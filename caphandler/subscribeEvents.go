@@ -144,6 +144,7 @@ func deleteMatchingSubscriptions(device *caputilities.RedfishDevice) {
 	}
 	return
 }
+
 func isOurSubscription(device *caputilities.RedfishDevice) bool {
 
 	redfishClient, err := caputilities.GetRedfishClient()
