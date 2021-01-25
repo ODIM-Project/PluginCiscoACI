@@ -16,15 +16,11 @@
 package caphandler
 
 import (
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/capresponse"
-	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	pluginConfig "github.com/ODIM-Project/PluginCiscoACI/config"
 	iris "github.com/kataras/iris/v12"
 )
@@ -117,55 +113,5 @@ func GetManagersInfo(ctx iris.Context) {
 }
 
 func getInfoFromDevice(uri string, deviceDetails capmodel.Device, ctx iris.Context) {
-	//replacing the request url with south bound translation URL
-	for key, value := range pluginConfig.Data.URLTranslation.SouthBoundURL {
-		uri = strings.Replace(uri, key, value, -1)
-	}
-	device := &caputilities.RedfishDevice{
-		Host:     deviceDetails.Host,
-		Username: deviceDetails.Username,
-		Password: string(deviceDetails.Password),
-	}
-	redfishClient, err := caputilities.GetRedfishClient()
-	if err != nil {
-		errMsg := "error: internal processing error: " + err.Error()
-		log.Println(errMsg)
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.WriteString(errMsg)
-		return
-	}
-
-	//Fetching generic resource details from the device
-	resp, err := redfishClient.GetWithBasicAuth(device, uri)
-	if err != nil {
-		errMsg := "error: authentication failed: " + err.Error()
-		log.Println(errMsg)
-		if resp == nil {
-			ctx.StatusCode(http.StatusInternalServerError)
-			ctx.WriteString(errMsg)
-			return
-		}
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf(err.Error())
-	}
-
-	if resp.StatusCode == 401 {
-		ctx.StatusCode(http.StatusBadRequest)
-		ctx.WriteString("Authtication with the device failed")
-		return
-	}
-	if resp.StatusCode >= 300 {
-		fmt.Printf("Could not retreive generic resource for %s: \n%s\n\n", device.Host, body)
-	}
-	respData := string(body)
-	//replacing the resposne with north bound translation URL
-	for key, value := range pluginConfig.Data.URLTranslation.NorthBoundURL {
-		respData = strings.Replace(respData, key, value, -1)
-	}
-	ctx.StatusCode(resp.StatusCode)
-	ctx.Write([]byte(respData))
+	// TODO: implementation pending
 }
