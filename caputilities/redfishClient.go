@@ -242,7 +242,6 @@ func (client *RedfishClient) SubscribeForEvents(device *RedfishDevice) (*http.Re
 	return resp, nil
 }
 
-
 // DeleteSubscriptionDetail will accepts device struct
 // and it will delete the subscription detail
 func (client *RedfishClient) DeleteSubscriptionDetail(device *RedfishDevice) (*http.Response, error) {
