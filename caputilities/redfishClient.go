@@ -142,6 +142,31 @@ func (client *RedfishClient) BasicAuthWithDevice(device *RedfishDevice, requestU
 	return resp, nil
 }
 
+// GetWithBasicAuth : Performs authentication with the given device and saves the token
+func (client *RedfishClient) GetWithBasicAuth(device *RedfishDevice, requestURI string) (*http.Response, error) {
+
+	endpoint := fmt.Sprintf("https://%s%s", device.Host, requestURI)
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Close = true
+	req.Header.Set("Accept", "application/json")
+	auth := device.Username + ":" + string(device.Password)
+	Basicauth := "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
+	req.Header.Add("Authorization", Basicauth)
+	req.Header.Add("Content-Type", "application/json")
+	req.Close = true
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
 // SubscribeForEvents :Subscribes for events with Basic Auth
 func (client *RedfishClient) SubscribeForEvents(device *RedfishDevice) (*http.Response, error) {
 	endpoint := fmt.Sprintf("https://%s%s", device.Host, "/redfish/v1/EventService/Subscriptions")
