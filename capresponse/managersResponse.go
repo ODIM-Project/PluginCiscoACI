@@ -15,21 +15,20 @@
 //Package capresponse ...
 package capresponse
 
+import (
+	dmtfmodel "github.com/ODIM-Project/ODIM/lib-dmtf/model"
+)
+
 //ManagersCollection for Plugin
 type ManagersCollection struct {
-	OdataContext string `json:"@odata.context"`
-	Etag         string `json:"@odata.etag,omitempty"`
-	OdataID      string `json:"@odata.id"`
-	OdataType    string `json:"@odata.type"`
-	Description  string `json:"Description"`
-	Name         string `json:"Name"`
-	Members      []Link `json:"Members"`
-	MembersCount int    `json:"Members@odata.count"`
-}
-
-// Link stores value of the links
-type Link struct {
-	Oid string `json:"@odata.id"`
+	OdataContext string           `json:"@odata.context"`
+	Etag         string           `json:"@odata.etag,omitempty"`
+	OdataID      string           `json:"@odata.id"`
+	OdataType    string           `json:"@odata.type"`
+	Description  string           `json:"Description"`
+	Name         string           `json:"Name"`
+	Members      []dmtfmodel.Link `json:"Members"`
+	MembersCount int              `json:"Members@odata.count"`
 }
 
 // Manager struct for manager deta

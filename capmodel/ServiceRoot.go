@@ -15,6 +15,10 @@
 //Package capmodel ...
 package capmodel
 
+import (
+	dmtfmodel "github.com/ODIM-Project/ODIM/lib-dmtf/model"
+)
+
 // ServiceRoot a Redfish service root
 type ServiceRoot struct {
 	Name           string
@@ -25,52 +29,12 @@ type ServiceRoot struct {
 	Etag           string `json:"@odata.etag,omitempty"`
 	Oid            string `json:"@odata.id"`
 	Type           string `json:"@odata.type"`
-	Systems        Systems
-	Chassis        Chassis
-	AccountService AccountService
-	EventService   EventService
-	JSONSchemas    JSONSchemas
-	Managers       Managers
-	SessionService SessionService
-	Links          Links
-}
-
-// Systems a Redfish system link
-type Systems struct {
-	Oid string `json:"@odata.id"`
-}
-
-// Chassis a Redfish chassis link
-type Chassis struct {
-	Oid string `json:"@odata.id"`
-}
-
-// AccountService a Redfish account service link
-type AccountService struct {
-	Oid string `json:"@odata.id"`
-}
-
-// EventService a Redfish event service link
-type EventService struct {
-	Oid string `json:"@odata.id"`
-}
-
-// JSONSchemas a Redfish json schemas link
-type JSONSchemas struct {
-	Oid string `json:"@odata.id"`
-}
-
-// Managers a Redfish managers link
-type Managers struct {
-	Oid string `json:"@odata.id"`
-}
-
-// SessionService a Redfish session service link
-type SessionService struct {
-	Oid string `json:"@odata.id"`
-}
-
-// Sessions ...
-type Sessions struct {
-	Oid string `json:"@odata.id"`
+	Systems        dmtfmodel.Link
+	Chassis        dmtfmodel.Link
+	AccountService dmtfmodel.Link
+	EventService   dmtfmodel.Link
+	JSONSchemas    dmtfmodel.Link
+	Managers       dmtfmodel.Link
+	SessionService dmtfmodel.Link
+	Links          dmtfmodel.Links
 }
