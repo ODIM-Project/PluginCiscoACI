@@ -16,20 +16,14 @@
 package caphandler
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"reflect"
-	"sync"
 	"time"
 
-	iris "github.com/kataras/iris/v12"
-	//"github.com/ODIM-Project/ODIM/lib-utilities/common"
-	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/capresponse"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	pluginConfig "github.com/ODIM-Project/PluginCiscoACI/config"
+	iris "github.com/kataras/iris/v12"
 )
 
 // GetPluginStatus defines the GetPluginStatus iris handler.
@@ -74,161 +68,6 @@ func GetPluginStatus(ctx iris.Context) {
 
 // GetPluginStartup ...
 func GetPluginStartup(ctx iris.Context) {
-	//Get token from Request
-	token := ctx.GetHeader("X-Auth-Token")
-	//Validating the token
-	if token != "" {
-		flag := TokenValidation(token)
-		if !flag {
-			log.Println("Invalid/Expired X-Auth-Token")
-			ctx.StatusCode(http.StatusUnauthorized)
-			ctx.WriteString("Invalid/Expired X-Auth-Token")
-			return
-		}
-	}
-
-	var startup []capmodel.Startup
-	err := ctx.ReadJSON(&startup)
-	if err != nil {
-		log.Println("Error while trying to collect data from request: ", err)
-		ctx.StatusCode(http.StatusBadRequest)
-		ctx.WriteString("Error: bad request.")
-		return
-	}
-	errorCh := make(chan error)
-	startUpResponse := make(chan map[string]string)
-	respBody := make(map[string]string)
-	quit := make(chan bool)
-	var writeWG sync.WaitGroup
-	go func() {
-		for {
-			select {
-			case err = <-errorCh:
-				ctx.StatusCode(http.StatusInternalServerError)
-				ctx.WriteString(err.Error())
-				//close(startUpResponse)
-				//close(respHeader)
-				//close(errorCh)
-				writeWG.Done()
-				return
-			case startResp := <-startUpResponse:
-				for k, v := range startResp {
-					respBody[k] = v
-				}
-				writeWG.Done()
-			case <-quit:
-				//close(startUpResponse)
-				//close(respHeader)
-				//close(errorCh)
-				//close(quit)
-				break
-			}
-		}
-	}()
-	for _, server := range startup {
-		writeWG.Add(1)
-		go checkCreateSub(server, startUpResponse, errorCh, &writeWG)
-		//go checkCreateSub(server, startUpResponse, respHeader, errorCh)
-	}
-	writeWG.Wait()
-	quit <- true
-	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(respBody)
-	return
-}
-
-func checkCreateSub(startup capmodel.Startup, startUpResponse chan map[string]string, errorCh chan error, writeWG *sync.WaitGroup) {
-	var respBody = make(map[string]string)
-
-	device := &caputilities.RedfishDevice{
-		Host:     startup.Device.Host,
-		Username: startup.Device.Username,
-		Password: string(startup.Device.Password),
-		Location: startup.Location,
-	}
-	redfishClient, err := caputilities.GetRedfishClient()
-	if err != nil {
-		errorCh <- err
-		return
-	}
-
-	//Get Subscription details
-	resp, err := redfishClient.GetSubscriptionDetail(device)
-	if err != nil {
-		errorCh <- err
-		return
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			errorCh <- err
-			return
-		}
-		var obj capmodel.EvtSubPost
-		if err = json.Unmarshal([]byte(body), &obj); err != nil {
-			errorCh <- err
-			return
-		}
-
-		res := reflect.DeepEqual(obj.EventTypes, startup.EventTypes)
-		if !res {
-			//Delete Subscription details
-			resp, err := redfishClient.DeleteSubscriptionDetail(device)
-			if err != nil {
-				errorCh <- err
-				return
-			}
-			defer resp.Body.Close()
-
-			//Create new Subscription with details in odimra
-			req := capmodel.EvtSubPost{
-				Destination: "https://" + pluginConfig.Data.LoadBalancerConf.Host + ":" + pluginConfig.Data.LoadBalancerConf.Port + pluginConfig.Data.EventConf.DestURI,
-				EventTypes:  startup.EventTypes,
-				Context:     "Event Subscription",
-				//      HTTPHeaders: reqPostBody.HTTPHeaders,
-				Protocol: "Redfish",
-			}
-			device.PostBody, err = json.Marshal(req)
-			if err != nil {
-				errorCh <- err
-				return
-			}
-
-			//Subscribe to Events
-			resp, err = redfishClient.SubscribeForEvents(device)
-			if err != nil {
-				errorCh <- err
-				return
-			}
-			defer resp.Body.Close()
-
-		}
-
-	} else if resp.StatusCode == http.StatusNotFound {
-		req := capmodel.EvtSubPost{
-			Destination: "https://" + pluginConfig.Data.LoadBalancerConf.Host + ":" + pluginConfig.Data.LoadBalancerConf.Port + pluginConfig.Data.EventConf.DestURI,
-			EventTypes:  []string{"Alert"},
-			Context:     "Event Subscription",
-			//	HTTPHeaders: reqPostBody.HTTPHeaders,
-			Protocol: "Redfish",
-		}
-		device.PostBody, err = json.Marshal(req)
-		if err != nil {
-			errorCh <- err
-			return
-		}
-
-		//Subscribe to Events
-		resp, err = redfishClient.SubscribeForEvents(device)
-		if err != nil {
-			errorCh <- err
-			return
-		}
-		defer resp.Body.Close()
-	}
-
-	respBody[startup.Device.Host] = resp.Header.Get("location")
-	startUpResponse <- respBody
-	return
+	// TODO: implementation pending
+	ctx.StatusCode(http.StatusNotImplemented)
 }
