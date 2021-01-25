@@ -19,6 +19,7 @@ import (
 	"log"
 	"net/http"
 
+	dmtfmodel "github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/capresponse"
 	pluginConfig "github.com/ODIM-Project/PluginCiscoACI/config"
@@ -44,8 +45,8 @@ func GetManagersCollection(ctx iris.Context) {
 	// if any error come while getting the device then request will be for  plugins manager
 	ctx.ReadJSON(&deviceDetails)
 	if deviceDetails.Host == "" {
-		var members = []capresponse.Link{
-			capresponse.Link{
+		var members = []dmtfmodel.Link{
+			dmtfmodel.Link{
 				Oid: "/ODIM/v1/Managers/" + pluginConfig.Data.RootServiceUUID,
 			},
 		}

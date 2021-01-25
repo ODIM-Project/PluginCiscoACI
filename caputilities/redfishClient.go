@@ -29,12 +29,6 @@ import (
 	"github.com/gofrs/uuid"
 )
 
-//RedfishDeviceCollection struct definition
-type RedfishDeviceCollection struct {
-	RedfishDevices            []*RedfishDevice           `json:"targetHosts"`
-	UnreachableRedfishDevices []UnreachableRedfishDevice `json:"failedHosts,omitempty"`
-}
-
 //RedfishDevice struct definition
 type RedfishDevice struct {
 	Host            string                `json:"hostAddress"`
@@ -54,26 +48,9 @@ type Identifier struct {
 	URI  string
 }
 
-//UnreachableRedfishDevice struct definition
-type UnreachableRedfishDevice struct {
-	Host         string `json:"hostAddress"`
-	ErrorMessage string `json:"errorMessage"`
-}
-
 //RedfishClient struct definition
 type RedfishClient struct {
 	httpClient *http.Client
-}
-
-// MarshalJSON Custom marshalling code used to prevent the display of password or authtoken
-func (rfd RedfishDevice) MarshalJSON() ([]byte, error) {
-	type redfishdevice RedfishDevice
-
-	sanitizedRedfishDevice := redfishdevice(rfd)
-	sanitizedRedfishDevice.Password = ""
-	sanitizedRedfishDevice.Token = ""
-
-	return json.Marshal(sanitizedRedfishDevice)
 }
 
 var redfishServiceRootURI = "/redfish/v1"
@@ -135,35 +112,6 @@ func (client *RedfishClient) GetRootService(device *RedfishDevice) error {
 	serviceRoot := &capmodel.ServiceRoot{}
 	json.Unmarshal(body, serviceRoot)
 	device.RootNode = serviceRoot
-	return nil
-}
-
-// AuthWithDevice : Performs authentication with the given device and saves the token
-func (client *RedfishClient) AuthWithDevice(device *RedfishDevice) error {
-	if device.RootNode == nil {
-		return fmt.Errorf("no ServiceRoot found for device")
-	}
-
-	// TODO auth (Issue #22)
-	endpoint := fmt.Sprintf("https://%s%s", device.Host, "/redfish/v1/SessionService/Sessions")
-
-	var jsonStr = []byte(`{"UserName":"` + device.Username + `","Password":"` + string(device.Password) + `"}`)
-	req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonStr))
-	req.Close = true
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("OData-Version", "4.0")
-
-	req.Close = true
-
-	resp, err := client.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-	device.Token = resp.Header["X-Auth-Token"][0]
-	fmt.Println(device.Token)
-
 	return nil
 }
 
@@ -259,30 +207,6 @@ func (client *RedfishClient) DeleteSubscriptionDetail(device *RedfishDevice) (*h
 	req.Close = true
 
 	resp, err := client.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
-}
-
-// DeviceCall will call device with the given device details on the url given
-// TODO: use same method to all other calls in this file
-func (client *RedfishClient) DeviceCall(device *RedfishDevice, url, method string) (*http.Response, error) {
-	endpoint := fmt.Sprintf("https://%s%s", device.Host, url)
-	req, err := http.NewRequest(method, endpoint, bytes.NewBuffer(device.PostBody))
-	if err != nil {
-		return nil, err
-	}
-	req.Close = true
-	req.Header.Set("Accept", "application/json")
-	auth := device.Username + ":" + string(device.Password)
-	Basicauth := "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
-	req.Header.Add("Authorization", Basicauth)
-	req.Header.Set("Content-Type", "application/json")
-	req.Close = true
-	var resp *http.Response
-	resp, err = client.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
