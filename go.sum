@@ -27,21 +27,17 @@ github.com/DataDog/zstd v1.4.1/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t
 github.com/Joker/hpp v1.0.0/go.mod h1:8x5n+M1Hp5hC0g8okX3sR3vFQwynaX/UgSOM9MeBKzY=
 github.com/Microsoft/go-winio v0.4.14/go.mod h1:qXqCSQ3Xa7+6tgxaGTIe4Kpcdsi+P8jBhyzoq1bpyYA=
 github.com/Microsoft/hcsshim v0.8.6/go.mod h1:Op3hHsoHPAvb6lceZHDtd9OkTew38wNoXnJs8iY7rUg=
-github.com/ODIM-Project/ODIM v0.0.0-20210122105005-f883dc0e7207 h1:7zen1qO0FSAQJs2sBuwKhibc/uzl9m3niPVOgVRy1ZQ=
-github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210122105005-f883dc0e7207 h1:9fVIMCLpLJurGLkI4QhBBqAFgc/NexDKiYUew0WqPHI=
-github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210122105005-f883dc0e7207/go.mod h1:T84xlNs4ie0z0qkaLON714rzHuOFs3jLpLtNw0CJrGw=
+github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210127110844-14b2936eea39 h1:drS5Rod6usMAV4rwq836mrG4FGy/dPtY0I9W40E5XLw=
+github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210127110844-14b2936eea39/go.mod h1:T84xlNs4ie0z0qkaLON714rzHuOFs3jLpLtNw0CJrGw=
 github.com/ODIM-Project/ODIM/lib-messagebus v0.0.0-20200727133207-df3dfb728bd1 h1:8pT0M0eydoMENdhvahO4rFrNMjMbkSuQUJS1j4h6zNQ=
 github.com/ODIM-Project/ODIM/lib-messagebus v0.0.0-20200727133207-df3dfb728bd1/go.mod h1:SFgC2w23lU3/pQv9ROS3x7iLWQESf4jafMumH/IVS0E=
 github.com/ODIM-Project/ODIM/lib-persistence-manager v0.0.0-20200727095517-f2a4bd1bdef7/go.mod h1:NyEEh6a2bgEXock1ThrXDLnp2A5syxleqSGmWwucPPA=
-github.com/ODIM-Project/ODIM/lib-persistence-manager v0.0.0-20201005194902-ed323c41b4d6 h1:+Ex1pdY+VB6mXoJRQPV6MXks/M6+AbAiccAAjCrq2Ks=
 github.com/ODIM-Project/ODIM/lib-persistence-manager v0.0.0-20201005194902-ed323c41b4d6/go.mod h1:px22wynjWTLxeeCGenVKhZ0Y+fIJc2RQusZazSo+OsI=
 github.com/ODIM-Project/ODIM/lib-persistence-manager v0.0.0-20201021053518-88345d4a9988 h1:mnZ4dpCtFygpzJUUKzIdynmxWO3mE3IcVM+xwgi8e+A=
 github.com/ODIM-Project/ODIM/lib-persistence-manager v0.0.0-20201021053518-88345d4a9988/go.mod h1:gxcTX5NCbmKYHweBnALpVA0hytBWvQ9esKGS2WnkBFk=
 github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20200727091052-cb7db65624ce/go.mod h1:kvWozdwrn+nfJmxQB5o2hruNU4K2c0CLn5r5UrdJp/M=
 github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20200925145026-eac0549d2f51/go.mod h1:mWour82PNJD+oJ8T2fYGpo7UBCNK7IlmPLRoeyFSYog=
 github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20201012075046-3c059402892a/go.mod h1:EY3r2ljrLgEkB5zP7zJbq7/YEn24PaBc3oLr4YVX40w=
-github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20201015111324-83393fdedb82 h1:2TOpMRuktYGOPS+IiuJdrM/aFepk6vEqFT6m1t6Zt6E=
-github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20201015111324-83393fdedb82/go.mod h1:EY3r2ljrLgEkB5zP7zJbq7/YEn24PaBc3oLr4YVX40w=
 github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20201201072448-9772421f1b55 h1:pLstw2ZzF9avQgOjBY44aUJ/Nm6fydjKeAVHgtp1rWU=
 github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20201201072448-9772421f1b55/go.mod h1:LFZuksUM93hhzHwMLH3zs/cno1bfBmyjnNQ6q4yYn3I=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
@@ -596,7 +592,6 @@ google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ
 google.golang.org/protobuf v0.0.0-20200228230310-ab0ca4ff8a60/go.mod h1:cfTl7dwQJ+fmap5saPgwCLgHXTUD7jkjRqWcaiX5VyM=
 google.golang.org/protobuf v1.20.1-0.20200309200217-e05f789c0967/go.mod h1:A+miEFZTKqfCUM6K7xSMQL9OKL/b6hQv+e19PK+JZNE=
 google.golang.org/protobuf v1.21.0/go.mod h1:47Nbq4nVaFHyn7ilMalzfO3qCViNmqZ2kzikPIcrTAo=
-google.golang.org/protobuf v1.23.0 h1:4MY060fB1DLGMB/7MBTLnwQUY6+F09GEiz6SsrNqyzM=
 google.golang.org/protobuf v1.23.0/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2l/sGQquU=
 gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
@@ -608,7 +603,6 @@ gopkg.in/go-playground/validator.v9 v9.30.0/go.mod h1:+c9/zcJMFNgbLvly1L1V+PpxWd
 gopkg.in/h2non/gock.v1 v1.0.15/go.mod h1:sX4zAkdYX1TRGJ2JY156cFspQn4yRWn6p9EMdODlynE=
 gopkg.in/ini.v1 v1.42.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
 gopkg.in/ini.v1 v1.44.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
-gopkg.in/ini.v1 v1.57.0 h1:9unxIsFcTt4I55uWluz+UmL95q4kdJ0buvQ1ZIqVQww=
 gopkg.in/ini.v1 v1.57.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
 gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce/go.mod h1:yeKp02qBN3iKW1OzL3MGk2IdtZzaj7SFntXj72NppTA=
 gopkg.in/ns1/ns1-go.v2 v2.0.0-20190730140822-b51389932cbc/go.mod h1:VV+3haRsgDiVLxyifmMBrBIuCWFBPYKbRssXB9z67Hw=
@@ -624,9 +618,7 @@ gopkg.in/warnings.v0 v0.1.2/go.mod h1:jksf8JmL6Qr/oQM2OXTHunEvvTAsrWBLb6OOjuVWRN
 gopkg.in/yaml.v2 v2.0.0-20170812160011-eb3733d160e7/go.mod h1:JAlM8MvJe8wmxCU4Bli9HhUf9+ttbYbLASfIpnQbh74=
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
-gopkg.in/yaml.v2 v2.2.4 h1:/eiJrUcujPVeJ3xlSWaiNi3uSVmDGBK1pDHUHAnao1I=
 gopkg.in/yaml.v2 v2.2.4/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
-gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86 h1:OfFoIUYv/me30yv7XlMy4F9RJw8DEm8WQ6QG1Ph4bH0=
 gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gotest.tools v2.2.0+incompatible/go.mod h1:DsYFclhRJ6vuDpmuTbkuFWG+y2sxOXAzmJt81HFBacw=
 honnef.co/go/tools v0.0.0-20180728063816-88497007e858/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
@@ -634,6 +626,5 @@ honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.0-20190106161140-3f1c8253044a/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190418001031-e561f6794a2a/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
-moul.io/http2curl v1.0.0 h1:6XwpyZOYsgZJrU8exnG87ncVkU1FVCcTRpwzOkTDUi8=
 moul.io/http2curl v1.0.0/go.mod h1:f6cULg+e4Md/oW1cYmwW4IWQOVl2lGbmCNGOHvzX2kE=
 sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=

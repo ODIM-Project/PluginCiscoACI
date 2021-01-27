@@ -3,7 +3,7 @@ module github.com/ODIM-Project/PluginCiscoACI
 go 1.13
 
 require (
-	github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210122105005-f883dc0e7207
+	github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210127110844-14b2936eea39
 	github.com/ODIM-Project/ODIM/lib-messagebus v0.0.0-20200727133207-df3dfb728bd1
 	github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20201201072448-9772421f1b55
 	github.com/gofrs/uuid v3.2.0+incompatible
