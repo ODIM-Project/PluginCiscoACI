@@ -46,11 +46,11 @@ func main() {
 	}
 
 	if err := config.SetConfiguration(); err != nil {
-		log.Fatal("error while reading from config" + err.Error())
+		log.Fatal("while reading from config, PluginCiscoACI got" + err.Error())
 	}
 
 	if err := dc.SetConfiguration(config.Data.MessageBusConf.MessageQueueConfigFilePath); err != nil {
-		log.Fatal("error while trying to set messagebus configuration: " + err.Error())
+		log.Fatal("while trying to set messagebus configuration, PluginCiscoACI got: " + err.Error())
 	}
 
 	// CreateJobQueue defines the queue which will act as an infinite buffer
@@ -79,7 +79,7 @@ func app() {
 	}
 	pluginServer, err := conf.GetHTTPServerObj()
 	if err != nil {
-		log.Fatal("fatal: error while initializing plugin server: " + err.Error())
+		log.Fatal("while initializing plugin server, PluginCiscoACI got: " + err.Error())
 	}
 	app.Run(iris.Server(pluginServer))
 }
@@ -146,7 +146,7 @@ func eventsrouters() {
 	}
 	evtServer, err := conf.GetHTTPServerObj()
 	if err != nil {
-		log.Fatal("fatal: error while initializing event server: " + err.Error())
+		log.Fatal("while initializing event server, PluginCiscoACI got: " + err.Error())
 	}
 	app.Run(iris.Server(evtServer))
 }
