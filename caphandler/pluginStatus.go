@@ -16,14 +16,13 @@
 package caphandler
 
 import (
-	"log"
-	"net/http"
-	"time"
-
 	"github.com/ODIM-Project/PluginCiscoACI/capresponse"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	pluginConfig "github.com/ODIM-Project/PluginCiscoACI/config"
 	iris "github.com/kataras/iris/v12"
+	log "github.com/sirupsen/logrus"
+	"net/http"
+	"time"
 )
 
 // GetPluginStatus defines the GetPluginStatus iris handler.
@@ -35,7 +34,7 @@ func GetPluginStatus(ctx iris.Context) {
 	if token != "" {
 		flag := TokenValidation(token)
 		if !flag {
-			log.Println("Invalid/Expired X-Auth-Token")
+			log.Error("Invalid/Expired X-Auth-Token")
 			ctx.StatusCode(http.StatusUnauthorized)
 			ctx.WriteString("Invalid/Expired X-Auth-Token")
 			return
