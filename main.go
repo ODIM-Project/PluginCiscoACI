@@ -14,11 +14,6 @@
 package main
 
 import (
-	"log"
-	"net/http"
-	"os"
-	"time"
-
 	dc "github.com/ODIM-Project/ODIM/lib-messagebus/datacommunicator"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
 	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
@@ -29,9 +24,14 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	iris "github.com/kataras/iris/v12"
+	"github.com/sirupsen/logrus"
+	"net/http"
+	"os"
+	"time"
 )
 
 var subscriptionInfo []capmodel.Device
+var log = logrus.New()
 
 // TokenObject will contains the generated token and public key of odimra
 type TokenObject struct {
@@ -42,15 +42,15 @@ type TokenObject struct {
 func main() {
 	// verifying the uid of the user
 	if uid := os.Geteuid(); uid == 0 {
-		log.Fatalln("Plugin Service should not be run as the root user")
+		log.Fatal("Plugin Service should not be run as the root user")
 	}
 
 	if err := config.SetConfiguration(); err != nil {
-		log.Fatalln("error while reading from config", err)
+		log.Fatal("while reading from config, PluginCiscoACI got" + err.Error())
 	}
 
 	if err := dc.SetConfiguration(config.Data.MessageBusConf.MessageQueueConfigFilePath); err != nil {
-		log.Fatalf("error while trying to set messagebus configuration: %v", err)
+		log.Fatal("while trying to set messagebus configuration, PluginCiscoACI got: " + err.Error())
 	}
 
 	// CreateJobQueue defines the queue which will act as an infinite buffer
@@ -79,7 +79,7 @@ func app() {
 	}
 	pluginServer, err := conf.GetHTTPServerObj()
 	if err != nil {
-		log.Fatalf("fatal: error while initializing plugin server: %v", err)
+		log.Fatal("while initializing plugin server, PluginCiscoACI got: " + err.Error())
 	}
 	app.Run(iris.Server(pluginServer))
 }
@@ -148,7 +148,7 @@ func eventsrouters() {
 	}
 	evtServer, err := conf.GetHTTPServerObj()
 	if err != nil {
-		log.Fatalf("fatal: error while initializing event server: %v", err)
+		log.Fatal("while initializing event server, PluginCiscoACI got: " + err.Error())
 	}
 	app.Run(iris.Server(evtServer))
 }
@@ -157,5 +157,4 @@ func eventsrouters() {
 func intializePluginStatus() {
 	caputilities.Status.Available = "yes"
 	caputilities.Status.Uptime = time.Now().Format(time.RFC3339)
-
 }

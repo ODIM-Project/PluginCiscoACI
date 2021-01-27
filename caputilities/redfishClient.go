@@ -20,13 +20,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-
 	dmtfmodel "github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	"github.com/gofrs/uuid"
+	log "github.com/sirupsen/logrus"
+	"io/ioutil"
+	"net/http"
 )
 
 //RedfishDevice struct definition
@@ -104,9 +104,9 @@ func (client *RedfishClient) GetRootService(device *RedfishDevice) error {
 	if resp.StatusCode >= 300 {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			fmt.Printf("%s", err)
+			log.Error(err.Error())
 		}
-		fmt.Printf("Could not retrieve ServiceRoot for %s: \n%s\n", device.Host, body)
+		log.Error("Could not retrieve ServiceRoot for " + device.Host + ", got: " + string(body))
 		return nil
 	}
 	serviceRoot := &dmtfmodel.ServiceRoot{}
