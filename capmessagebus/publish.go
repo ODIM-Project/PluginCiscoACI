@@ -47,7 +47,7 @@ func Publish(data interface{}) bool {
 	}
 	topic := config.Data.MessageBusConf.EmbQueue[0]
 	if err := K.Distribute(topic, event); err != nil {
-		log.Error("Unable Publish events to kafka, got: ", err.Error())
+		log.Error("Unable Publish events to kafka, got: " + err.Error())
 		return false
 	}
 	for _, eventMessage := range message.Events {
