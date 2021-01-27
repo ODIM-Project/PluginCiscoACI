@@ -14,10 +14,6 @@
 package main
 
 import (
-	"net/http"
-	"os"
-	"time"
-	"github.com/sirupsen/logrus"
 	dc "github.com/ODIM-Project/ODIM/lib-messagebus/datacommunicator"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
 	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
@@ -28,6 +24,10 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	iris "github.com/kataras/iris/v12"
+	"github.com/sirupsen/logrus"
+	"net/http"
+	"os"
+	"time"
 )
 
 var subscriptionInfo []capmodel.Device
