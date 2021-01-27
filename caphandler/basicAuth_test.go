@@ -19,16 +19,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
-	"net"
-	"net/http"
-	"strings"
-	"testing"
-
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	iris "github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/httptest"
+	log "github.com/sirupsen/logrus"
+	"net"
+	"net/http"
 	testhttp "net/http/httptest"
+	"strings"
+	"testing"
 )
 
 var (
@@ -152,7 +151,7 @@ func startTestServer(handler mockHandlerFunc) *testhttp.Server {
 	// create a listener with the desired port.
 	l, err := net.Listen("tcp", "localhost:1234")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 
 	ts := testhttp.NewUnstartedServer(
@@ -174,14 +173,14 @@ func startTestServer(handler mockHandlerFunc) *testhttp.Server {
 
 	cert, err := tls.X509KeyPair(hostCert, hostPrivKey)
 	if err != nil {
-		log.Fatalf("error: failed to load key pair: %v", err)
+		log.Fatal("failed to load key pair: " + err.Error())
 	}
 	tlsConfig.Certificates = []tls.Certificate{cert}
 	tlsConfig.BuildNameToCertificate()
 
 	capool := x509.NewCertPool()
 	if !capool.AppendCertsFromPEM(hostCA) {
-		log.Fatalf("error: failed to load CA certificate")
+		log.Fatal("failed to load CA certificate")
 	}
 	tlsConfig.RootCAs = capool
 	tlsConfig.ClientCAs = capool
@@ -192,7 +191,6 @@ func startTestServer(handler mockHandlerFunc) *testhttp.Server {
 }
 
 func mockBasicAuthHandler(username, password, url string, w http.ResponseWriter) {
-	fmt.Println("url,", url)
 	if url == "/redfish/v1" {
 		serviceRoot := map[string]interface{}{
 			"Systems": map[string]string{

@@ -20,23 +20,23 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-
+	dmtfmodel "github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
-	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	"github.com/gofrs/uuid"
+	log "github.com/sirupsen/logrus"
+	"io/ioutil"
+	"net/http"
 )
 
 //RedfishDevice struct definition
 type RedfishDevice struct {
-	Host            string                `json:"hostAddress"`
-	Username        string                `json:"username,omitempty"`
-	Password        string                `json:"password,omitempty"`
-	Token           string                `json:"token,omitempty"`
-	Tags            []string              `json:"Tags"`
-	RootNode        *capmodel.ServiceRoot `json:"rootNode,omitempty"`
+	Host            string                 `json:"hostAddress"`
+	Username        string                 `json:"username,omitempty"`
+	Password        string                 `json:"password,omitempty"`
+	Token           string                 `json:"token,omitempty"`
+	Tags            []string               `json:"Tags"`
+	RootNode        *dmtfmodel.ServiceRoot `json:"rootNode,omitempty"`
 	ComputerSystems []*Identifier
 	PostBody        []byte `json:"PostBody,omitempty"`
 	Location        string `json:"Location"`
@@ -104,12 +104,12 @@ func (client *RedfishClient) GetRootService(device *RedfishDevice) error {
 	if resp.StatusCode >= 300 {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			fmt.Printf("%s", err)
+			log.Error(err.Error())
 		}
-		fmt.Printf("Could not retrieve ServiceRoot for %s: \n%s\n", device.Host, body)
+		log.Error("Could not retrieve ServiceRoot for " + device.Host + ", got: " + string(body))
 		return nil
 	}
-	serviceRoot := &capmodel.ServiceRoot{}
+	serviceRoot := &dmtfmodel.ServiceRoot{}
 	json.Unmarshal(body, serviceRoot)
 	device.RootNode = serviceRoot
 	return nil

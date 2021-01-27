@@ -16,19 +16,18 @@
 package caphandler
 
 import (
-	"net/http"
-
-	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	iris "github.com/kataras/iris/v12"
+	"net/http"
 )
 
-//GetManagersInfo Fetches details of the given resource from the device
-func GetManagersInfo(ctx iris.Context) {
+// GetTaskMonitor ...
+func GetTaskMonitor(ctx iris.Context) {
 	// TODO: implementation pending
 	ctx.StatusCode(http.StatusNotImplemented)
-
 }
 
-func getInfoFromDevice(uri string, deviceDetails capmodel.Device, ctx iris.Context) {
+// GetTaskService ...
+func GetTaskService(ctx iris.Context) {
 	// TODO: implementation pending
+	ctx.StatusCode(http.StatusNotImplemented)
 }
