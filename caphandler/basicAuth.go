@@ -66,9 +66,10 @@ func Validate(ctx iris.Context) {
 	//Get device details from request
 	err := ctx.ReadJSON(&deviceDetails)
 	if err != nil {
-		log.Error("while trying to collect data from request, PluginCiscoACI got: " + err.Error())
+		errMsg := "while trying to collect data from request, PluginCiscoACI got: " + err.Error()
+		log.Error(errMsg)
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.WriteString("Error: bad request.")
+		ctx.WriteString(errMsg)
 		return
 	}
 	device := &caputilities.RedfishDevice{
