@@ -17,12 +17,11 @@ package caphandler
 
 import (
 	"encoding/json"
-	"log"
-	"net/http"
-
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
 	pluginConfig "github.com/ODIM-Project/PluginCiscoACI/config"
 	iris "github.com/kataras/iris/v12"
+	log "github.com/sirupsen/logrus"
+	"net/http"
 	"strings"
 )
 
@@ -39,12 +38,12 @@ func RedfishEvents(ctx iris.Context) {
 	var req interface{}
 	err := ctx.ReadJSON(&req)
 	if err != nil {
-		log.Println(err)
+		log.Error(err)
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.WriteString("error: bad request")
 		return
 	}
-	log.Println("Event Request", req)
+	log.Info("Event Request", req)
 	remoteAddr := ctx.RemoteAddr()
 	request, _ := json.Marshal(req)
 
