@@ -12,5 +12,3 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
 )
-
-replace github.com/ODIM-Project/ODIM/lib-dmtf => ../ODIM/lib-dmtf
