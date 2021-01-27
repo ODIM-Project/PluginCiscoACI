@@ -122,6 +122,17 @@ func routers() *iris.Application {
 
 	pluginRoutes.Get("/Managers", caphandler.GetManagersInfo)
 
+	taskmon := pluginRoutes.Party("/taskmon")
+	taskmon.Get("/{TaskID}", caphandler.GetTaskMonitor)
+
+	task := pluginRoutes.Party("/TaskService")
+	task.Get("/", caphandler.GetTaskService)
+	task.Get("/Tasks", caphandler.GetTaskService)
+	task.Get("/Tasks/{TaskID}", caphandler.GetTaskService)
+	task.Get("/Tasks/{TaskID}/SubTasks", caphandler.GetTaskService)
+	task.Get("/Tasks/{TaskID}/SubTasks/{subTaskID}", caphandler.GetTaskService)
+	task.Delete("/Tasks/{TaskID}", caphandler.GetTaskService)
+
 	return app
 }
 
