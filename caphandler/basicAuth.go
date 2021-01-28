@@ -98,7 +98,7 @@ func Validate(ctx iris.Context) {
 	resp, err := redfishClient.BasicAuthWithDevice(device, device.RootNode.Systems.Oid)
 	if err != nil {
 		log.Error(err.Error())
-		capresponse.SetErrorResponse(ctx, http.StatusInternalServerError, response.InternalError, err.Error(), nil)
+		capresponse.SetErrorResponse(ctx, http.StatusUnauthorized, response.ResourceAtURIUnauthorized, err.Error(), []interface{}{device.RootNode.Systems.Oid})
 		return
 	}
 
