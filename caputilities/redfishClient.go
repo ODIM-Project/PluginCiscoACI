@@ -106,8 +106,9 @@ func (client *RedfishClient) GetRootService(device *RedfishDevice) error {
 		if err != nil {
 			log.Error(err.Error())
 		}
-		log.Error("Could not retrieve ServiceRoot for " + device.Host + ", got: " + string(body))
-		return nil
+		errMsg := "Could not retrieve ServiceRoot for " + device.Host + ", got: " + string(body)
+		log.Error(errMsg)
+		return fmt.Errorf(errMsg)
 	}
 	serviceRoot := &dmtfmodel.ServiceRoot{}
 	json.Unmarshal(body, serviceRoot)
