@@ -16,48 +16,15 @@
 package capresponse
 
 import (
+	"github.com/ODIM-Project/ODIM/lib-utilities/common"
 	iris "github.com/kataras/iris/v12"
 )
 
-//ErrorResopnse struct is response Error struct
-type ErrorResopnse struct {
-	Error Error `json:"Error"`
-}
-
-//Error struct is standard response struct
-type Error struct {
-	Code                string            `json:"Code"`
-	Message             string            `json:"Message"`
-	MessageExtendedInfo []MsgExtendedInfo `json:"@Message.ExtendedInfo"`
-}
-
-//MsgExtendedInfo struct definition
-type MsgExtendedInfo struct {
-	MessageID   string   `json:"MessageId"`
-	Message     string   `json:"Message"`
-	MessageArgs []string `json:"MessageArgs"`
-}
-
-// CreateErrorResponse will accrpts the error string and create standard error resopnse
-func CreateErrorResponse(errs string) ErrorResopnse {
-	var err = ErrorResopnse{
-		Error{
-			Code:    "iLO.0.10.ExtendedInfo",
-			Message: "See @Message.ExtendedInfo for more information.",
-			MessageExtendedInfo: []MsgExtendedInfo{
-				MsgExtendedInfo{
-					MessageID: "Base.1.0.Failed",
-					Message:   errs,
-				},
-			},
-		},
-	}
-	return err
-}
-
 // SetErrorResponse will accepts the iris context, error string and status code
 // it will set error resopnse to ctx
-func SetErrorResponse(ctx iris.Context, err string, statusCode int32) {
-	ctx.StatusCode(int(statusCode))
-	ctx.JSON(CreateErrorResponse(err))
+func SetErrorResponse(ctx iris.Context, statusCode int32, statusMsg, errMsg string, msgArgs []interface{}) {
+	resp := common.GeneralError(statusCode, statusMsg, errMsg, msgArgs, nil)
+	ctx.StatusCode(int(resp.StatusCode))
+	common.SetResponseHeader(ctx, resp.Header)
+	ctx.JSON(resp.Body)
 }
