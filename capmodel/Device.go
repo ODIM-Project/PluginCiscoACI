@@ -39,10 +39,3 @@ type EvtSubPost struct {
 type HTTPHeaders struct {
 	ContentType string `json:"Content-Type"`
 }
-
-// Startup struct recieve request on Startup call
-type Startup struct {
-	Location   string   `json:"Location"`
-	EventTypes []string `json:"EventTypes,omitempty"`
-	Device     Device   `json:"Device"`
-}
