@@ -1,0 +1,33 @@
+FROM aci_plugin_builddep:tst as build-stage
+
+FROM ubuntu:18.04
+
+RUN mkdir /etc/plugin_certs
+RUN mkdir /etc/plugin_config
+RUN mkdir /var/plugin_config
+COPY config/config.json /var/plugin_config
+COPY config/platformconfig.toml /var/plugin_config
+COPY config /aci-plugin/config
+COPY start_plugin.sh /aci-plugin/
+COPY command.sh /aci-plugin/
+
+COPY --from=build-stage /aci-plugin/PluginCiscoACI /bin/
+RUN  groupadd -r -g 1235 plugin
+RUN  useradd -s /bin/bash -u 1235 -m -d /home/plugin -r -g plugin plugin
+RUN  apt update
+RUN  apt-get -y install sudo
+RUN  apt-get -y install vim
+RUN  apt-get install uuid-runtime
+RUN apt-get update \
+    && apt-get install -y systemd systemd-sysv \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN  chown -R plugin:plugin /etc/plugin_certs
+RUN  chown -R plugin:plugin /etc/plugin_config
+RUN  chown -R plugin:plugin /var/plugin_config
+
+VOLUME [ "/sys/fs/cgroup" ]
+
+ENTRYPOINT  ["/lib/systemd/systemd"]
+
