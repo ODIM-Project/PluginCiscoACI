@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aciplugin
+  namespace: {{ .Values.odimra.namespace }}
+  labels:
+    app: aciplugin
+spec:
+  ports:
+    - port: 45020
+  selector:
+    app: aciplugin
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: aciplugin-events
+  namespace: {{ .Values.odimra.namespace }}
+  labels:
+    app: aciplugin
+spec:
+  type: NodePort
+  ports:
+  - port: 45021
+    nodePort: {{ .Values.aciplugin.eventListenerNodePort }}
+    protocol: TCP
+  externalTrafficPolicy: Local
+  selector:
+    app: aciplugin

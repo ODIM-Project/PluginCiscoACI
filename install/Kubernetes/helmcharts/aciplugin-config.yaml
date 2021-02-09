@@ -1,0 +1,12 @@
+odimra:
+  namespace: odim 
+  groupID: 
+aciplugin:
+  hostname: 
+  eventListenerNodePort: 30086
+  aciPluginRootServiceUUID: 
+  username: admin 
+  password: sTfTyTZFvNj5zU5Tt0TfyDYU-ye3_ZqTMnMIj-LAeXaa8vCnBqq8Ga7zV6ZdfqQCdSAzmaO5AJxccD99UHLVlQ==
+  lbHost: 
+  lbPort: 30086
+  logPath: /var/log/aciplugin_logs
