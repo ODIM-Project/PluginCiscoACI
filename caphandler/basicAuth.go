@@ -16,15 +16,17 @@
 package caphandler
 
 import (
+	"io/ioutil"
+	"net/http"
+	"time"
+
+	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/capresponse"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	pluginConfig "github.com/ODIM-Project/PluginCiscoACI/config"
 	iris "github.com/kataras/iris/v12"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
-	"net/http"
-	"time"
 )
 
 //TokenValidation validates sent token with the list of plugin generated tokens
@@ -81,7 +83,7 @@ func Validate(ctx iris.Context) {
 	redfishClient, err := caputilities.GetRedfishClient()
 	if err != nil {
 		log.Error(err.Error())
-		capresponse.SetErrorResponse(ctx, err.Error(), http.StatusInternalServerError)
+		capresponse.SetErrorResponse(ctx, http.StatusInternalServerError, response.InternalError, err.Error(), nil)
 		return
 	}
 
@@ -89,21 +91,21 @@ func Validate(ctx iris.Context) {
 	err = redfishClient.GetRootService(device)
 	if err != nil {
 		log.Error(err.Error())
-		capresponse.SetErrorResponse(ctx, err.Error(), http.StatusBadRequest)
+		capresponse.SetErrorResponse(ctx, http.StatusInternalServerError, response.InternalError, err.Error(), nil)
 		return
 	}
 	//Doing Get on device using basic Authentication
 	resp, err := redfishClient.BasicAuthWithDevice(device, device.RootNode.Systems.Oid)
 	if err != nil {
 		log.Error(err.Error())
-		capresponse.SetErrorResponse(ctx, err.Error(), http.StatusBadRequest)
+		capresponse.SetErrorResponse(ctx, http.StatusUnauthorized, response.ResourceAtURIUnauthorized, err.Error(), []interface{}{device.RootNode.Systems.Oid})
 		return
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Error(err.Error())
-		capresponse.SetErrorResponse(ctx, err.Error(), http.StatusBadRequest)
+		capresponse.SetErrorResponse(ctx, http.StatusInternalServerError, response.InternalError, err.Error(), nil)
 		return
 	}
 

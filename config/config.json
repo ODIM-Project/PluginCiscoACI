@@ -1,16 +1,16 @@
 {
 	"RootServiceUUID": "",
 	"PluginConf": {
-		"ID": "GRF",
+		"ID": "ACI",
 		"Host": "",
-		"Port": "45001",
+		"Port": "45020",
 		"UserName": "admin",
-		"Password": "UUFCYFpBoHh6UdvytPzm65SkHj5zyl73EYVNJNbrFeAPWYrkpTijGB9zrVQSbbLv052HK7-7chqDQQcjgWf7YA=="
+		"Password": "sTfTyTZFvNj5zU5Tt0TfyDYU-ye3_ZqTMnMIj-LAeXaa8vCnBqq8Ga7zV6ZdfqQCdSAzmaO5AJxccD99UHLVlQ=="
 	},
 	"EventConf": {
 		"DestinationURI": "/redfishEventListener",
 		"ListenerHost": "",
-		"ListenerPort": "45002"
+		"ListenerPort": "45021"
 	},
 	"KeyCertConf": {
 		"RootCACertificatePath": "",

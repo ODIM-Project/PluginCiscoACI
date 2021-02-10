@@ -1,0 +1,17 @@
+FROM golang:1.13.8
+
+WORKDIR /aci-plugin/
+
+COPY go.mod  /aci-plugin/
+COPY go.sum  /aci-plugin/
+COPY caphandler  /aci-plugin/caphandler
+COPY capmessagebus  /aci-plugin/capmessagebus
+COPY capmiddleware  /aci-plugin/capmiddleware
+COPY capmodel  /aci-plugin/capmodel
+COPY capresponse  /aci-plugin/capresponse
+COPY caputilities  /aci-plugin/caputilities
+COPY main.go /aci-plugin/
+COPY config /aci-plugin/config
+COPY build.sh /aci-plugin/
+
+RUN ./build.sh
