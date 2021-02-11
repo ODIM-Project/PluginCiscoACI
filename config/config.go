@@ -98,7 +98,6 @@ type TLSConf struct {
 //APICConf is for holding all the cisco APIC related configurations
 type APICConf struct {
 	APICHost string `json:"APICHost"`
-	APICPort string `json:"APICPort"`
 	UserName string `json:"UserName"`
 	Password string `json:"Password"`
 }
@@ -309,9 +308,6 @@ func checkTLSConf() error {
 func checkAPICConf() error {
 	if Data.APICConf.APICHost == "" {
 		return fmt.Errorf("no value set for APIC Host ")
-	}
-	if Data.APICConf.APICPort == "" {
-		return fmt.Errorf("no value set for APIC Port")
 	}
 	if Data.APICConf.UserName == "" {
 		return fmt.Errorf("no value set for APIC Username")

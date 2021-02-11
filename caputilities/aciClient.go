@@ -24,7 +24,7 @@ import (
 
 // GetFabricNodeData collects the all switch and fabric  deatails from the aci
 func GetFabricNodeData() ([]*models.FabricNodeMember, error) {
-	aciClient := client.NewClient(config.Data.APICConf.APICHost+":"+config.Data.APICConf.APICPort, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
+	aciClient := client.NewClient(config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	log.Info("token: ")
 	log.Info(aciClient.AuthToken)
 	serviceManager := client.NewServiceManager("", aciClient)

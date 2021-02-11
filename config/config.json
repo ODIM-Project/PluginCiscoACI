@@ -51,7 +51,6 @@
 	},
 	"APICConf":{
 		"APICHost":"",
-		"APICPort":"",
 		"UserName": "",
 		"Password": ""
 	}
