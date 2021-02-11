@@ -14,16 +14,21 @@
 package main
 
 import (
+	"encoding/json"
 	dc "github.com/ODIM-Project/ODIM/lib-messagebus/datacommunicator"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
 	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
+	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/caphandler"
 	"github.com/ODIM-Project/PluginCiscoACI/capmessagebus"
 	"github.com/ODIM-Project/PluginCiscoACI/capmiddleware"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
+	"github.com/ODIM-Project/PluginCiscoACI/constants"
+	"github.com/ciscoecosystem/aci-go-client/models"
 	iris "github.com/kataras/iris/v12"
+	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -60,7 +65,7 @@ func main() {
 	// RunReadWorkers will create a worker pool for doing a specific task
 	// which is passed to it as Publish method after reading the data from the channel.
 	go common.RunReadWorkers(caphandler.Out, capmessagebus.Publish, 1)
-
+	intializeACIData()
 	intializePluginStatus()
 	app()
 }
@@ -158,4 +163,60 @@ func eventsrouters() {
 func intializePluginStatus() {
 	caputilities.Status.Available = "yes"
 	caputilities.Status.Uptime = time.Now().Format(time.RFC3339)
+}
+
+// intializeACIData reads required fabric,switch and port data from aci and stored it in the data store
+func intializeACIData() {
+	capdata.FabricDataStore.Data = make(map[string][]string)
+	capdata.SwitchDataStore.Data = make(map[string]*models.FabricNodeMember, 0)
+	aciNodesData, err := caputilities.GetFabricNodeData()
+	if err != nil {
+		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
+	}
+	for i := 0; i < len(aciNodesData); i++ {
+		capdata.FabricDataStore.Lock.Lock()
+		fabricID := config.Data.RootServiceUUID + ":" + aciNodesData[i].FabricId
+		if data, ok := capdata.FabricDataStore.Data[fabricID]; ok {
+			capdata.FabricDataStore.Data[fabricID] = append(data, aciNodesData[i].NodeId)
+		} else {
+			capdata.FabricDataStore.Data[fabricID] = []string{aciNodesData[i].NodeId}
+		}
+		capdata.FabricDataStore.Lock.Unlock()
+		capdata.SwitchDataStore.Lock.Lock()
+		capdata.SwitchDataStore.Data[aciNodesData[i].NodeId] = aciNodesData[i]
+		capdata.SwitchDataStore.Lock.Unlock()
+	}
+
+	// TODO:
+	// adding logic to collect the port data
+	// registering the for the aci events
+
+	// Send resource added event odim
+	capdata.FabricDataStore.Lock.RLock()
+	for fabricID := range capdata.FabricDataStore.Data {
+		var event = common.Event{
+			EventID:   uuid.NewV4().String(),
+			MessageID: constants.ResourceCreatedMessageID,
+			EventType: "ResourceAdded",
+			OriginOfCondition: &common.Link{
+				Oid: "/ODIM/v1/Fabrics/" + fabricID,
+			},
+		}
+		var events = []common.Event{event}
+		var messageData = common.MessageData{
+			Name:      "Resource Event",
+			Context:   "/redfish/v1/$metadata#Event.Event",
+			OdataType: constants.EventODataType,
+			Events:    events,
+		}
+		data, _ := json.Marshal(messageData)
+		eventData := common.Events{
+			IP:      config.Data.LoadBalancerConf.Host,
+			Request: data,
+		}
+		capmessagebus.Publish(eventData)
+	}
+	capdata.FabricDataStore.Lock.RUnlock()
+
+	return
 }
