@@ -16,16 +16,86 @@
 package caphandler
 
 import (
-	"net/http"
-
+	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
+	pluginConfig "github.com/ODIM-Project/PluginCiscoACI/config"
 	iris "github.com/kataras/iris/v12"
+	log "github.com/sirupsen/logrus"
+	"net/http"
 )
 
-//GetManagersInfo Fetches details of the given resource from the device
+//GetManagersCollection Fetches details of the manager collection
+func GetManagersCollection(ctx iris.Context) {
+	//Get token from Request
+	token := ctx.GetHeader("X-Auth-Token")
+	uri := ctx.Request().RequestURI
+	//Validating the token
+	if token != "" {
+		flag := TokenValidation(token)
+		if !flag {
+			log.Println("Invalid/Expired X-Auth-Token")
+			ctx.StatusCode(http.StatusUnauthorized)
+			ctx.WriteString("Invalid/Expired X-Auth-Token")
+			return
+		}
+	}
+
+	var members = []*model.Link{
+		&model.Link{
+			Oid: "/ODIM/v1/Managers/" + pluginConfig.Data.RootServiceUUID,
+		},
+	}
+
+	managers := model.Collection{
+		ODataContext: "/ODIM/v1/$metadata#ManagerCollection.ManagerCollection",
+		ODataID:      uri,
+		ODataType:    "#ManagerCollection.ManagerCollection",
+		Description:  "Managers view",
+		Name:         "Managers",
+		Members:      members,
+		MembersCount: len(members),
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(managers)
+	return
+
+}
+
+//GetManagersInfo Fetches details of the given manager info
 func GetManagersInfo(ctx iris.Context) {
-	// TODO: implementation pending
-	ctx.StatusCode(http.StatusNotImplemented)
+	//Get token from Request
+	token := ctx.GetHeader("X-Auth-Token")
+	uri := ctx.Request().RequestURI
+
+	//Validating the token
+	if token != "" {
+		flag := TokenValidation(token)
+		if !flag {
+			log.Println("Invalid/Expired X-Auth-Token")
+			ctx.StatusCode(http.StatusUnauthorized)
+			ctx.WriteString("Invalid/Expired X-Auth-Token")
+			return
+		}
+	}
+
+	//TODO :Populating the switch data in the ManagerForSwitches
+	managers := model.Manager{
+		ODataContext:    "/ODIM/v1/$metadata#Manager.Manager",
+		ODataID:         uri,
+		ODataType:       "#Manager.v1_10_0.Manager",
+		Name:            pluginConfig.Data.PluginConf.ID,
+		ManagerType:     "Service",
+		ID:              pluginConfig.Data.RootServiceUUID,
+		UUID:            pluginConfig.Data.RootServiceUUID,
+		FirmwareVersion: pluginConfig.Data.FirmwareVersion,
+		Status: &model.Status{
+			State:  "Enabled",
+			Health: "OK",
+		},
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(managers)
+	return
 
 }
 
