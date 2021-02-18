@@ -82,7 +82,7 @@ func GetManagersInfo(ctx iris.Context) {
 	managers := model.Manager{
 		ODataContext:    "/ODIM/v1/$metadata#Manager.Manager",
 		ODataID:         uri,
-		ODataType:       "#Manager.v1_1_11.Manager",
+		ODataType:       "#Manager.v1_10_0.Manager",
 		Name:            pluginConfig.Data.PluginConf.ID,
 		ManagerType:     "Service",
 		ID:              pluginConfig.Data.RootServiceUUID,
