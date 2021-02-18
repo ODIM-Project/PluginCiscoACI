@@ -37,7 +37,7 @@ func TestGetManagerCollection(t *testing.T) {
 	var deviceDetails = capmodel.Device{}
 	//Unit Test for success scenario
 
-	e.GET("/ODIM/v1/Managers").WithJSON(deviceDetails).Expect().Status(http.StatusNotImplemented) // status code to be changed after implementation is completed
+	e.GET("/ODIM/v1/Managers").WithJSON(deviceDetails).Expect().Status(http.StatusOK)
 
 }
 
@@ -50,7 +50,6 @@ func TestGetManager(t *testing.T) {
 	var deviceDetails = capmodel.Device{}
 	e := httptest.New(t, mockApp)
 	//Unit Test for success scenario
-	e.GET("/ODIM/v1/Managers").WithJSON(deviceDetails).Expect().Status(http.StatusNotImplemented)  // status code to be changed after implementation is completed
-
+	e.GET("/ODIM/v1/Managers").WithJSON(deviceDetails).Expect().Status(http.StatusOK)
 
 }
