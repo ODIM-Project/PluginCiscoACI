@@ -120,8 +120,9 @@ func routers() *iris.Application {
 	pluginRoutes.Get("/Fabrics/{id}/AddressPools/{rid}", caphandler.GetFabricResource)
 	pluginRoutes.Delete("/Fabrics/{id}/AddressPools/{rid}", caphandler.GetFabricResource)
 
-	pluginRoutes.Get("/Managers", caphandler.GetManagersInfo)
-
+	managers := pluginRoutes.Party("/Managers")
+	managers.Get("/", caphandler.GetManagersCollection)
+	managers.Get("/{id}", caphandler.GetManagersInfo)
 	taskmon := pluginRoutes.Party("/taskmon")
 	taskmon.Get("/{TaskID}", caphandler.GetTaskMonitor)
 
