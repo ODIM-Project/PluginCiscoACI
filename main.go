@@ -173,22 +173,23 @@ func intializeACIData() {
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
 	}
-	for i := 0; i < len(aciNodesData); i++ {
+	for _, aciNodeData := range aciNodesData {
 		capdata.FabricDataStore.Lock.Lock()
-		fabricID := config.Data.RootServiceUUID + ":" + aciNodesData[i].FabricId
+		fabricID := config.Data.RootServiceUUID + ":" + aciNodeData.FabricId
 		if data, ok := capdata.FabricDataStore.Data[fabricID]; ok {
-			capdata.FabricDataStore.Data[fabricID] = append(data, aciNodesData[i].NodeId)
+			capdata.FabricDataStore.Data[fabricID] = append(data, aciNodeData.NodeId)
 		} else {
-			capdata.FabricDataStore.Data[fabricID] = []string{aciNodesData[i].NodeId}
+			capdata.FabricDataStore.Data[fabricID] = []string{aciNodeData.NodeId}
 		}
 		capdata.FabricDataStore.Lock.Unlock()
+
 		capdata.SwitchDataStore.Lock.Lock()
-		capdata.SwitchDataStore.Data[aciNodesData[i].NodeId] = aciNodesData[i]
+		capdata.SwitchDataStore.Data[aciNodeData.NodeId] = aciNodeData
 		capdata.SwitchDataStore.Lock.Unlock()
 	}
 
 	// TODO:
-	// adding logic to collect the port data
+	// adding logic to collect the ports data
 	// registering the for the aci events
 
 	// Send resource added event odim
@@ -204,7 +205,7 @@ func intializeACIData() {
 		}
 		var events = []common.Event{event}
 		var messageData = common.MessageData{
-			Name:      "Resource Event",
+			Name:      "Fabric added event",
 			Context:   "/redfish/v1/$metadata#Event.Event",
 			OdataType: constants.EventODataType,
 			Events:    events,

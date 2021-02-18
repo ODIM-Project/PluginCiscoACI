@@ -19,14 +19,11 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	"github.com/ciscoecosystem/aci-go-client/client"
 	"github.com/ciscoecosystem/aci-go-client/models"
-	log "github.com/sirupsen/logrus"
 )
 
 // GetFabricNodeData collects the all switch and fabric  deatails from the aci
 func GetFabricNodeData() ([]*models.FabricNodeMember, error) {
-	aciClient := client.NewClient(config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
-	log.Info("token: ")
-	log.Info(aciClient.AuthToken)
+	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	serviceManager := client.NewServiceManager("", aciClient)
 	return serviceManager.ListFabricNodeMember()
 
