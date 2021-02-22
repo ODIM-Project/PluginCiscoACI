@@ -48,7 +48,7 @@ func GetFabricData(ctx iris.Context) {
 		ODataContext: "/ODIM/v1/$metadata#Fabric.Fabric",
 		ODataID:      uri,
 		ODataType:    "#Fabric.v1_2_0.Fabric",
-		Name:         "AFC fabric",
+		Name:         "ACI Fabric",
 		ID:           fabricID,
 		AddressPools: &model.Link{
 			Oid: uri + "/AddressPools",
