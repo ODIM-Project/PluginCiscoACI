@@ -16,11 +16,55 @@
 package caphandler
 
 import (
+	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	iris "github.com/kataras/iris/v12"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
 //GetFabricResource : Fetches details of the given resource from the device
 func GetFabricResource(ctx iris.Context) {
 	ctx.StatusCode(http.StatusNotImplemented)
+}
+
+// GetFabricData fetches the fabric information
+func GetFabricData(ctx iris.Context) {
+	//Get token from Request
+	token := ctx.GetHeader("X-Auth-Token")
+	uri := ctx.Request().RequestURI
+	fabricID := ctx.Params().Get("id")
+	//Validating the token
+	if token != "" {
+		flag := TokenValidation(token)
+		if !flag {
+			log.Println("Invalid/Expired X-Auth-Token")
+			ctx.StatusCode(http.StatusUnauthorized)
+			ctx.WriteString("Invalid/Expired X-Auth-Token")
+			return
+		}
+	}
+
+	var fabricResponse = model.Fabric{
+		ODataContext: "/ODIM/v1/$metadata#Fabric.Fabric",
+		ODataID:      uri,
+		ODataType:    "#Fabric.v1_2_0.Fabric",
+		Name:         "AFC fabric",
+		ID:           fabricID,
+		AddressPools: &model.Link{
+			Oid: uri + "/AddressPools",
+		},
+		Endpoints: &model.Link{
+			Oid: uri + "/Endpoints",
+		},
+		Switches: &model.Link{
+			Oid: uri + "/Switches",
+		},
+		Zones: &model.Link{
+			Oid: uri + "/Zones",
+		},
+		FabricType: "Ethernet",
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(fabricResponse)
+
 }

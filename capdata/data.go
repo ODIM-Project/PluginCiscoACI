@@ -22,8 +22,14 @@ import (
 
 // FabricData ...
 type FabricData struct {
-	Data map[string][]string
+	Data map[string]*Fabric
 	Lock sync.RWMutex
+}
+
+//Fabric ACI data of switch id and pod id
+type Fabric struct {
+	SwitchData []string
+	PodID      string
 }
 
 // FabricDataStore holds the value  aci fabric id and switches

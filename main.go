@@ -110,9 +110,9 @@ func routers() *iris.Application {
 	pluginRoutes.Post("/Startup", capmiddleware.BasicAuth, caphandler.GetPluginStartup)
 
 	pluginRoutes.Get("/Fabrics", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}/Switches", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}/Switches/{rid}", caphandler.GetFabricResource)
+	pluginRoutes.Get("/Fabrics/{id}", caphandler.GetFabricData)
+	pluginRoutes.Get("/Fabrics/{id}/Switches", caphandler.GetSwitchCollection)
+	pluginRoutes.Get("/Fabrics/{id}/Switches/{rid}", caphandler.GetSwitchInfo)
 	pluginRoutes.Get("/Fabrics/{id}/Switches/{rid}/Ports", caphandler.GetFabricResource)
 	pluginRoutes.Get("/Fabrics/{id}/Switches/{id2}/Ports/{rid}", caphandler.GetFabricResource)
 	pluginRoutes.Get("/Fabrics/{id}/Zones", caphandler.GetFabricResource)
@@ -161,30 +161,38 @@ func eventsrouters() {
 
 // intializePluginStatus sets plugin status
 func intializePluginStatus() {
-	caputilities.Status.Available = "yes"
+	caputilities.Status.Available = "no"
 	caputilities.Status.Uptime = time.Now().Format(time.RFC3339)
 }
 
 // intializeACIData reads required fabric,switch and port data from aci and stored it in the data store
 func intializeACIData() {
-	capdata.FabricDataStore.Data = make(map[string][]string)
+	capdata.FabricDataStore.Data = make(map[string]*capdata.Fabric)
 	capdata.SwitchDataStore.Data = make(map[string]*models.FabricNodeMember, 0)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
 	}
 	for _, aciNodeData := range aciNodesData {
+		switchID := uuid.NewV4().String() + ":" + aciNodeData.NodeId
 		capdata.FabricDataStore.Lock.Lock()
 		fabricID := config.Data.RootServiceUUID + ":" + aciNodeData.FabricId
 		if data, ok := capdata.FabricDataStore.Data[fabricID]; ok {
-			capdata.FabricDataStore.Data[fabricID] = append(data, aciNodeData.NodeId)
+			data.SwitchData = append(data.SwitchData, switchID)
+			data.PodID = aciNodeData.PodId
 		} else {
-			capdata.FabricDataStore.Data[fabricID] = []string{aciNodeData.NodeId}
+
+			capdata.FabricDataStore.Data[fabricID] = &capdata.Fabric{
+				SwitchData: []string{
+					switchID,
+				},
+				PodID: aciNodeData.PodId,
+			}
 		}
 		capdata.FabricDataStore.Lock.Unlock()
 
 		capdata.SwitchDataStore.Lock.Lock()
-		capdata.SwitchDataStore.Data[aciNodeData.NodeId] = aciNodeData
+		capdata.SwitchDataStore.Data[switchID] = aciNodeData
 		capdata.SwitchDataStore.Lock.Unlock()
 	}
 
@@ -192,6 +200,8 @@ func intializeACIData() {
 	// adding logic to collect the ports data
 	// registering the for the aci events
 
+	//updating the plugin status
+	caputilities.Status.Available = "yes"
 	// Send resource added event odim
 	capdata.FabricDataStore.Lock.RLock()
 	for fabricID := range capdata.FabricDataStore.Data {
