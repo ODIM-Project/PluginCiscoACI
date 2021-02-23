@@ -19,28 +19,14 @@ import (
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	iris "github.com/kataras/iris/v12"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 )
 
 // GetSwitchCollection fetches the switches which are linked to that fabric
 func GetSwitchCollection(ctx iris.Context) {
-	//Get token from Request
-	token := ctx.GetHeader("X-Auth-Token")
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	//Validating the token
-	if token != "" {
-		flag := TokenValidation(token)
-		if !flag {
-			log.Println("Invalid/Expired X-Auth-Token")
-			ctx.StatusCode(http.StatusUnauthorized)
-			ctx.WriteString("Invalid/Expired X-Auth-Token")
-			return
-		}
-	}
-
 	// get all switches which are store under that fabric
 
 	fabricData := capdata.FabricDataStore.Data[fabricID]
@@ -68,19 +54,7 @@ func GetSwitchCollection(ctx iris.Context) {
 
 // GetSwitchInfo fetches the switch info for given swith id
 func GetSwitchInfo(ctx iris.Context) {
-	//Get token from Request
-	token := ctx.GetHeader("X-Auth-Token")
 	uri := ctx.Request().RequestURI
-	//Validating the token
-	if token != "" {
-		flag := TokenValidation(token)
-		if !flag {
-			log.Println("Invalid/Expired X-Auth-Token")
-			ctx.StatusCode(http.StatusUnauthorized)
-			ctx.WriteString("Invalid/Expired X-Auth-Token")
-			return
-		}
-	}
 	switchID := ctx.Params().Get("rid")
 	// Get the switch data from the memory
 	switchData := capdata.SwitchDataStore.Data[switchID]

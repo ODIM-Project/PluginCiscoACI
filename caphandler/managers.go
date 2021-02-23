@@ -20,26 +20,12 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	pluginConfig "github.com/ODIM-Project/PluginCiscoACI/config"
 	iris "github.com/kataras/iris/v12"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
 //GetManagersCollection Fetches details of the manager collection
 func GetManagersCollection(ctx iris.Context) {
-	//Get token from Request
-	token := ctx.GetHeader("X-Auth-Token")
 	uri := ctx.Request().RequestURI
-	//Validating the token
-	if token != "" {
-		flag := TokenValidation(token)
-		if !flag {
-			log.Println("Invalid/Expired X-Auth-Token")
-			ctx.StatusCode(http.StatusUnauthorized)
-			ctx.WriteString("Invalid/Expired X-Auth-Token")
-			return
-		}
-	}
-
 	var members = []*model.Link{
 		&model.Link{
 			Oid: "/ODIM/v1/Managers/" + pluginConfig.Data.RootServiceUUID,
@@ -63,21 +49,7 @@ func GetManagersCollection(ctx iris.Context) {
 
 //GetManagersInfo Fetches details of the given manager info
 func GetManagersInfo(ctx iris.Context) {
-	//Get token from Request
-	token := ctx.GetHeader("X-Auth-Token")
 	uri := ctx.Request().RequestURI
-
-	//Validating the token
-	if token != "" {
-		flag := TokenValidation(token)
-		if !flag {
-			log.Println("Invalid/Expired X-Auth-Token")
-			ctx.StatusCode(http.StatusUnauthorized)
-			ctx.WriteString("Invalid/Expired X-Auth-Token")
-			return
-		}
-	}
-
 	//TODO :Populating the switch data in the ManagerForSwitches
 	managers := model.Manager{
 		ODataContext:    "/ODIM/v1/$metadata#Manager.Manager",
