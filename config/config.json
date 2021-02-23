@@ -48,5 +48,10 @@
 		"SouthBoundURL": {
 			"ODIM": "redfish"
 		}
+	},
+	"APICConf":{
+		"APICHost":"",
+		"UserName": "",
+		"Password": ""
 	}
 }
