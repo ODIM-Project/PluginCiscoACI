@@ -48,7 +48,8 @@ func GetPortData(podID, switchID string) (*capmodel.PortResponse, error) {
 	if err!=nil{
 		return nil,err
 	}
-	endpoint := fmt.Sprintf("https://%s/api/node/class/topology/%s/%s/l1PhysIf.json", config.Data.APICConf.APICHost, podID, switchID)
+	endpoint := fmt.Sprintf("https://%s/api/node/class/topology/pod-%s/node-%s/l1PhysIf.json", config.Data.APICConf.APICHost, podID, switchID)
+
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -60,9 +61,13 @@ func GetPortData(podID, switchID string) (*capmodel.PortResponse, error) {
 	if newClient.httpClient, err = httpConf.GetHTTPClientObj(); err != nil {
 		return nil, err
 	}
+	fmt.Println("Token ",aciClient.AuthToken.Token)
 	req.Close = true
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("APIC-Cookie", `token="`+aciClient.AuthToken.Token+`"`)
+	req.AddCookie(&http.Cookie{
+			Name:  "APIC-Cookie",
+			Value: aciClient.AuthToken.Token,
+		})
 	req.Close = true
 
 	resp, err := newClient.httpClient.Do(req)
