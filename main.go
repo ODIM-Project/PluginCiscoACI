@@ -169,6 +169,7 @@ func intializePluginStatus() {
 func intializeACIData() {
 	capdata.FabricDataStore.Data = make(map[string]*capdata.Fabric)
 	capdata.SwitchDataStore.Data = make(map[string]*models.FabricNodeMember, 0)
+	capdata.SwitchToPortDataStore = make(map[string][]string)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
@@ -194,10 +195,16 @@ func intializeACIData() {
 		capdata.SwitchDataStore.Lock.Lock()
 		capdata.SwitchDataStore.Data[switchID] = aciNodeData
 		capdata.SwitchDataStore.Lock.Unlock()
+		// adding logic to collect the ports data
+		portData, err := caputilities.GetPortData(aciNodeData.PodId, aciNodeData.NodeId)
+		if err != nil {
+			log.Fatal("while intializing ACI Port  Data  PluginCiscoACI got: " + err.Error())
+		}
+		parsePortData(portData, switchID)
+
 	}
 
 	// TODO:
-	// adding logic to collect the ports data
 	// registering the for the aci events
 
 	//updating the plugin status
@@ -230,4 +237,18 @@ func intializeACIData() {
 	capdata.FabricDataStore.Lock.RUnlock()
 
 	return
+}
+
+// parsePortData parses the portData and stores it  in the inmemory
+func parsePortData(portResponseData *capmodel.PortResponse, switchID string) {
+	var portData []string
+	capdata.PortDataStore = make(map[string]interface{})
+	for _, imdata := range portResponseData.IMData {
+		portAttributes := imdata.PhysicalInterface.Attributes
+		id := portAttributes["id"].(string)
+		portID := uuid.NewV4().String() + ":" + id
+		portData = append(portData, portID)
+		capdata.PortDataStore[portID] = portAttributes
+	}
+	capdata.SwitchToPortDataStore[switchID] = portData
 }
