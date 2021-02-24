@@ -44,6 +44,10 @@ func GetFabricNodeData() ([]*models.FabricNodeMember, error) {
 func GetPortData(podID, switchID string) (*capmodel.PortResponse, error) {
 	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	// Get the port data for given switch using the uri /api/node/class/topology/{pod_id}/{switchID}/l1PhysIf.json
+	err:= aciClient.Authenticate()
+	if err!=nil{
+		return nil,err
+	}
 	endpoint := fmt.Sprintf("https://%s/api/node/class/topology/%s/%s/l1PhysIf.json", config.Data.APICConf.APICHost, podID, switchID)
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
