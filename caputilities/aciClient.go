@@ -44,9 +44,9 @@ func GetFabricNodeData() ([]*models.FabricNodeMember, error) {
 func GetPortData(podID, switchID string) (*capmodel.PortResponse, error) {
 	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	// Get the port data for given switch using the uri /api/node/class/topology/{pod_id}/{switchID}/l1PhysIf.json
-	err:= aciClient.Authenticate()
-	if err!=nil{
-		return nil,err
+	err := aciClient.Authenticate()
+	if err != nil {
+		return nil, err
 	}
 	endpoint := fmt.Sprintf("https://%s/api/node/class/topology/pod-%s/node-%s/l1PhysIf.json", config.Data.APICConf.APICHost, podID, switchID)
 
@@ -61,13 +61,12 @@ func GetPortData(podID, switchID string) (*capmodel.PortResponse, error) {
 	if newClient.httpClient, err = httpConf.GetHTTPClientObj(); err != nil {
 		return nil, err
 	}
-	fmt.Println("Token ",aciClient.AuthToken.Token)
 	req.Close = true
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(&http.Cookie{
-			Name:  "APIC-Cookie",
-			Value: aciClient.AuthToken.Token,
-		})
+		Name:  "APIC-Cookie",
+		Value: aciClient.AuthToken.Token,
+	})
 	req.Close = true
 
 	resp, err := newClient.httpClient.Do(req)

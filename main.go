@@ -108,22 +108,22 @@ func routers() *iris.Application {
 	pluginRoutes.Delete("/Subscriptions", capmiddleware.BasicAuth, caphandler.DeleteEventSubscription)
 	pluginRoutes.Get("/Status", capmiddleware.BasicAuth, caphandler.GetPluginStatus)
 	pluginRoutes.Post("/Startup", capmiddleware.BasicAuth, caphandler.GetPluginStartup)
-
-	pluginRoutes.Get("/Fabrics", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}", caphandler.GetFabricData)
-	pluginRoutes.Get("/Fabrics/{id}/Switches", caphandler.GetSwitchCollection)
-	pluginRoutes.Get("/Fabrics/{id}/Switches/{rid}", caphandler.GetSwitchInfo)
-	pluginRoutes.Get("/Fabrics/{id}/Switches/{rid}/Ports", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}/Switches/{id2}/Ports/{rid}", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}/Zones", caphandler.GetFabricResource)
-	pluginRoutes.Post("/Fabrics/{id}/Zones", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}/Zones/{rid}", caphandler.GetFabricResource)
-	pluginRoutes.Delete("/Fabrics/{id}/Zones/{rid}", caphandler.GetFabricResource)
-	pluginRoutes.Patch("/Fabrics/{id}/Zones/{rid}", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}/AddressPools", caphandler.GetFabricResource)
-	pluginRoutes.Post("/Fabrics/{id}/AddressPools", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}/AddressPools/{rid}", caphandler.GetFabricResource)
-	pluginRoutes.Delete("/Fabrics/{id}/AddressPools/{rid}", caphandler.GetFabricResource)
+	fabricRoutes := pluginRoutes.Party("/Fabrics", capmiddleware.BasicAuth)
+	fabricRoutes.Get("/", caphandler.GetFabricResource)
+	fabricRoutes.Get("/{id}", caphandler.GetFabricData)
+	fabricRoutes.Get("/{id}/Switches", caphandler.GetSwitchCollection)
+	fabricRoutes.Get("/{id}/Switches/{rid}", caphandler.GetSwitchInfo)
+	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports", caphandler.GetPortCollection)
+	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports/{portID}", caphandler.GetFabricResource)
+	fabricRoutes.Get("/{id}/Zones", caphandler.GetFabricResource)
+	fabricRoutes.Post("/{id}/Zones", caphandler.GetFabricResource)
+	fabricRoutes.Get("/{id}/Zones/{rid}", caphandler.GetFabricResource)
+	fabricRoutes.Delete("/{id}/Zones/{rid}", caphandler.GetFabricResource)
+	fabricRoutes.Patch("/{id}/Zones/{rid}", caphandler.GetFabricResource)
+	fabricRoutes.Get("/{id}/AddressPools", caphandler.GetFabricResource)
+	fabricRoutes.Post("/{id}/AddressPools", caphandler.GetFabricResource)
+	fabricRoutes.Get("/{id}/AddressPools/{rid}", caphandler.GetFabricResource)
+	fabricRoutes.Delete("/{id}/AddressPools/{rid}", caphandler.GetFabricResource)
 
 	managers := pluginRoutes.Party("/Managers")
 	managers.Get("/", caphandler.GetManagersCollection)
@@ -217,7 +217,7 @@ func intializeACIData() {
 			MessageID: constants.ResourceCreatedMessageID,
 			EventType: "ResourceAdded",
 			OriginOfCondition: &common.Link{
-				Oid: "/ODIM/v1/Fabrics/" + fabricID,
+				Oid: "/ODIM/v1/" + fabricID,
 			},
 		}
 		var events = []common.Event{event}
