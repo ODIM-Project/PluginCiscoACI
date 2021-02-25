@@ -50,3 +50,19 @@ func GetPortCollection(ctx iris.Context) {
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(portCollectionResponse)
 }
+
+// GetPortInfo fetches the port info for given port id
+func GetPortInfo(ctx iris.Context) {
+	uri := ctx.Request().RequestURI
+	portID := ctx.Params().Get("portID")
+	portData := capdata.PortDataStore[portID].(map[string]interface{})
+	portResponse := model.Port{
+		ODataContext: "/ODIM/v1/$metadata#Port.Port",
+		ODataID:      uri,
+		ODataType:    "#Port.v1_3_0.Port",
+		ID:           portID,
+		PortID:       portData["id"].(string),
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(portResponse)
+}

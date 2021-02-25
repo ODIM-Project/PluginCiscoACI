@@ -32,6 +32,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -114,7 +115,7 @@ func routers() *iris.Application {
 	fabricRoutes.Get("/{id}/Switches", caphandler.GetSwitchCollection)
 	fabricRoutes.Get("/{id}/Switches/{rid}", caphandler.GetSwitchInfo)
 	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports", caphandler.GetPortCollection)
-	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports/{portID}", caphandler.GetFabricResource)
+	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports/{portID}", caphandler.GetPortInfo)
 	fabricRoutes.Get("/{id}/Zones", caphandler.GetFabricResource)
 	fabricRoutes.Post("/{id}/Zones", caphandler.GetFabricResource)
 	fabricRoutes.Get("/{id}/Zones/{rid}", caphandler.GetFabricResource)
@@ -246,6 +247,7 @@ func parsePortData(portResponseData *capmodel.PortResponse, switchID string) {
 	for _, imdata := range portResponseData.IMData {
 		portAttributes := imdata.PhysicalInterface.Attributes
 		id := portAttributes["id"].(string)
+		id = strings.Replace(id, "/", "-", -1)
 		portID := uuid.NewV4().String() + ":" + id
 		portData = append(portData, portID)
 		capdata.PortDataStore[portID] = portAttributes
