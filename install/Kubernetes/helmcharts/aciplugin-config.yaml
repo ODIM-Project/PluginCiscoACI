@@ -1,8 +1,8 @@
 odimra:
   namespace: odim 
-  groupID: 
+  groupID:
+  haDeploymentEnabled:
 aciplugin:
-  hostname: 
   eventListenerNodePort: 30086
   aciPluginRootServiceUUID: 
   username: admin 

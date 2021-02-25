@@ -29,7 +29,7 @@ ADD capresponse  /aciplugin/capresponse
 ADD caputilities  /aciplugin/caputilities
 ADD main.go /aciplugin/
 ADD config /aciplugin/config
-RUN go build -i -race .
+RUN go build -i .
 COPY install/Docker/dockerfiles/scripts/add-hosts .
 RUN go build -o add-hosts add-hosts.go
 

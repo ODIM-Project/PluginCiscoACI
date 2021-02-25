@@ -10,9 +10,7 @@ spec:
     - port: 45020
   selector:
     app: aciplugin
-
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -26,6 +24,8 @@ spec:
   - port: 45021
     nodePort: {{ .Values.aciplugin.eventListenerNodePort }}
     protocol: TCP
+  {{ if eq .Values.odimra.haDeploymentEnabled false }}
   externalTrafficPolicy: Local
+  {{ end }}
   selector:
     app: aciplugin

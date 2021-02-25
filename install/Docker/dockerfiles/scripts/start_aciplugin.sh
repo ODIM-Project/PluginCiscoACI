@@ -46,6 +46,8 @@ start_aciplugin()
 	sleep 3
 
 	nohup /bin/add-hosts -file /tmp/host.append >> /var/log/aciplugin_logs/add-hosts.log 2>&1 &
+
+	echo "[$(date)] -- INFO  -- Check /var/log/aciplugin_logs for application logs"
 }
 
 monitor_process()
@@ -53,7 +55,7 @@ monitor_process()
 	while true; do
 		pid=$(pgrep -fc PluginCiscoACI 2> /dev/null)
 		if [[ $? -ne 0 ]] || [[ $pid -gt 1 ]]; then
-			echo "aciplugin has exited" >> /var/log/aciplugin_logs/aciplugin.log 2>&1 &
+			echo "[$(date)] -- ERROR -- aciplugin not found running, exiting" >> /var/log/aciplugin_logs/aciplugin.log 2>&1 &
 			kill -15 ${OWN_PID}
 			exit 1
 		fi
@@ -64,6 +66,8 @@ monitor_process()
 ##############################################
 ###############  MAIN  #######################
 ##############################################
+
+check_pre_reqs
 
 start_aciplugin
 
