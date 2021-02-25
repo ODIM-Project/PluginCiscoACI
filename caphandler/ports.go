@@ -61,6 +61,7 @@ func GetPortInfo(ctx iris.Context) {
 		ODataID:      uri,
 		ODataType:    "#Port.v1_3_0.Port",
 		ID:           portID,
+		Name:         "Port-" + portData["id"].(string),
 		PortID:       portData["id"].(string),
 	}
 	ctx.StatusCode(http.StatusOK)

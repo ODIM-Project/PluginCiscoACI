@@ -171,6 +171,7 @@ func intializeACIData() {
 	capdata.FabricDataStore.Data = make(map[string]*capdata.Fabric)
 	capdata.SwitchDataStore.Data = make(map[string]*models.FabricNodeMember, 0)
 	capdata.SwitchToPortDataStore = make(map[string][]string)
+	capdata.PortDataStore = make(map[string]interface{})
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
@@ -218,7 +219,7 @@ func intializeACIData() {
 			MessageID: constants.ResourceCreatedMessageID,
 			EventType: "ResourceAdded",
 			OriginOfCondition: &common.Link{
-				Oid: "/ODIM/v1/" + fabricID,
+				Oid: "/ODIM/v1/Fabrics/" + fabricID,
 			},
 		}
 		var events = []common.Event{event}
@@ -243,7 +244,6 @@ func intializeACIData() {
 // parsePortData parses the portData and stores it  in the inmemory
 func parsePortData(portResponseData *capmodel.PortResponse, switchID string) {
 	var portData []string
-	capdata.PortDataStore = make(map[string]interface{})
 	for _, imdata := range portResponseData.IMData {
 		portAttributes := imdata.PhysicalInterface.Attributes
 		id := portAttributes["id"].(string)
