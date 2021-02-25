@@ -16,6 +16,7 @@
 package caphandler
 
 import (
+	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	iris "github.com/kataras/iris/v12"
 	"net/http"
 )
@@ -23,4 +24,34 @@ import (
 //GetFabricResource : Fetches details of the given resource from the device
 func GetFabricResource(ctx iris.Context) {
 	ctx.StatusCode(http.StatusNotImplemented)
+}
+
+// GetFabricData fetches the fabric information
+func GetFabricData(ctx iris.Context) {
+	uri := ctx.Request().RequestURI
+	fabricID := ctx.Params().Get("id")
+
+	var fabricResponse = model.Fabric{
+		ODataContext: "/ODIM/v1/$metadata#Fabric.Fabric",
+		ODataID:      uri,
+		ODataType:    "#Fabric.v1_2_0.Fabric",
+		Name:         "ACI Fabric",
+		ID:           fabricID,
+		AddressPools: &model.Link{
+			Oid: uri + "/AddressPools",
+		},
+		Endpoints: &model.Link{
+			Oid: uri + "/Endpoints",
+		},
+		Switches: &model.Link{
+			Oid: uri + "/Switches",
+		},
+		Zones: &model.Link{
+			Oid: uri + "/Zones",
+		},
+		FabricType: "Ethernet",
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(fabricResponse)
+
 }

@@ -39,6 +39,7 @@ type configModel struct {
 	KeyCertConf             *KeyCertConf      `json:"KeyCertConf"`
 	URLTranslation          *URLTranslation   `json:"URLTranslation"`
 	TLSConf                 *TLSConf          `json:"TLSConf"`
+	APICConf                *APICConf         `json:"APICConf"`
 }
 
 //PluginConf is for holding all the plugin related configurations
@@ -94,6 +95,13 @@ type TLSConf struct {
 	PreferredCipherSuites []string `json:"PreferredCipherSuites"`
 }
 
+//APICConf is for holding all the cisco APIC related configurations
+type APICConf struct {
+	APICHost string `json:"APICHost"`
+	UserName string `json:"UserName"`
+	Password string `json:"Password"`
+}
+
 // SetConfiguration will extract the config data from file
 func SetConfiguration() error {
 	configFilePath := os.Getenv("PLUGIN_CONFIG_FILE_PATH")
@@ -145,6 +153,9 @@ func ValidateConfiguration() error {
 	}
 	checkLBConf()
 	checkURLTranslationConf()
+	if err := checkAPICConf(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -290,6 +301,19 @@ func checkTLSConf() error {
 	}
 	if err = lutilconf.SetPreferredCipherSuites(Data.TLSConf.PreferredCipherSuites); err != nil {
 		return err
+	}
+	return nil
+}
+
+func checkAPICConf() error {
+	if Data.APICConf.APICHost == "" {
+		return fmt.Errorf("no value set for APIC Host ")
+	}
+	if Data.APICConf.UserName == "" {
+		return fmt.Errorf("no value set for APIC Username")
+	}
+	if Data.APICConf.Password == "" {
+		return fmt.Errorf("no value set for APIC Password")
 	}
 	return nil
 }
