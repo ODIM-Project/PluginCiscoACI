@@ -16,15 +16,75 @@
 package caputilities
 
 import (
+	"encoding/json"
+	"fmt"
+	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
+	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	"github.com/ciscoecosystem/aci-go-client/client"
 	"github.com/ciscoecosystem/aci-go-client/models"
+	"io/ioutil"
+	"net/http"
 )
+
+//ACIHTTPClient struct definition of HTTP wraper clinet used to communicate with ACI
+type ACIHTTPClient struct {
+	httpClient *http.Client
+}
 
 // GetFabricNodeData collects the all switch and fabric  deatails from the aci
 func GetFabricNodeData() ([]*models.FabricNodeMember, error) {
 	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	serviceManager := client.NewServiceManager("", aciClient)
 	return serviceManager.ListFabricNodeMember()
+
+}
+
+//GetPortData collects the all port data for the given switch
+func GetPortData(podID, switchID string) (*capmodel.PortResponse, error) {
+	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
+	// Get the port data for given switch using the uri /api/node/class/topology/{pod_id}/{switchID}/l1PhysIf.json
+	err := aciClient.Authenticate()
+	if err != nil {
+		return nil, err
+	}
+	endpoint := fmt.Sprintf("https://%s/api/node/class/topology/pod-%s/node-%s/l1PhysIf.json", config.Data.APICConf.APICHost, podID, switchID)
+
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	newClient := ACIHTTPClient{}
+	httpConf := &lutilconf.HTTPConfig{
+		CACertificate: &config.Data.KeyCertConf.RootCACertificate,
+	}
+	if newClient.httpClient, err = httpConf.GetHTTPClientObj(); err != nil {
+		return nil, err
+	}
+	req.Close = true
+	req.Header.Set("Accept", "application/json")
+	req.AddCookie(&http.Cookie{
+		Name:  "APIC-Cookie",
+		Value: aciClient.AuthToken.Token,
+	})
+	req.Close = true
+
+	resp, err := newClient.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode >= 300 {
+		errMsg := fmt.Sprintf("Get on the URL %s is giving response with status code %d with response body %s", endpoint, resp.StatusCode, string(body))
+		return nil, fmt.Errorf(errMsg)
+	}
+
+	var portResponseData capmodel.PortResponse
+	json.Unmarshal(body, &portResponseData)
+	return &portResponseData, nil
 
 }

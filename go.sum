@@ -57,6 +57,8 @@ github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210218054304-a257c0713966 h1:EXms
 github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210218054304-a257c0713966/go.mod h1:T84xlNs4ie0z0qkaLON714rzHuOFs3jLpLtNw0CJrGw=
 github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210218123052-d26d3da86472 h1:UJWZq4G5ooKICreInMjtbblVCCeO5hzOR+F38qj1juo=
 github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210218123052-d26d3da86472/go.mod h1:T84xlNs4ie0z0qkaLON714rzHuOFs3jLpLtNw0CJrGw=
+github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210224103931-d81630eccd59 h1:zjUqnedoklp/tbH0PA10y3cK0p6xuEdb78TituDJ6KI=
+github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210224103931-d81630eccd59/go.mod h1:T84xlNs4ie0z0qkaLON714rzHuOFs3jLpLtNw0CJrGw=
 github.com/ODIM-Project/ODIM/lib-messagebus v0.0.0-20210128033657-6247ee21f91f h1:F3E8i3h8eje/tk/qhsUNm/jnliGk24W1JaXZZWHoiew=
 github.com/ODIM-Project/ODIM/lib-messagebus v0.0.0-20210128033657-6247ee21f91f/go.mod h1:DNa6dM+k+TeJukEjdIoF7A3CW50e4hmGZAkMZ1O2uQg=
 github.com/ODIM-Project/ODIM/lib-persistence-manager v0.0.0-20200727095517-f2a4bd1bdef7/go.mod h1:NyEEh6a2bgEXock1ThrXDLnp2A5syxleqSGmWwucPPA=
@@ -70,6 +72,8 @@ github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20201012075046-3c059402892a/go
 github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20201201072448-9772421f1b55/go.mod h1:LFZuksUM93hhzHwMLH3zs/cno1bfBmyjnNQ6q4yYn3I=
 github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20210128033657-6247ee21f91f h1:ZKeptj4DtBA7IAr4p1UQdjQ97UJDBywWvqSbpDBeDAg=
 github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20210128033657-6247ee21f91f/go.mod h1:cWH5Nan+gMqG6Uhglg6rBg+4GDJQsmQs+F/1NW+5zPM=
+github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20210223083440-a4950a58a7ed h1:KvNaKwWQ4WJvZB1zQJSHPYqT6zCFwNs2zvMeGm3/+KI=
+github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20210223083440-a4950a58a7ed/go.mod h1:cWH5Nan+gMqG6Uhglg6rBg+4GDJQsmQs+F/1NW+5zPM=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/OpenDNS/vegadns2client v0.0.0-20180418235048-a3fa4a771d87/go.mod h1:iGLljf5n9GjT6kc0HBvyI1nOKnGQbNB66VzSNbK5iks=
 github.com/Shopify/goreferrer v0.0.0-20181106222321-ec9c9a553398 h1:WDC6ySpJzbxGWFh4aMxFFC28wwGp5pEuoTtvA4q/qQ4=

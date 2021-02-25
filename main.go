@@ -32,6 +32,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -108,22 +109,22 @@ func routers() *iris.Application {
 	pluginRoutes.Delete("/Subscriptions", capmiddleware.BasicAuth, caphandler.DeleteEventSubscription)
 	pluginRoutes.Get("/Status", capmiddleware.BasicAuth, caphandler.GetPluginStatus)
 	pluginRoutes.Post("/Startup", capmiddleware.BasicAuth, caphandler.GetPluginStartup)
-
-	pluginRoutes.Get("/Fabrics", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}", caphandler.GetFabricData)
-	pluginRoutes.Get("/Fabrics/{id}/Switches", caphandler.GetSwitchCollection)
-	pluginRoutes.Get("/Fabrics/{id}/Switches/{rid}", caphandler.GetSwitchInfo)
-	pluginRoutes.Get("/Fabrics/{id}/Switches/{rid}/Ports", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}/Switches/{id2}/Ports/{rid}", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}/Zones", caphandler.GetFabricResource)
-	pluginRoutes.Post("/Fabrics/{id}/Zones", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}/Zones/{rid}", caphandler.GetFabricResource)
-	pluginRoutes.Delete("/Fabrics/{id}/Zones/{rid}", caphandler.GetFabricResource)
-	pluginRoutes.Patch("/Fabrics/{id}/Zones/{rid}", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}/AddressPools", caphandler.GetFabricResource)
-	pluginRoutes.Post("/Fabrics/{id}/AddressPools", caphandler.GetFabricResource)
-	pluginRoutes.Get("/Fabrics/{id}/AddressPools/{rid}", caphandler.GetFabricResource)
-	pluginRoutes.Delete("/Fabrics/{id}/AddressPools/{rid}", caphandler.GetFabricResource)
+	fabricRoutes := pluginRoutes.Party("/Fabrics", capmiddleware.BasicAuth)
+	fabricRoutes.Get("/", caphandler.GetFabricResource)
+	fabricRoutes.Get("/{id}", caphandler.GetFabricData)
+	fabricRoutes.Get("/{id}/Switches", caphandler.GetSwitchCollection)
+	fabricRoutes.Get("/{id}/Switches/{rid}", caphandler.GetSwitchInfo)
+	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports", caphandler.GetPortCollection)
+	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports/{portID}", caphandler.GetPortInfo)
+	fabricRoutes.Get("/{id}/Zones", caphandler.GetFabricResource)
+	fabricRoutes.Post("/{id}/Zones", caphandler.GetFabricResource)
+	fabricRoutes.Get("/{id}/Zones/{rid}", caphandler.GetFabricResource)
+	fabricRoutes.Delete("/{id}/Zones/{rid}", caphandler.GetFabricResource)
+	fabricRoutes.Patch("/{id}/Zones/{rid}", caphandler.GetFabricResource)
+	fabricRoutes.Get("/{id}/AddressPools", caphandler.GetFabricResource)
+	fabricRoutes.Post("/{id}/AddressPools", caphandler.GetFabricResource)
+	fabricRoutes.Get("/{id}/AddressPools/{rid}", caphandler.GetFabricResource)
+	fabricRoutes.Delete("/{id}/AddressPools/{rid}", caphandler.GetFabricResource)
 
 	managers := pluginRoutes.Party("/Managers")
 	managers.Get("/", caphandler.GetManagersCollection)
@@ -169,6 +170,8 @@ func intializePluginStatus() {
 func intializeACIData() {
 	capdata.FabricDataStore.Data = make(map[string]*capdata.Fabric)
 	capdata.SwitchDataStore.Data = make(map[string]*models.FabricNodeMember, 0)
+	capdata.SwitchToPortDataStore = make(map[string][]string)
+	capdata.PortDataStore = make(map[string]interface{})
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
@@ -194,10 +197,16 @@ func intializeACIData() {
 		capdata.SwitchDataStore.Lock.Lock()
 		capdata.SwitchDataStore.Data[switchID] = aciNodeData
 		capdata.SwitchDataStore.Lock.Unlock()
+		// adding logic to collect the ports data
+		portData, err := caputilities.GetPortData(aciNodeData.PodId, aciNodeData.NodeId)
+		if err != nil {
+			log.Fatal("while intializing ACI Port  Data  PluginCiscoACI got: " + err.Error())
+		}
+		parsePortData(portData, switchID)
+
 	}
 
 	// TODO:
-	// adding logic to collect the ports data
 	// registering the for the aci events
 
 	//updating the plugin status
@@ -230,4 +239,18 @@ func intializeACIData() {
 	capdata.FabricDataStore.Lock.RUnlock()
 
 	return
+}
+
+// parsePortData parses the portData and stores it  in the inmemory
+func parsePortData(portResponseData *capmodel.PortResponse, switchID string) {
+	var portData []string
+	for _, imdata := range portResponseData.IMData {
+		portAttributes := imdata.PhysicalInterface.Attributes
+		id := portAttributes["id"].(string)
+		id = strings.Replace(id, "/", "-", -1)
+		portID := uuid.NewV4().String() + ":" + id
+		portData = append(portData, portID)
+		capdata.PortDataStore[portID] = portAttributes
+	}
+	capdata.SwitchToPortDataStore[switchID] = portData
 }

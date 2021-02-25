@@ -43,3 +43,9 @@ type SwitchData struct {
 
 // SwitchDataStore holds the value  aci switch id and switches info
 var SwitchDataStore SwitchData
+
+// SwitchToPortDataStore hold the value of the ports belonging to respective switches
+var SwitchToPortDataStore map[string][]string
+
+//PortDataStore hold the value of the ports info of the switch
+var PortDataStore map[string]interface{}
