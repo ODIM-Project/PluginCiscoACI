@@ -281,7 +281,7 @@ func getSwitchData(fabricNodeData *models.FabricNodeMember, switchID string) *dm
 		log.Fatal("Unable to get the Switch info:" + err.Error())
 	}
 	switchData.FirmwareVersion = switchRespData.SystemAttributes.Version
-	switchChassisData, err := caputilities.GetSwitchChassisInfo(podID, nodeID)
+	switchChassisData, err := caputilities.GetSwitchChassisInfo(fabricNodeData.PodId, fabricNodeData.NodeId)
 	if err != nil {
 		log.Fatal("Unable to get the Switch Chassis info:" + err.Error())
 	}

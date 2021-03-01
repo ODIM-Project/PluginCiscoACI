@@ -141,20 +141,20 @@ func GetFabricHelath(podID string) (*capmodel.FabricHelath, error) {
 // GetSwitchInfo collects the given switch data from the aci
 func GetSwitchInfo(podID, switchID int) (*models.System, error) {
 	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
-	serviceManager := client.NewServiceManager("", aciClient)
+	serviceManager := client.NewServiceManager(client.DefaultMOURL, aciClient)
 	return serviceManager.ReadSystem(podID, switchID)
 
 }
 
 // GetSwitchChassisInfo collects the given switch chassis data from the aci
-func GetSwitchChassisInfo(podID, switchID int) (*capmodel.SwitchChassis, error) {
+func GetSwitchChassisInfo(podID, switchID string) (*capmodel.SwitchChassis, error) {
 	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json
 	err := aciClient.Authenticate()
 	if err != nil {
 		return nil, err
 	}
-	endpoint := fmt.Sprintf("https://%s/api/node/mo/topology/pod-%d/node-%d/sys/ch.json", config.Data.APICConf.APICHost, podID, switchID)
+	endpoint := fmt.Sprintf("https://%s/api/node/mo/topology/pod-%s/node-%s/sys/ch.json", config.Data.APICConf.APICHost, podID, switchID)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
