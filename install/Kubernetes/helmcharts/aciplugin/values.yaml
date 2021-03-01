@@ -1,8 +1,8 @@
 odimra:
   namespace: 
   groupID: 
+  haDeploymentEnabled:
 aciplugin:
-  hostname: 
   eventListenerNodePort: 
   imageTag: "1.0"
   aciPluginRootServiceUUID: 

@@ -20,23 +20,23 @@ data:
     		"ListenerPort": "45021"
     	},
     	"KeyCertConf": {
-    		"RootCACertificatePath": "/etc/aciplugin_certs/rootCA.crt",
-    		"PrivateKeyPath": "/etc/aciplugin_certs/odimra_server.key",
-    		"CertificatePath": "/etc/aciplugin_certs/odimra_server.crt"
+    		"RootCACertificatePath": "/etc/odimra_certs/rootCA.crt",
+    		"PrivateKeyPath": "/etc/odimra_certs/odimra_server.key",
+    		"CertificatePath": "/etc/odimra_certs/odimra_server.crt"
     	},
     	"TLSConf" : {
     		"MinVersion": "TLS_1.2",
     		"MaxVersion": "TLS_1.2",
     		"VerifyPeer": true,
     		"PreferredCipherSuites": [
-    			"TLS_RSA_WITH_AES_128_GCM_SHA256",
-    			"TLS_RSA_WITH_AES_256_GCM_SHA384",
-    			"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-    			"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-    			"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-    			"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
-    		]
-    	},
+                        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+                        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+                        "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                        "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+                        "TLS_RSA_WITH_AES_128_GCM_SHA256",
+                        "TLS_RSA_WITH_AES_256_GCM_SHA384"
+                ]
+        },
     	"FirmwareVersion": "v1.0.0",
     	"SessionTimeoutInMinutes": 30,
     	"LoadBalancerConf": {
@@ -46,7 +46,7 @@ data:
     	"MessageBusConf": {
     		"MessageQueueConfigFilePath": "/etc/aciplugin_config/platformconfig.toml",
     		"MessageBusType": "Kafka",
-    		"MessageBusQueue": ["REDFISH-EVENTS-TOPIC"]
+    		"MessageBusQueue": ["ACI-EVENTS-TOPIC"]
     	},
     	"URLTranslation": {
     		"NorthBoundURL": {

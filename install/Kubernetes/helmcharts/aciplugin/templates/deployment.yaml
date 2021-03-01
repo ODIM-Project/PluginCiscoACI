@@ -75,13 +75,4 @@ spec:
             - name: aciplugin-log
               mountPath: /var/log/aciplugin_logs
             - name: odimra-secret
-              mountPath: /etc/aciplugin_certs
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                - {{ .Values.aciplugin.hostname }}
+              mountPath: /etc/odimra_certs
