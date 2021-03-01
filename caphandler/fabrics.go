@@ -17,8 +17,12 @@ package caphandler
 
 import (
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
+	"github.com/ODIM-Project/PluginCiscoACI/capdata"
+	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	iris "github.com/kataras/iris/v12"
+	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strconv"
 )
 
 //GetFabricResource : Fetches details of the given resource from the device
@@ -30,7 +34,7 @@ func GetFabricResource(ctx iris.Context) {
 func GetFabricData(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-
+	fabricData := capdata.FabricDataStore.Data[fabricID]
 	var fabricResponse = model.Fabric{
 		ODataContext: "/ODIM/v1/$metadata#Fabric.Fabric",
 		ODataID:      uri,
@@ -50,8 +54,30 @@ func GetFabricData(ctx iris.Context) {
 			Oid: uri + "/Zones",
 		},
 		FabricType: "Ethernet",
+		MaxZones:   800,
+		Status: &model.Status{
+			State:  "Enabled",
+			Health: getFabricHelathData(fabricData.PodID),
+		},
 	}
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(fabricResponse)
 
+}
+
+func getFabricHelathData(podID string) string {
+	fabricHelathResposne, err := caputilities.GetFabricHelath(podID)
+	data := fabricHelathResposne.IMData[0].FabricHelathData.Attributes
+	currentHealthValue := data["cur"].(string)
+	healthValue, err := strconv.Atoi(currentHealthValue)
+	if err != nil {
+		log.Error("Unable to convert current helath value:" + currentHealthValue + " go the error" + err.Error())
+		return ""
+	}
+	if healthValue > 90 {
+		return "OK"
+	} else if healthValue <= 90 && healthValue < 30 {
+		return "Warning"
+	}
+	return "Critical"
 }

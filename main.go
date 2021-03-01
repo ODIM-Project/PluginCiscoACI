@@ -15,6 +15,7 @@ package main
 
 import (
 	"encoding/json"
+	dmtfmodel "github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	dc "github.com/ODIM-Project/ODIM/lib-messagebus/datacommunicator"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
 	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
@@ -32,6 +33,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -169,7 +171,7 @@ func intializePluginStatus() {
 // intializeACIData reads required fabric,switch and port data from aci and stored it in the data store
 func intializeACIData() {
 	capdata.FabricDataStore.Data = make(map[string]*capdata.Fabric)
-	capdata.SwitchDataStore.Data = make(map[string]*models.FabricNodeMember, 0)
+	capdata.SwitchDataStore.Data = make(map[string]*dmtfmodel.Switch, 0)
 	capdata.SwitchToPortDataStore = make(map[string][]string)
 	capdata.PortDataStore = make(map[string]interface{})
 	aciNodesData, err := caputilities.GetFabricNodeData()
@@ -193,9 +195,9 @@ func intializeACIData() {
 			}
 		}
 		capdata.FabricDataStore.Lock.Unlock()
-
+		switchData := getSwitchData(aciNodeData, switchID)
 		capdata.SwitchDataStore.Lock.Lock()
-		capdata.SwitchDataStore.Data[switchID] = aciNodeData
+		capdata.SwitchDataStore.Data[switchID] = switchData
 		capdata.SwitchDataStore.Lock.Unlock()
 		// adding logic to collect the ports data
 		portData, err := caputilities.GetPortData(aciNodeData.PodId, aciNodeData.NodeId)
@@ -253,4 +255,37 @@ func parsePortData(portResponseData *capmodel.PortResponse, switchID string) {
 		capdata.PortDataStore[portID] = portAttributes
 	}
 	capdata.SwitchToPortDataStore[switchID] = portData
+}
+
+func getSwitchData(fabricNodeData *models.FabricNodeMember, switchID string) *dmtfmodel.Switch {
+	switchUUIDData := strings.Split(switchID, ":")
+	var switchData = dmtfmodel.Switch{
+		ODataContext: "/ODIM/v1/$metadata#Switch.Switch",
+		ODataType:    "#Switch.v1_4_0.Switch",
+		ID:           switchID,
+		Name:         fabricNodeData.Name,
+		SwitchType:   "Ethernet",
+		UUID:         switchUUIDData[0],
+		SerialNumber: fabricNodeData.Serial,
+	}
+	podID, err := strconv.Atoi(fabricNodeData.PodId)
+	if err != nil {
+		log.Fatal("Converstion of PODID" + fabricNodeData.PodId + " failed")
+	}
+	nodeID, err := strconv.Atoi(fabricNodeData.NodeId)
+	if err != nil {
+		log.Fatal("Converstion of NodeID" + fabricNodeData.PodId + " failed")
+	}
+	switchRespData, err := caputilities.GetSwitchInfo(podID, nodeID)
+	if err != nil {
+		log.Fatal("Unable to get the Switch info:" + err.Error())
+	}
+	switchData.FirmwareVersion = switchRespData.SystemAttributes.Version
+	switchChassisData, err := caputilities.GetSwitchChassisInfo(podID, nodeID)
+	if err != nil {
+		log.Fatal("Unable to get the Switch Chassis info:" + err.Error())
+	}
+	switchData.Manufacturer = switchChassisData.IMData[0].SwitchChassisData.Attributes["vendor"].(string)
+	switchData.Model = switchChassisData.IMData[0].SwitchChassisData.Attributes["model"].(string)
+	return &switchData
 }

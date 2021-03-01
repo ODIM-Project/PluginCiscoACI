@@ -32,7 +32,7 @@ type ACIHTTPClient struct {
 	httpClient *http.Client
 }
 
-// GetFabricNodeData collects the all switch and fabric  deatails from the aci
+// GetFabricNodeData collects the all switch and fabric  details from the aci
 func GetFabricNodeData() ([]*models.FabricNodeMember, error) {
 	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	serviceManager := client.NewServiceManager("", aciClient)
@@ -86,5 +86,159 @@ func GetPortData(podID, switchID string) (*capmodel.PortResponse, error) {
 	var portResponseData capmodel.PortResponse
 	json.Unmarshal(body, &portResponseData)
 	return &portResponseData, nil
+
+}
+
+//GetFabricHelath queries the fabric for it's helath from ACI
+func GetFabricHelath(podID string) (*capmodel.FabricHelath, error) {
+	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
+	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json
+	err := aciClient.Authenticate()
+	if err != nil {
+		return nil, err
+	}
+	endpoint := fmt.Sprintf("https://%s/api/node/class/topology/pod-%s/health.json", config.Data.APICConf.APICHost, podID)
+
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	newClient := ACIHTTPClient{}
+	httpConf := &lutilconf.HTTPConfig{
+		CACertificate: &config.Data.KeyCertConf.RootCACertificate,
+	}
+	if newClient.httpClient, err = httpConf.GetHTTPClientObj(); err != nil {
+		return nil, err
+	}
+	req.Close = true
+	req.Header.Set("Accept", "application/json")
+	req.AddCookie(&http.Cookie{
+		Name:  "APIC-Cookie",
+		Value: aciClient.AuthToken.Token,
+	})
+	req.Close = true
+
+	resp, err := newClient.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode >= 300 {
+		errMsg := fmt.Sprintf("Get on the URL %s is giving response with status code %d with response body %s", endpoint, resp.StatusCode, string(body))
+		return nil, fmt.Errorf(errMsg)
+	}
+
+	var fabricHelathData capmodel.FabricHelath
+	json.Unmarshal(body, &fabricHelathData)
+	return &fabricHelathData, nil
+
+}
+
+// GetSwitchInfo collects the given switch data from the aci
+func GetSwitchInfo(podID, switchID int) (*models.System, error) {
+	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
+	serviceManager := client.NewServiceManager("", aciClient)
+	return serviceManager.ReadSystem(podID, switchID)
+
+}
+
+// GetSwitchChassisInfo collects the given switch chassis data from the aci
+func GetSwitchChassisInfo(podID, switchID int) (*capmodel.SwitchChassis, error) {
+	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
+	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json
+	err := aciClient.Authenticate()
+	if err != nil {
+		return nil, err
+	}
+	endpoint := fmt.Sprintf("https://%s/api/node/mo/topology/pod-%d/node-%d/sys/ch.json", config.Data.APICConf.APICHost, podID, switchID)
+
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	newClient := ACIHTTPClient{}
+	httpConf := &lutilconf.HTTPConfig{
+		CACertificate: &config.Data.KeyCertConf.RootCACertificate,
+	}
+	if newClient.httpClient, err = httpConf.GetHTTPClientObj(); err != nil {
+		return nil, err
+	}
+	req.Close = true
+	req.Header.Set("Accept", "application/json")
+	req.AddCookie(&http.Cookie{
+		Name:  "APIC-Cookie",
+		Value: aciClient.AuthToken.Token,
+	})
+	req.Close = true
+
+	resp, err := newClient.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode >= 300 {
+		errMsg := fmt.Sprintf("Get on the URL %s is giving response with status code %d with response body %s", endpoint, resp.StatusCode, string(body))
+		return nil, fmt.Errorf(errMsg)
+	}
+
+	var switchChassisData capmodel.SwitchChassis
+	json.Unmarshal(body, &switchChassisData)
+	return &switchChassisData, nil
+}
+
+//GetSwitchHelath queries the switch for it's helath from ACI
+func GetSwitchHelath(podID, switchID string) (*capmodel.SwitchHelath, error) {
+	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
+	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json
+	err := aciClient.Authenticate()
+	if err != nil {
+		return nil, err
+	}
+	endpoint := fmt.Sprintf("https://%s/api/node/mo/topology/%s/%s/sys/health.json", config.Data.APICConf.APICHost, podID, switchID)
+
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	newClient := ACIHTTPClient{}
+	httpConf := &lutilconf.HTTPConfig{
+		CACertificate: &config.Data.KeyCertConf.RootCACertificate,
+	}
+	if newClient.httpClient, err = httpConf.GetHTTPClientObj(); err != nil {
+		return nil, err
+	}
+	req.Close = true
+	req.Header.Set("Accept", "application/json")
+	req.AddCookie(&http.Cookie{
+		Name:  "APIC-Cookie",
+		Value: aciClient.AuthToken.Token,
+	})
+	req.Close = true
+
+	resp, err := newClient.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode >= 300 {
+		errMsg := fmt.Sprintf("Get on the URL %s is giving response with status code %d with response body %s", endpoint, resp.StatusCode, string(body))
+		return nil, fmt.Errorf(errMsg)
+	}
+
+	var switchHelathData capmodel.SwitchHelath
+	json.Unmarshal(body, &switchHelathData)
+	return &switchHelathData, nil
 
 }

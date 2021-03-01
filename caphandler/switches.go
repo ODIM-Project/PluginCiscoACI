@@ -18,8 +18,11 @@ package caphandler
 import (
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
+	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	iris "github.com/kataras/iris/v12"
+	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -57,21 +60,35 @@ func GetSwitchInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	switchID := ctx.Params().Get("rid")
 	// Get the switch data from the memory
-	switchData := capdata.SwitchDataStore.Data[switchID]
-	switchUUIDData := strings.Split(switchID, ":")
-	switchResponse := model.Switch{
-		ODataContext: "/ODIM/v1/$metadata#Switch.Switch",
-		ODataID:      uri,
-		ODataType:    "#Switch.v1_4_0.Switch",
-		ID:           switchID,
-		Name:         switchData.Name,
-		SwitchType:   "Ethernet",
-		UUID:         switchUUIDData[0],
-		SerialNumber: switchData.Serial,
-		Ports: &model.Link{
-			Oid: uri + "/Ports",
-		},
+	switchResponse := capdata.SwitchDataStore.Data[switchID]
+	switchResponse.ODataID = uri
+	switchResponse.Ports = &model.Link{
+		Oid: uri + "/Ports",
+	}
+	fabricID := ctx.Params().Get("id")
+	fabricData := capdata.FabricDataStore.Data[fabricID]
+	switchResponse.Status = &model.Status{
+		State:  "Enabled",
+		Health: getSwitchHelathData(fabricData.PodID, switchID),
 	}
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(switchResponse)
+}
+
+func getSwitchHelathData(podID, switchID string) string {
+	switchIDData := strings.Split(switchID, ":")
+	switchHelathResposne, err := caputilities.GetSwitchHelath(podID, switchIDData[1])
+	data := switchHelathResposne.IMData[0].SwitchHelathData.Attributes
+	currentHealthValue := data["cur"].(string)
+	healthValue, err := strconv.Atoi(currentHealthValue)
+	if err != nil {
+		log.Error("Unable to convert current helath value:" + currentHealthValue + " go the error" + err.Error())
+		return ""
+	}
+	if healthValue > 90 {
+		return "OK"
+	} else if healthValue <= 90 && healthValue < 30 {
+		return "Warning"
+	}
+	return "Critical"
 }
