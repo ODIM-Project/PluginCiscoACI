@@ -97,7 +97,7 @@ func GetFabricHelath(podID string) (*capmodel.FabricHelath, error) {
 	if err != nil {
 		return nil, err
 	}
-	endpoint := fmt.Sprintf("https://%s/api/node/class/topology/pod-%s/health.json", config.Data.APICConf.APICHost, podID)
+	endpoint := fmt.Sprintf("https://%s/api/node/mo/topology/pod-%s/health.json", config.Data.APICConf.APICHost, podID)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
@@ -202,7 +202,7 @@ func GetSwitchHelath(podID, switchID string) (*capmodel.SwitchHelath, error) {
 	if err != nil {
 		return nil, err
 	}
-	endpoint := fmt.Sprintf("https://%s/api/node/mo/topology/%s/%s/sys/health.json", config.Data.APICConf.APICHost, podID, switchID)
+	endpoint := fmt.Sprintf("https://%s/api/node/mo/topology/pod-%s/node-%s/sys/health.json", config.Data.APICConf.APICHost, podID, switchID)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {

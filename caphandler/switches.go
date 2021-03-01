@@ -78,6 +78,10 @@ func GetSwitchInfo(ctx iris.Context) {
 func getSwitchHelathData(podID, switchID string) string {
 	switchIDData := strings.Split(switchID, ":")
 	switchHelathResposne, err := caputilities.GetSwitchHelath(podID, switchIDData[1])
+        if err!=nil{
+		log.Error("Unable to get helath of switch "+err.Error())
+	return ""
+	}
 	data := switchHelathResposne.IMData[0].SwitchHelathData.Attributes
 	currentHealthValue := data["cur"].(string)
 	healthValue, err := strconv.Atoi(currentHealthValue)
