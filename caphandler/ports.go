@@ -58,7 +58,7 @@ func GetPortCollection(ctx iris.Context) {
 // GetPortInfo fetches the port info for given port id
 func GetPortInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
-	switchID := ctx.Params().Get("rid")
+	switchID := ctx.Params().Get("switchID")
 	fabricID := ctx.Params().Get("id")
 	fabricData := capdata.FabricDataStore.Data[fabricID]
 	portID := ctx.Params().Get("portID")
@@ -87,9 +87,15 @@ func getPortAddtionalAttributes(fabricID, switchID string, p *model.Port) {
 		p.LinkStatus = "LinkDown"
 
 	}
+	curSpeedData := strings.Split(portInfoData["operSpeed"].(string), "G")
+	data, err := strconv.ParseFloat(curSpeedData[0], 64)
+	if err != nil {
+		log.Error("Unable to get current speed  of port " + err.Error())
+	}
+	p.CurrentSpeedGbps = data
 	portsHelathResposne, err := caputilities.GetPortHealth(fabricID, switchIDData[1], p.PortID)
 	if err != nil {
-		log.Error("Unable to get helath of switch " + err.Error())
+		log.Error("Unable to get helath of port " + err.Error())
 		return
 	}
 
