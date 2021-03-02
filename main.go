@@ -15,6 +15,7 @@ package main
 
 import (
 	"encoding/json"
+	dmtfmodel "github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	dc "github.com/ODIM-Project/ODIM/lib-messagebus/datacommunicator"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
 	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
@@ -32,6 +33,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -169,9 +171,9 @@ func intializePluginStatus() {
 // intializeACIData reads required fabric,switch and port data from aci and stored it in the data store
 func intializeACIData() {
 	capdata.FabricDataStore.Data = make(map[string]*capdata.Fabric)
-	capdata.SwitchDataStore.Data = make(map[string]*models.FabricNodeMember, 0)
+	capdata.SwitchDataStore.Data = make(map[string]*dmtfmodel.Switch, 0)
 	capdata.SwitchToPortDataStore = make(map[string][]string)
-	capdata.PortDataStore = make(map[string]interface{})
+	capdata.PortDataStore = make(map[string]*dmtfmodel.Port)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
@@ -193,9 +195,9 @@ func intializeACIData() {
 			}
 		}
 		capdata.FabricDataStore.Lock.Unlock()
-
+		switchData := getSwitchData(aciNodeData, switchID)
 		capdata.SwitchDataStore.Lock.Lock()
-		capdata.SwitchDataStore.Data[switchID] = aciNodeData
+		capdata.SwitchDataStore.Data[switchID] = switchData
 		capdata.SwitchDataStore.Lock.Unlock()
 		// adding logic to collect the ports data
 		portData, err := caputilities.GetPortData(aciNodeData.PodId, aciNodeData.NodeId)
@@ -242,7 +244,7 @@ func intializeACIData() {
 }
 
 // parsePortData parses the portData and stores it  in the inmemory
-func parsePortData(portResponseData *capmodel.PortResponse, switchID string) {
+func parsePortData(portResponseData *capmodel.PortCollectionResponse, switchID string) {
 	var portData []string
 	for _, imdata := range portResponseData.IMData {
 		portAttributes := imdata.PhysicalInterface.Attributes
@@ -250,7 +252,54 @@ func parsePortData(portResponseData *capmodel.PortResponse, switchID string) {
 		id = strings.Replace(id, "/", "-", -1)
 		portID := uuid.NewV4().String() + ":" + id
 		portData = append(portData, portID)
-		capdata.PortDataStore[portID] = portAttributes
+		portInfo := dmtfmodel.Port{
+			ODataContext: "/ODIM/v1/$metadata#Port.Port",
+			ODataType:    "#Port.v1_3_0.Port",
+			ID:           portID,
+			Name:         "Port-" + portAttributes["id"].(string),
+			PortID:       portAttributes["id"].(string),
+			PortProtocol: "Ethernet",
+		}
+		mtu, err := strconv.Atoi(portAttributes["mtu"].(string))
+		if err != nil {
+			log.Error("Unable to get mtu for the port" + portID)
+		}
+		portInfo.MaxFrameSize = mtu
+		capdata.PortDataStore[portID] = &portInfo
 	}
 	capdata.SwitchToPortDataStore[switchID] = portData
+}
+
+func getSwitchData(fabricNodeData *models.FabricNodeMember, switchID string) *dmtfmodel.Switch {
+	switchUUIDData := strings.Split(switchID, ":")
+	var switchData = dmtfmodel.Switch{
+		ODataContext: "/ODIM/v1/$metadata#Switch.Switch",
+		ODataType:    "#Switch.v1_4_0.Switch",
+		ID:           switchID,
+		Name:         fabricNodeData.Name,
+		SwitchType:   "Ethernet",
+		UUID:         switchUUIDData[0],
+		SerialNumber: fabricNodeData.Serial,
+	}
+	podID, err := strconv.Atoi(fabricNodeData.PodId)
+	if err != nil {
+		log.Fatal("Converstion of PODID" + fabricNodeData.PodId + " failed")
+	}
+	nodeID, err := strconv.Atoi(fabricNodeData.NodeId)
+	if err != nil {
+		log.Fatal("Converstion of NodeID" + fabricNodeData.NodeId + " failed")
+	}
+	log.Info("Getting the switchData for NodeID" + fabricNodeData.NodeId)
+	switchRespData, err := caputilities.GetSwitchInfo(podID, nodeID)
+	if err != nil {
+		log.Fatal("Unable to get the Switch info:" + err.Error())
+	}
+	switchData.FirmwareVersion = switchRespData.SystemAttributes.Version
+	switchChassisData, err := caputilities.GetSwitchChassisInfo(fabricNodeData.PodId, fabricNodeData.NodeId)
+	if err != nil {
+		log.Fatal("Unable to get the Switch Chassis info for node " + fabricNodeData.NodeId + " :" + err.Error())
+	}
+	switchData.Manufacturer = switchChassisData.IMData[0].SwitchChassisData.Attributes["vendor"].(string)
+	switchData.Model = switchChassisData.IMData[0].SwitchChassisData.Attributes["model"].(string)
+	return &switchData
 }

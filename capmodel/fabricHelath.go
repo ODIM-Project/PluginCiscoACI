@@ -15,29 +15,18 @@
 //Package capmodel ...
 package capmodel
 
-//PortCollectionResponse ...
-type PortCollectionResponse struct {
-	TotalCount string                 `json:"totalCount"`
-	IMData     []PortCollectionIMData `json:"imdata"`
+//FabricHealth ...
+type FabricHealth struct {
+	TotalCount string               `json:"totalCount"`
+	IMData     []FabricHealthIMData `json:"imdata"`
 }
 
-// PortCollectionIMData ...
-type PortCollectionIMData struct {
-	PhysicalInterface PhysicalInterface `json:"l1PhysIf"`
+// FabricHealthIMData ...
+type FabricHealthIMData struct {
+	FabricHealthData FabricHealthData `json:"fabricHealthTotal"`
 }
 
-// PhysicalInterface ...
-type PhysicalInterface struct {
+// FabricHealthData ...
+type FabricHealthData struct {
 	Attributes map[string]interface{} `json:"attributes"`
-}
-
-// PortInfoResponse ...
-type PortInfoResponse struct {
-	TotalCount string           `json:"totalCount"`
-	IMData     []PortInfoIMData `json:"imdata"`
-}
-
-//PortInfoIMData ...
-type PortInfoIMData struct {
-	PhysicalInterface PhysicalInterface `json:"ethpmPhysIf"`
 }

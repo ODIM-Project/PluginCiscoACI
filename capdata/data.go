@@ -16,7 +16,7 @@
 package capdata
 
 import (
-	"github.com/ciscoecosystem/aci-go-client/models"
+	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"sync"
 )
 
@@ -37,7 +37,7 @@ var FabricDataStore FabricData
 
 // SwitchData ...
 type SwitchData struct {
-	Data map[string]*models.FabricNodeMember
+	Data map[string]*model.Switch
 	Lock sync.RWMutex
 }
 
@@ -48,4 +48,4 @@ var SwitchDataStore SwitchData
 var SwitchToPortDataStore map[string][]string
 
 //PortDataStore hold the value of the ports info of the switch
-var PortDataStore map[string]interface{}
+var PortDataStore map[string]*model.Port

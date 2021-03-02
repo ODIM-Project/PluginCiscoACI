@@ -18,8 +18,12 @@ package caphandler
 import (
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
+	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	iris "github.com/kataras/iris/v12"
+	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 // GetPortCollection fetches the ports  which are linked to that switch
@@ -54,16 +58,65 @@ func GetPortCollection(ctx iris.Context) {
 // GetPortInfo fetches the port info for given port id
 func GetPortInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
+	switchID := ctx.Params().Get("switchID")
+	fabricID := ctx.Params().Get("id")
+	fabricData := capdata.FabricDataStore.Data[fabricID]
 	portID := ctx.Params().Get("portID")
-	portData := capdata.PortDataStore[portID].(map[string]interface{})
-	portResponse := model.Port{
-		ODataContext: "/ODIM/v1/$metadata#Port.Port",
-		ODataID:      uri,
-		ODataType:    "#Port.v1_3_0.Port",
-		ID:           portID,
-		Name:         "Port-" + portData["id"].(string),
-		PortID:       portData["id"].(string),
-	}
+	portData := capdata.PortDataStore[portID]
+	portData.ODataID = uri
+	getPortAddtionalAttributes(fabricData.PodID, switchID, portData)
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(portResponse)
+	ctx.JSON(portData)
+
+}
+
+func getPortAddtionalAttributes(fabricID, switchID string, p *model.Port) {
+	switchIDData := strings.Split(switchID, ":")
+	PortInfoResponse, err := caputilities.GetPortInfo(fabricID, switchIDData[1], p.PortID)
+	if err != nil {
+		log.Error("Unable to get addtional port info " + err.Error())
+		return
+	}
+	portInfoData := PortInfoResponse.IMData[0].PhysicalInterface.Attributes
+	operationState := portInfoData["operSt"].(string)
+	if operationState == "up" {
+		p.LinkState = "Enabled"
+		p.LinkStatus = "LinkUp"
+	} else {
+		p.LinkState = "Disabled"
+		p.LinkStatus = "LinkDown"
+
+	}
+	curSpeedData := strings.Split(portInfoData["operSpeed"].(string), "G")
+	data, err := strconv.ParseFloat(curSpeedData[0], 64)
+	if err != nil {
+		log.Error("Unable to get current speed  of port " + err.Error())
+	}
+	p.CurrentSpeedGbps = data
+	portsHealthResposne, err := caputilities.GetPortHealth(fabricID, switchIDData[1], p.PortID)
+	if err != nil {
+		log.Error("Unable to get Health of port " + err.Error())
+		return
+	}
+
+	Healthdata := portsHealthResposne.IMData[0].HealthData.Attributes
+	currentHealthValue := Healthdata["cur"].(string)
+	healthValue, err := strconv.Atoi(currentHealthValue)
+	if err != nil {
+		log.Error("Unable to convert current Health value:" + currentHealthValue + " go the error" + err.Error())
+		return
+	}
+	var portStatus = model.Status{
+		State: p.LinkState,
+	}
+	if healthValue > 90 {
+		portStatus.Health = "OK"
+	} else if healthValue <= 90 && healthValue < 30 {
+		portStatus.Health = "Warning"
+	} else {
+		portStatus.Health = "Critical"
+	}
+
+	p.Status = &portStatus
+	return
 }
