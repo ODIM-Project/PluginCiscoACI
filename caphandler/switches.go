@@ -82,7 +82,7 @@ func getSwitchHelathData(podID, switchID string) string {
 		log.Error("Unable to get helath of switch " + err.Error())
 		return ""
 	}
-	data := switchHelathResposne.IMData[0].SwitchHelathData.Attributes
+	data := switchHelathResposne.IMData[0].HelathData.Attributes
 	currentHealthValue := data["cur"].(string)
 	healthValue, err := strconv.Atoi(currentHealthValue)
 	if err != nil {

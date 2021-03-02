@@ -48,4 +48,4 @@ var SwitchDataStore SwitchData
 var SwitchToPortDataStore map[string][]string
 
 //PortDataStore hold the value of the ports info of the switch
-var PortDataStore map[string]interface{}
+var PortDataStore map[string]*model.Port

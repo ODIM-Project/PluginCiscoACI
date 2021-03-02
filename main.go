@@ -173,7 +173,7 @@ func intializeACIData() {
 	capdata.FabricDataStore.Data = make(map[string]*capdata.Fabric)
 	capdata.SwitchDataStore.Data = make(map[string]*dmtfmodel.Switch, 0)
 	capdata.SwitchToPortDataStore = make(map[string][]string)
-	capdata.PortDataStore = make(map[string]interface{})
+	capdata.PortDataStore = make(map[string]*dmtfmodel.Port)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
@@ -244,7 +244,7 @@ func intializeACIData() {
 }
 
 // parsePortData parses the portData and stores it  in the inmemory
-func parsePortData(portResponseData *capmodel.PortResponse, switchID string) {
+func parsePortData(portResponseData *capmodel.PortCollectionResponse, switchID string) {
 	var portData []string
 	for _, imdata := range portResponseData.IMData {
 		portAttributes := imdata.PhysicalInterface.Attributes
@@ -252,7 +252,20 @@ func parsePortData(portResponseData *capmodel.PortResponse, switchID string) {
 		id = strings.Replace(id, "/", "-", -1)
 		portID := uuid.NewV4().String() + ":" + id
 		portData = append(portData, portID)
-		capdata.PortDataStore[portID] = portAttributes
+		portInfo := dmtfmodel.Port{
+			ODataContext: "/ODIM/v1/$metadata#Port.Port",
+			ODataType:    "#Port.v1_3_0.Port",
+			ID:           portID,
+			Name:         "Port-" + portAttributes["id"].(string),
+			PortID:       portAttributes["id"].(string),
+			PortProtocol: "Ethernet",
+		}
+		mtu, err := strconv.Atoi(portAttributes["mtu"].(string))
+		if err != nil {
+			log.Error("Unable to get mtu for the port" + portID)
+		}
+		portInfo.MaxFrameSize = mtu
+		capdata.PortDataStore[portID] = &portInfo
 	}
 	capdata.SwitchToPortDataStore[switchID] = portData
 }
