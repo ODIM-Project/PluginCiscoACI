@@ -200,11 +200,11 @@ func intializeACIData() {
 		capdata.SwitchDataStore.Data[switchID] = switchData
 		capdata.SwitchDataStore.Lock.Unlock()
 		// adding logic to collect the ports data
-		//portData, err := caputilities.GetPortData(aciNodeData.PodId, aciNodeData.NodeId)
-		//if err != nil {
-		//	log.Fatal("while intializing ACI Port  Data  PluginCiscoACI got: " + err.Error())
-		//}
-		//parsePortData(portData, switchID)
+		portData, err := caputilities.GetPortData(aciNodeData.PodId, aciNodeData.NodeId)
+		if err != nil {
+			log.Fatal("while intializing ACI Port  Data  PluginCiscoACI got: " + err.Error())
+		}
+		parsePortData(portData, switchID)
 
 	}
 
@@ -276,7 +276,7 @@ func getSwitchData(fabricNodeData *models.FabricNodeMember, switchID string) *dm
 	if err != nil {
 		log.Fatal("Converstion of NodeID" + fabricNodeData.NodeId + " failed")
 	}
-	log.Info("Getting the switchData for NodeID"+fabricNodeData.NodeId )
+	log.Info("Getting the switchData for NodeID" + fabricNodeData.NodeId)
 	switchRespData, err := caputilities.GetSwitchInfo(podID, nodeID)
 	if err != nil {
 		log.Fatal("Unable to get the Switch info:" + err.Error())
@@ -284,7 +284,7 @@ func getSwitchData(fabricNodeData *models.FabricNodeMember, switchID string) *dm
 	switchData.FirmwareVersion = switchRespData.SystemAttributes.Version
 	switchChassisData, err := caputilities.GetSwitchChassisInfo(fabricNodeData.PodId, fabricNodeData.NodeId)
 	if err != nil {
-		log.Fatal("Unable to get the Switch Chassis info for node "+fabricNodeData.NodeId+" :" + err.Error())
+		log.Fatal("Unable to get the Switch Chassis info for node " + fabricNodeData.NodeId + " :" + err.Error())
 	}
 	switchData.Manufacturer = switchChassisData.IMData[0].SwitchChassisData.Attributes["vendor"].(string)
 	switchData.Model = switchChassisData.IMData[0].SwitchChassisData.Attributes["model"].(string)

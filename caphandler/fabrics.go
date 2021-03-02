@@ -67,9 +67,9 @@ func GetFabricData(ctx iris.Context) {
 
 func getFabricHelathData(podID string) string {
 	fabricHelathResposne, err := caputilities.GetFabricHelath(podID)
-        if err!=nil{
-             log.Info("Unable to get fabric health"+err.Error())
-	     return ""
+	if err != nil {
+		log.Info("Unable to get fabric health" + err.Error())
+		return ""
 	}
 	log.Info(fabricHelathResposne)
 	data := fabricHelathResposne.IMData[0].FabricHelathData.Attributes
