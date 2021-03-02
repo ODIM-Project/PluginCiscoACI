@@ -93,17 +93,17 @@ func getPortAddtionalAttributes(fabricID, switchID string, p *model.Port) {
 		log.Error("Unable to get current speed  of port " + err.Error())
 	}
 	p.CurrentSpeedGbps = data
-	portsHelathResposne, err := caputilities.GetPortHealth(fabricID, switchIDData[1], p.PortID)
+	portsHealthResposne, err := caputilities.GetPortHealth(fabricID, switchIDData[1], p.PortID)
 	if err != nil {
-		log.Error("Unable to get helath of port " + err.Error())
+		log.Error("Unable to get Health of port " + err.Error())
 		return
 	}
 
-	helathdata := portsHelathResposne.IMData[0].HelathData.Attributes
-	currentHealthValue := helathdata["cur"].(string)
+	Healthdata := portsHealthResposne.IMData[0].HealthData.Attributes
+	currentHealthValue := Healthdata["cur"].(string)
 	healthValue, err := strconv.Atoi(currentHealthValue)
 	if err != nil {
-		log.Error("Unable to convert current helath value:" + currentHealthValue + " go the error" + err.Error())
+		log.Error("Unable to convert current Health value:" + currentHealthValue + " go the error" + err.Error())
 		return
 	}
 	var portStatus = model.Status{

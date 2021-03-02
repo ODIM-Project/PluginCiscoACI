@@ -15,18 +15,18 @@
 //Package capmodel ...
 package capmodel
 
-//FabricHelath ...
-type FabricHelath struct {
+//FabricHealth ...
+type FabricHealth struct {
 	TotalCount string               `json:"totalCount"`
-	IMData     []FabricHelathIMData `json:"imdata"`
+	IMData     []FabricHealthIMData `json:"imdata"`
 }
 
-// FabricHelathIMData ...
-type FabricHelathIMData struct {
-	FabricHelathData FabricHelathData `json:"fabricHealthTotal"`
+// FabricHealthIMData ...
+type FabricHealthIMData struct {
+	FabricHealthData FabricHealthData `json:"fabricHealthTotal"`
 }
 
-// FabricHelathData ...
-type FabricHelathData struct {
+// FabricHealthData ...
+type FabricHealthData struct {
 	Attributes map[string]interface{} `json:"attributes"`
 }

@@ -69,24 +69,24 @@ func GetSwitchInfo(ctx iris.Context) {
 	fabricData := capdata.FabricDataStore.Data[fabricID]
 	switchResponse.Status = &model.Status{
 		State:  "Enabled",
-		Health: getSwitchHelathData(fabricData.PodID, switchID),
+		Health: getSwitchHealthData(fabricData.PodID, switchID),
 	}
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(switchResponse)
 }
 
-func getSwitchHelathData(podID, switchID string) string {
+func getSwitchHealthData(podID, switchID string) string {
 	switchIDData := strings.Split(switchID, ":")
-	switchHelathResposne, err := caputilities.GetSwitchHelath(podID, switchIDData[1])
+	switchHealthResposne, err := caputilities.GetSwitchHealth(podID, switchIDData[1])
 	if err != nil {
-		log.Error("Unable to get helath of switch " + err.Error())
+		log.Error("Unable to get Health of switch " + err.Error())
 		return ""
 	}
-	data := switchHelathResposne.IMData[0].HelathData.Attributes
+	data := switchHealthResposne.IMData[0].HealthData.Attributes
 	currentHealthValue := data["cur"].(string)
 	healthValue, err := strconv.Atoi(currentHealthValue)
 	if err != nil {
-		log.Error("Unable to convert current helath value:" + currentHealthValue + " go the error" + err.Error())
+		log.Error("Unable to convert current Health value:" + currentHealthValue + " go the error" + err.Error())
 		return ""
 	}
 	if healthValue > 90 {

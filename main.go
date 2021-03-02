@@ -301,7 +301,5 @@ func getSwitchData(fabricNodeData *models.FabricNodeMember, switchID string) *dm
 	}
 	switchData.Manufacturer = switchChassisData.IMData[0].SwitchChassisData.Attributes["vendor"].(string)
 	switchData.Model = switchChassisData.IMData[0].SwitchChassisData.Attributes["model"].(string)
-	log.Info("Switch Data")
-	log.Info(switchData)
 	return &switchData
 }

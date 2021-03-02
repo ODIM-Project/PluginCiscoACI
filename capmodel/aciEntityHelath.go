@@ -15,18 +15,18 @@
 //Package capmodel ...
 package capmodel
 
-//Helath ...
-type Helath struct {
+//Health ...
+type Health struct {
 	TotalCount string         `json:"totalCount"`
-	IMData     []HelathIMData `json:"imdata"`
+	IMData     []HealthIMData `json:"imdata"`
 }
 
-//HelathIMData ...
-type HelathIMData struct {
-	HelathData HelathData `json:"healthInst"`
+//HealthIMData ...
+type HealthIMData struct {
+	HealthData HealthData `json:"healthInst"`
 }
 
-// HelathData ...
-type HelathData struct {
+// HealthData ...
+type HealthData struct {
 	Attributes map[string]interface{} `json:"attributes"`
 }

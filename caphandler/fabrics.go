@@ -57,7 +57,7 @@ func GetFabricData(ctx iris.Context) {
 		MaxZones:   800,
 		Status: &model.Status{
 			State:  "Enabled",
-			Health: getFabricHelathData(fabricData.PodID),
+			Health: getFabricHealthData(fabricData.PodID),
 		},
 	}
 	ctx.StatusCode(http.StatusOK)
@@ -65,18 +65,18 @@ func GetFabricData(ctx iris.Context) {
 
 }
 
-func getFabricHelathData(podID string) string {
-	fabricHelathResposne, err := caputilities.GetFabricHelath(podID)
+func getFabricHealthData(podID string) string {
+	fabricHealthResposne, err := caputilities.GetFabricHealth(podID)
 	if err != nil {
 		log.Info("Unable to get fabric health" + err.Error())
 		return ""
 	}
-	log.Info(fabricHelathResposne)
-	data := fabricHelathResposne.IMData[0].FabricHelathData.Attributes
+	log.Info(fabricHealthResposne)
+	data := fabricHealthResposne.IMData[0].FabricHealthData.Attributes
 	currentHealthValue := data["cur"].(string)
 	healthValue, err := strconv.Atoi(currentHealthValue)
 	if err != nil {
-		log.Error("Unable to convert current helath value:" + currentHealthValue + " go the error" + err.Error())
+		log.Error("Unable to convert current Health value:" + currentHealthValue + " go the error" + err.Error())
 		return ""
 	}
 	if healthValue > 90 {

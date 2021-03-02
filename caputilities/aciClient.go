@@ -86,8 +86,8 @@ func GetPortData(podID, switchID string) (*capmodel.PortCollectionResponse, erro
 
 }
 
-//GetFabricHelath queries the fabric for it's helath from ACI
-func GetFabricHelath(podID string) (*capmodel.FabricHelath, error) {
+//GetFabricHealth queries the fabric for it's Health from ACI
+func GetFabricHealth(podID string) (*capmodel.FabricHealth, error) {
 	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json
 	err := aciClient.Authenticate()
@@ -129,9 +129,9 @@ func GetFabricHelath(podID string) (*capmodel.FabricHelath, error) {
 		return nil, fmt.Errorf(errMsg)
 	}
 
-	var fabricHelathData capmodel.FabricHelath
-	json.Unmarshal(body, &fabricHelathData)
-	return &fabricHelathData, nil
+	var fabricHealthData capmodel.FabricHealth
+	json.Unmarshal(body, &fabricHealthData)
+	return &fabricHealthData, nil
 
 }
 
@@ -183,8 +183,8 @@ func GetSwitchChassisInfo(podID, switchID string) (*capmodel.SwitchChassis, erro
 	return &switchChassisData, nil
 }
 
-//GetSwitchHelath queries the switch for it's helath from ACI
-func GetSwitchHelath(podID, switchID string) (*capmodel.Helath, error) {
+//GetSwitchHealth queries the switch for it's Health from ACI
+func GetSwitchHealth(podID, switchID string) (*capmodel.Health, error) {
 	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json
 	err := aciClient.Authenticate()
@@ -226,9 +226,9 @@ func GetSwitchHelath(podID, switchID string) (*capmodel.Helath, error) {
 		return nil, fmt.Errorf(errMsg)
 	}
 
-	var switchHelathData capmodel.Helath
-	json.Unmarshal(body, &switchHelathData)
-	return &switchHelathData, nil
+	var switchHealthData capmodel.Health
+	json.Unmarshal(body, &switchHealthData)
+	return &switchHealthData, nil
 
 }
 
@@ -275,8 +275,8 @@ func GetPortInfo(podID, switchID, portID string) (*capmodel.PortInfoResponse, er
 
 }
 
-//GetPortHealth collects the helath  for  given port
-func GetPortHealth(podID, switchID, portID string) (*capmodel.Helath, error) {
+//GetPortHealth collects the Health  for  given port
+func GetPortHealth(podID, switchID, portID string) (*capmodel.Health, error) {
 	endpoint := fmt.Sprintf("https://%s/api/node/mo/topology/pod-%s/node-%s/sys/phys-[%s]/phys/health.json", config.Data.APICConf.APICHost, podID, switchID, portID)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -312,7 +312,7 @@ func GetPortHealth(podID, switchID, portID string) (*capmodel.Helath, error) {
 		return nil, fmt.Errorf(errMsg)
 	}
 
-	var portResponseData capmodel.Helath
+	var portResponseData capmodel.Health
 	json.Unmarshal(body, &portResponseData)
 	return &portResponseData, nil
 
