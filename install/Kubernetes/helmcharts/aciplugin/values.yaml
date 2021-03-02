@@ -1,0 +1,15 @@
+odimra:
+  namespace: 
+  groupID: 
+  haDeploymentEnabled:
+aciplugin:
+  eventListenerNodePort: 
+  imageTag: "1.0"
+  aciPluginRootServiceUUID: 
+  username: 
+  password: 
+  host: aciplugin
+  eventHost: aciplugin
+  lbHost: 
+  lbPort: 
+  logPath:

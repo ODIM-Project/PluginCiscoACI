@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aciplugin
+  namespace: {{ .Values.odimra.namespace }}
+  annotations:
+    secret.reloader.stakater.com/reload: "odimra-secret"
+spec:
+  replicas: {{ .Values.ReplicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app: aciplugin
+  template:
+    metadata:
+      labels:
+        app: aciplugin
+      annotations:
+        rollme: {{ randAlphaNum 5 | quote }}
+    spec:
+      hostname: aciplugin
+      volumes:
+        - name: aciplugin-config-vol
+          projected:
+            sources:
+            - configMap:
+                name: aciplugin-config
+            - configMap:
+                name: odimra-platformconfig
+        - name: configure-hosts
+          configMap:
+            name: configure-hosts
+            items:
+            - key: hosts
+              path: host.append
+              mode: 0644
+        - name: odimra-secret
+          secret:
+            secretName: odimra-secret
+            items:
+            - key: rootCAcrt
+              path: rootCA.crt
+              mode: 0444
+            - key: odimra_servercrt
+              path: odimra_server.crt
+              mode: 0444
+            - key: odimra_serverkey
+              path: odimra_server.key
+              mode: 0444
+            - key: odimra_kafka_clientcrt
+              path: odimra_kafka_client.crt
+              mode: 0444
+            - key: odimra_kafka_clientkey
+              path: odimra_kafka_client.key
+              mode: 0444
+        - name: aciplugin-log
+          persistentVolumeClaim:
+            claimName: aciplugin-log-claim
+      securityContext:
+        fsGroup: {{ .Values.odimra.groupID }}
+      containers:
+        - name: aciplugin
+          env:
+            - name: GET_HOSTS_FROM
+              value: dns
+          image: aciplugin:{{ .Values.aciplugin.imageTag }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 45020
+            - containerPort: 45021
+          volumeMounts:
+            - name: aciplugin-config-vol
+              mountPath: /etc/aciplugin_config
+            - name: configure-hosts
+              mountPath: /tmp
+            - name: aciplugin-log
+              mountPath: /var/log/aciplugin_logs
+            - name: odimra-secret
+              mountPath: /etc/odimra_certs
