@@ -56,7 +56,7 @@ func GetManagersInfo(ctx iris.Context) {
 	for fabricID, fabricData := range capdata.FabricDataStore.Data {
 		for i := 0; i < len(fabricData.SwitchData); i++ {
 			managedSwitches = append(managedSwitches, model.Link{
-				Oid: "/ODIM/v1/Fabrics" + fabricID + "/Switches/" + fabricData.SwitchData[i],
+				Oid: "/ODIM/v1/Fabrics/" + fabricID + "/Switches/" + fabricData.SwitchData[i],
 			})
 		}
 	}
