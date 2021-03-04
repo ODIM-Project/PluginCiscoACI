@@ -17,6 +17,7 @@ package caphandler
 
 import (
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
+	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	pluginConfig "github.com/ODIM-Project/PluginCiscoACI/config"
 	iris "github.com/kataras/iris/v12"
@@ -50,7 +51,16 @@ func GetManagersCollection(ctx iris.Context) {
 //GetManagersInfo Fetches details of the given manager info
 func GetManagersInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
-	//TODO :Populating the switch data in the ManagerForSwitches
+	// Get all switch data uri
+	managedSwitches := []model.Link{}
+	for fabricID, fabricData := range capdata.FabricDataStore.Data {
+		for i := 0; i < len(fabricData.SwitchData); i++ {
+			managedSwitches = append(managedSwitches, model.Link{
+				Oid: "/ODIM/v1/Fabrics/" + fabricID + "/Switches/" + fabricData.SwitchData[i],
+			})
+		}
+	}
+
 	managers := model.Manager{
 		ODataContext:    "/ODIM/v1/$metadata#Manager.Manager",
 		ODataID:         uri,
@@ -63,6 +73,10 @@ func GetManagersInfo(ctx iris.Context) {
 		Status: &model.Status{
 			State:  "Enabled",
 			Health: "OK",
+		},
+		Links: &model.ManagerLinks{
+			ManagerForSwitches:      &managedSwitches,
+			ManagerForSwitchesCount: len(managedSwitches),
 		},
 	}
 	ctx.StatusCode(http.StatusOK)
