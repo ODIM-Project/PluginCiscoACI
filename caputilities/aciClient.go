@@ -234,6 +234,12 @@ func GetSwitchHealth(podID, switchID string) (*capmodel.Health, error) {
 
 //GetPortInfo collects the dat for  given port
 func GetPortInfo(podID, switchID, portID string) (*capmodel.PortInfoResponse, error) {
+	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
+	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json
+	err := aciClient.Authenticate()
+	if err != nil {
+		return nil, err
+	}
 	endpoint := fmt.Sprintf("https://%s/api/node/mo/topology/pod-%s/node-%s/sys/phys-[%s]/phys.json", config.Data.APICConf.APICHost, podID, switchID, portID)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -277,6 +283,12 @@ func GetPortInfo(podID, switchID, portID string) (*capmodel.PortInfoResponse, er
 
 //GetPortHealth collects the Health  for  given port
 func GetPortHealth(podID, switchID, portID string) (*capmodel.Health, error) {
+	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
+	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json
+	err := aciClient.Authenticate()
+	if err != nil {
+		return nil, err
+	}
 	endpoint := fmt.Sprintf("https://%s/api/node/mo/topology/pod-%s/node-%s/sys/phys-[%s]/phys/health.json", config.Data.APICConf.APICHost, podID, switchID, portID)
 
 	req, err := http.NewRequest("GET", endpoint, nil)

@@ -75,7 +75,7 @@ func GetManagersInfo(ctx iris.Context) {
 			Health: "OK",
 		},
 		Links: &model.ManagerLinks{
-			ManagerForSwitches:      &managedSwitches,
+			ManagerForSwitches:      managedSwitches,
 			ManagerForSwitchesCount: len(managedSwitches),
 		},
 	}

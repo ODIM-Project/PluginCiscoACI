@@ -16,7 +16,9 @@
 package caphandler
 
 import (
+	"fmt"
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
+	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	iris "github.com/kataras/iris/v12"
@@ -32,8 +34,15 @@ func GetSwitchCollection(ctx iris.Context) {
 	fabricID := ctx.Params().Get("id")
 	// get all switches which are store under that fabric
 
-	fabricData := capdata.FabricDataStore.Data[fabricID]
-
+	fabricData, ok := capdata.FabricDataStore.Data[fabricID]
+	if !ok {
+		errMsg := fmt.Sprintf("Switch data for uri %s not found", uri)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Switch", uri})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
 	var members = []*model.Link{}
 
 	for i := 0; i < len(fabricData.SwitchData); i++ {
@@ -59,14 +68,31 @@ func GetSwitchCollection(ctx iris.Context) {
 func GetSwitchInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	switchID := ctx.Params().Get("rid")
+	fabricID := ctx.Params().Get("id")
+	fabricData, ok := capdata.FabricDataStore.Data[fabricID]
+	if !ok {
+		errMsg := fmt.Sprintf("Switch data for uri %s not found", uri)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
 	// Get the switch data from the memory
-	switchResponse := capdata.SwitchDataStore.Data[switchID]
+	switchResponse, ok := capdata.SwitchDataStore.Data[switchID]
+	if !ok {
+		errMsg := fmt.Sprintf("Switch data for uri %s not found", uri)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Switch", uri})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
 	switchResponse.ODataID = uri
 	switchResponse.Ports = &model.Link{
 		Oid: uri + "/Ports",
 	}
-	fabricID := ctx.Params().Get("id")
-	fabricData := capdata.FabricDataStore.Data[fabricID]
+
 	switchResponse.Status = &model.Status{
 		State:  "Enabled",
 		Health: getSwitchHealthData(fabricData.PodID, switchID),
