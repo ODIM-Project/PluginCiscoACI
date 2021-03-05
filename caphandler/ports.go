@@ -16,6 +16,7 @@
 package caphandler
 
 import (
+	"fmt"
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
@@ -35,7 +36,7 @@ func GetPortCollection(ctx iris.Context) {
 	// get all port which are store under that switch
 	portData, ok := capdata.SwitchToPortDataStore[switchID]
 	if !ok {
-		errMsg := "Port data for uri " + uri + " not found"
+		errMsg := fmt.Sprintf("Port data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Port", uri})
 		ctx.StatusCode(http.StatusNotFound)
@@ -70,7 +71,7 @@ func GetPortInfo(ctx iris.Context) {
 	fabricID := ctx.Params().Get("id")
 	fabricData, ok := capdata.FabricDataStore.Data[fabricID]
 	if !ok {
-		errMsg := "Port data for uri " + uri + " not found"
+		errMsg := fmt.Sprintf("Port data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
 		ctx.StatusCode(http.StatusNotFound)
@@ -80,7 +81,7 @@ func GetPortInfo(ctx iris.Context) {
 	portID := ctx.Params().Get("portID")
 	portData, ok := capdata.PortDataStore[portID]
 	if !ok {
-		errMsg := "Port data for uri " + uri + " not found"
+		errMsg := fmt.Sprintf("Port data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Port", uri})
 		ctx.StatusCode(http.StatusNotFound)

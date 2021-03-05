@@ -16,6 +16,7 @@
 package caphandler
 
 import (
+	"fmt"
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
@@ -35,7 +36,7 @@ func GetSwitchCollection(ctx iris.Context) {
 
 	fabricData, ok := capdata.FabricDataStore.Data[fabricID]
 	if !ok {
-		errMsg := "Switch data for uri " + uri + " not found"
+		errMsg := fmt.Sprintf("Switch data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Switch", uri})
 		ctx.StatusCode(http.StatusNotFound)
@@ -70,7 +71,7 @@ func GetSwitchInfo(ctx iris.Context) {
 	fabricID := ctx.Params().Get("id")
 	fabricData, ok := capdata.FabricDataStore.Data[fabricID]
 	if !ok {
-		errMsg := "Switch data for uri " + uri + " not found"
+		errMsg := fmt.Sprintf("Switch data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
 		ctx.StatusCode(http.StatusNotFound)
@@ -80,7 +81,7 @@ func GetSwitchInfo(ctx iris.Context) {
 	// Get the switch data from the memory
 	switchResponse, ok := capdata.SwitchDataStore.Data[switchID]
 	if !ok {
-		errMsg := "Switch data for uri " + uri + " not found"
+		errMsg := fmt.Sprintf("Switch data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Switch", uri})
 		ctx.StatusCode(http.StatusNotFound)

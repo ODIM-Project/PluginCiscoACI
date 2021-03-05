@@ -16,6 +16,7 @@
 package caphandler
 
 import (
+	"fmt"
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
@@ -37,7 +38,7 @@ func GetFabricData(ctx iris.Context) {
 	fabricID := ctx.Params().Get("id")
 	fabricData, ok := capdata.FabricDataStore.Data[fabricID]
 	if !ok {
-		errMsg := "Fabric data for uri " + uri + " not found"
+		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", uri})
 		ctx.StatusCode(http.StatusNotFound)
