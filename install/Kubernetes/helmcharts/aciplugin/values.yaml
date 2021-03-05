@@ -13,3 +13,6 @@ aciplugin:
   lbHost: 
   lbPort: 
   logPath:
+  apicHost:
+  apicUserName:
+  apicPassword:
