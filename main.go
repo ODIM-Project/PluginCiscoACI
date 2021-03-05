@@ -253,12 +253,14 @@ func parsePortData(portResponseData *capmodel.PortCollectionResponse, switchID s
 		portID := uuid.NewV4().String() + ":" + id
 		portData = append(portData, portID)
 		portInfo := dmtfmodel.Port{
-			ODataContext: "/ODIM/v1/$metadata#Port.Port",
-			ODataType:    "#Port.v1_3_0.Port",
-			ID:           portID,
-			Name:         "Port-" + portAttributes["id"].(string),
-			PortID:       portAttributes["id"].(string),
-			PortProtocol: "Ethernet",
+			ODataContext:          "/ODIM/v1/$metadata#Port.Port",
+			ODataType:             "#Port.v1_3_0.Port",
+			ID:                    portID,
+			Name:                  "Port-" + portAttributes["id"].(string),
+			PortID:                portAttributes["id"].(string),
+			PortProtocol:          "Ethernet",
+			PortType:              "BidirectionalPort",
+			LinkNetworkTechnology: "Ethernet",
 		}
 		mtu, err := strconv.Atoi(portAttributes["mtu"].(string))
 		if err != nil {

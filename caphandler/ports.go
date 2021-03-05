@@ -17,6 +17,7 @@ package caphandler
 
 import (
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
+	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	iris "github.com/kataras/iris/v12"
@@ -32,8 +33,15 @@ func GetPortCollection(ctx iris.Context) {
 	switchID := ctx.Params().Get("switchID")
 
 	// get all port which are store under that switch
-	portData := capdata.SwitchToPortDataStore[switchID]
-
+	portData, ok := capdata.SwitchToPortDataStore[switchID]
+	if !ok {
+		errMsg := "Port data for uri " + uri + " not found"
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Port", uri})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
 	var members = []*model.Link{}
 
 	for i := 0; i < len(portData); i++ {
@@ -60,9 +68,25 @@ func GetPortInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	switchID := ctx.Params().Get("switchID")
 	fabricID := ctx.Params().Get("id")
-	fabricData := capdata.FabricDataStore.Data[fabricID]
+	fabricData, ok := capdata.FabricDataStore.Data[fabricID]
+	if !ok {
+		errMsg := "Port data for uri " + uri + " not found"
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
 	portID := ctx.Params().Get("portID")
-	portData := capdata.PortDataStore[portID]
+	portData, ok := capdata.PortDataStore[portID]
+	if !ok {
+		errMsg := "Port data for uri " + uri + " not found"
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Port", uri})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
 	portData.ODataID = uri
 	getPortAddtionalAttributes(fabricData.PodID, switchID, portData)
 	ctx.StatusCode(http.StatusOK)
@@ -82,10 +106,11 @@ func getPortAddtionalAttributes(fabricID, switchID string, p *model.Port) {
 	if operationState == "up" {
 		p.LinkState = "Enabled"
 		p.LinkStatus = "LinkUp"
+		p.InterfaceEnabled = true
 	} else {
 		p.LinkState = "Disabled"
 		p.LinkStatus = "LinkDown"
-
+		p.InterfaceEnabled = false
 	}
 	curSpeedData := strings.Split(portInfoData["operSpeed"].(string), "G")
 	data, err := strconv.ParseFloat(curSpeedData[0], 64)
@@ -119,4 +144,19 @@ func getPortAddtionalAttributes(fabricID, switchID string, p *model.Port) {
 
 	p.Status = &portStatus
 	return
+}
+
+func updateErrorResponse(statusMsg, errMsg string, msgArgs []interface{}) interface{} {
+	args := response.Args{
+		Code:    response.GeneralError,
+		Message: "",
+		ErrorArgs: []response.ErrArgs{
+			response.ErrArgs{
+				StatusMessage: statusMsg,
+				ErrorMessage:  errMsg,
+				MessageArgs:   msgArgs,
+			},
+		},
+	}
+	return args.CreateGenericErrorResponse()
 }
