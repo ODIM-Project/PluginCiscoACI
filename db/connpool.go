@@ -15,11 +15,17 @@
 package db
 
 import (
-	"github.com/gomodule/redigo/redis"
-	redisSentinel "github.com/go-redis/redis"
+	"fmt"
 	"github.com/ODIM-Project/ODIM/lib-utilities/errors"
+	"github.com/ODIM-Project/PluginCiscoACI/config"
+	redisSentinel "github.com/go-redis/redis"
+	"github.com/gomodule/redigo/redis"
+	log "github.com/sirupsen/logrus"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
+	"unsafe"
 )
 
 // ConnPool is the established connection
@@ -41,6 +47,12 @@ type RedisExternalCalls interface {
 
 type redisExtCallsImp struct{}
 
+var redisExtCalls RedisExternalCalls
+
+func init() {
+	redisExtCalls = redisExtCallsImp{}
+}
+
 func (r redisExtCallsImp) newSentinelClient(opt *redisSentinel.Options) *redisSentinel.SentinelClient {
 	return redisSentinel.NewSentinelClient(opt)
 }
@@ -58,14 +70,14 @@ func GetConnPool() (*ConnPool, *errors.Error) {
 		if err != nil {
 			log.Error("error while trying to get Readpool connection : " + err.Error())
 		}
-		inMemDBConnPool.PoolUpdatedTime = time.Now()
+		connPool.PoolUpdatedTime = time.Now()
 	}
-	if inMemDBConnPool.WritePool == nil {
+	if connPool.WritePool == nil {
 		log.Info("GetDBConnection : connPool.WritePool is nil, invoking resetDBWriteConection ")
-		resetDBWriteConection(InMemory)
+		resetDBWriteConection()
 	}
 
-	return inMemDBConnPool, err
+	return connPool, err
 }
 
 func createConnPool() (*ConnPool, *errors.Error) {
@@ -111,7 +123,7 @@ func getCurrentMasterHostPort() (string, string) {
 		masterIP = stringSlice[0]
 		masterPort = stringSlice[1]
 	}
-	log.Info("GetCurrentMasterHostPort masterIP : "+masterIP, ", masterPort : "+masterPort)
+	log.Info("getCurrentMasterHostPort masterIP : "+masterIP, ", masterPort : "+masterPort)
 	return masterIP, masterPort
 }
 
@@ -130,4 +142,81 @@ func isDbConnectError(err error) (*errors.Error, bool) {
 		return errors.PackError(errors.DBConnFailed, err), true
 	}
 	return nil, false
+}
+
+//resetDBWriteConection is used to reset the WriteConnection Pool
+func resetDBWriteConection() {
+	if config.Data.DBConf.RedisHAEnabled {
+		connPool.Mux.Lock()
+		defer connPool.Mux.Unlock()
+		if connPool.WritePool != nil {
+			return
+		}
+		err := connPool.setWritePool()
+		if err != nil {
+			log.Error("Reset of inMemory write pool failed: " + err.Error())
+			return
+		}
+		log.Info("New inMemory connection pool created")
+	}
+}
+
+func (p *ConnPool) setWritePool() error {
+	currentMasterIP, currentMasterPort := retryForMasterIP(p)
+	if currentMasterIP == "" {
+		return fmt.Errorf("unable to retrieve master ip from sentinel master election")
+	}
+	log.Info("new write pool master IP found: " + currentMasterIP)
+	writePool, _ := getPool(currentMasterIP, currentMasterPort)
+	if writePool == nil {
+		return fmt.Errorf("write pool creation failed")
+	}
+
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&p.WritePool)), unsafe.Pointer(writePool))
+	p.MasterIP = currentMasterIP
+	p.PoolUpdatedTime = time.Now()
+	return nil
+}
+
+func retryForMasterIP(pool *ConnPool) (currentMasterIP, currentMasterPort string) {
+	for i := 0; i < 120; i++ {
+		currentMasterIP, currentMasterPort = getCurrentMasterHostPort()
+		if currentMasterIP != "" && pool.MasterIP != currentMasterIP {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	return
+}
+
+//getPool is used is utility function to get the Connection Pool from DB.
+func getPool(host, port string) (*redis.Pool, error) {
+	protocol := config.Data.DBConf.Protocol
+	p := &redis.Pool{
+		// Maximum number of idle connections in the pool.
+		MaxIdle: config.Data.DBConf.MaxIdleConns,
+		// max number of connections
+		MaxActive: config.Data.DBConf.MaxActiveConns,
+		// Dial is an application supplied function for creating and
+		// configuring a connection.
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial(protocol, host+":"+port)
+			return c, err
+		},
+		/*TestOnBorrow is an optional application supplied function to
+		  check the health of an idle connection before the connection is
+		  used again by the application. Argument t is the time that the
+		  connection was returned to the pool.This function PINGs
+		  connections that have been idle more than a minute.
+		  If the function returns an error, then the connection is closed.
+		*/
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			if time.Since(t) < time.Minute {
+				return nil
+			}
+			_, err := c.Do("PING")
+			return err
+		},
+	}
+	return p, nil
 }
