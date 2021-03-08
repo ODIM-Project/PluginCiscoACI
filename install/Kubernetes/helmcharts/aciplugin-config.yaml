@@ -10,3 +10,6 @@ aciplugin:
   lbHost: 
   lbPort: 30086
   logPath: /var/log/aciplugin_logs
+  apicHost:
+  apicUserName:
+  apicPassword:
