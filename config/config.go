@@ -18,10 +18,11 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
+
+	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
+	log "github.com/sirupsen/logrus"
 )
 
 // Data will have the configuration data from config file
@@ -48,8 +49,8 @@ type DBConf struct {
 	Protocol       string `json:"Protocol"`
 	Host           string `json:"Host"`
 	Port           string `json:"Port"`
-	MaxIdleConns   int    `json:"MaxIdleConns"`
-	MaxActiveConns int    `json:"MaxActiveConns"`
+	MinIdleConns   int    `json:"MinIdleConns"`
+	PoolSize       int    `json:"PoolSize"`
 	RedisHAEnabled bool   `json:"RedisHAEnabled"`
 	SentinelPort   string `json:"SentinelPort"`
 	MasterSet      string `json:"MasterSet"`
@@ -348,13 +349,13 @@ func checkDBConf() error {
 	if Data.DBConf.Port == "" {
 		return fmt.Errorf("error: no value configured for DB Port")
 	}
-	if Data.DBConf.MaxActiveConns == 0 {
-		log.Warn("No value configured for MaxActiveConns, setting default value")
-		Data.DBConf.MaxActiveConns = DefaultDBMaxActiveConns
+	if Data.DBConf.PoolSize == 0 {
+		log.Warn("No value configured for PoolSize, setting default value")
+		Data.DBConf.PoolSize = DefaultDBPoolSize
 	}
-	if Data.DBConf.MaxIdleConns == 0 {
-		log.Warn("No value configured for MaxIdleConns, setting default value")
-		Data.DBConf.MaxIdleConns = DefaultDBMaxIdleConns
+	if Data.DBConf.MinIdleConns == 0 {
+		log.Warn("No value configured for MinIdleConns, setting default value")
+		Data.DBConf.MinIdleConns = DefaultDBMinIdleConns
 	}
 	if Data.DBConf.RedisHAEnabled {
 		if err := checkDBHAConf(); err != nil {

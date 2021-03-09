@@ -17,8 +17,8 @@ package config
 const (
 	// DefaultDBProtocol - default Protocol value
 	DefaultDBProtocol = "tcp"
-	// DefaultDBMaxActiveConns - default MaxActiveConns value
-	DefaultDBMaxActiveConns = 120
-	// DefaultDBMaxIdleConns - default MaxIdleConns value
-	DefaultDBMaxIdleConns = 10
+	// DefaultDBPoolSize - default PoolSize value
+	DefaultDBPoolSize = 120
+	// DefaultDBMinIdleConns - default MinIdleConns value
+	DefaultDBMinIdleConns = 10
 )
