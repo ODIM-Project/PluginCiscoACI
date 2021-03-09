@@ -116,6 +116,14 @@ func CreateAddressPool(ctx iris.Context) {
 		return
 	}
 	// Todo :Add required validation for the request params
+	err = validateAddressPoolRequest(addresspoolData)
+	if err != nil {
+		log.Error(err.Error())
+		resp := updateErrorResponse(response.PropertyMissing, err.Error(), nil)
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(resp)
+		return
+	}
 	addressPoolID := uuid.NewV4().String()
 	addresspoolData.ODataContext = "/ODIM/v1/$metadata#AddressPool.AddressPool"
 	addresspoolData.ODataType = "#AddressPool.v1_1_0.AddressPool"
@@ -134,4 +142,20 @@ func CreateAddressPool(ctx iris.Context) {
 	})
 	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(addresspoolData)
+}
+
+func validateAddressPoolRequest(request model.AddressPool) error {
+	if request.Ethernet == nil {
+		return fmt.Errorf("Ethernet data in request is missing")
+	}
+	if request.Ethernet.IPv4 == nil {
+		return fmt.Errorf("Ethernet IPV4 data  in request is missing")
+	}
+	if request.Ethernet.IPv4.HostAddressRange == nil {
+		return fmt.Errorf("IPV4 HostAddressRange data  in request is missing")
+	}
+	if request.Ethernet.IPv4.HostAddressRange.Lower == "" || request.Ethernet.IPv4.HostAddressRange.Upper == "" {
+		return fmt.Errorf("HostAddressRange Lower or Upper data in request is missing")
+	}
+	return nil
 }
