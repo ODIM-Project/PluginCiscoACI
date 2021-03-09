@@ -211,14 +211,11 @@ func SetUpMockConfig(t *testing.T) error {
 	lutilconf.SetPreferredCipherSuites(Data.TLSConf.PreferredCipherSuites)
 
 	Data.DBConf = &DBConf{
-		Protocol:       "tcp",
-		Host:           "ValidHost",
-		Port:           "ValidPort",
-		MinIdleConns:   2,
-		PoolSize:       4,
-		RedisHAEnabled: true,
-		SentinelPort:   "5678",
-		MasterSet:      "ValidMasterSet",
+		Protocol:           "tcp",
+		Address:            "host:port",
+		MinIdleConns:       2,
+		PoolSize:           4,
+		SentinelMasterName: "SentinelMasterName",
 	}
 
 	return nil

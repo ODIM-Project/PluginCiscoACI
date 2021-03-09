@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
 	log "github.com/sirupsen/logrus"
@@ -46,14 +47,11 @@ type configModel struct {
 
 // DBConf holds all DB related configurations
 type DBConf struct {
-	Protocol       string `json:"Protocol"`
-	Host           string `json:"Host"`
-	Port           string `json:"Port"`
-	MinIdleConns   int    `json:"MinIdleConns"`
-	PoolSize       int    `json:"PoolSize"`
-	RedisHAEnabled bool   `json:"RedisHAEnabled"`
-	SentinelPort   string `json:"SentinelPort"`
-	MasterSet      string `json:"MasterSet"`
+	Protocol           string `json:"Protocol"`
+	Address            string `json:"Address"`
+	MinIdleConns       int    `json:"MinIdleConns"`
+	PoolSize           int    `json:"PoolSize"`
+	SentinelMasterName string `json:"SentinelMasterName"`
 }
 
 //PluginConf is for holding all the plugin related configurations
@@ -343,11 +341,8 @@ func checkDBConf() error {
 		log.Warn("Incorrect value configured for DB Protocol, setting default value")
 		Data.DBConf.Protocol = DefaultDBProtocol
 	}
-	if Data.DBConf.Host == "" {
-		return fmt.Errorf("error: no value configured for DB Host")
-	}
-	if Data.DBConf.Port == "" {
-		return fmt.Errorf("error: no value configured for DB Port")
+	if Data.DBConf.Address == "" || !strings.Contains(Data.DBConf.Address, ":") {
+		return fmt.Errorf("error: no or wrong value configured for DB Address")
 	}
 	if Data.DBConf.PoolSize == 0 {
 		log.Warn("No value configured for PoolSize, setting default value")
@@ -356,21 +351,6 @@ func checkDBConf() error {
 	if Data.DBConf.MinIdleConns == 0 {
 		log.Warn("No value configured for MinIdleConns, setting default value")
 		Data.DBConf.MinIdleConns = DefaultDBMinIdleConns
-	}
-	if Data.DBConf.RedisHAEnabled {
-		if err := checkDBHAConf(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func checkDBHAConf() error {
-	if Data.DBConf.SentinelPort == "" {
-		return fmt.Errorf("error: no value configured for DB SentinelPort")
-	}
-	if Data.DBConf.MasterSet == "" {
-		return fmt.Errorf("error: no value configured for DB MasterSet")
 	}
 	return nil
 }
