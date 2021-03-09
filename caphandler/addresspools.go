@@ -96,8 +96,7 @@ func GetAddressPoolInfo(ctx iris.Context) {
 func CreateAddressPool(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	_, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
+	if _, ok := capdata.FabricDataStore.Data[fabricID]; !ok {
 		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
@@ -116,10 +115,10 @@ func CreateAddressPool(ctx iris.Context) {
 		return
 	}
 	// Todo :Add required validation for the request params
-	err = validateAddressPoolRequest(addresspoolData)
+	missingAttribute, err := validateAddressPoolRequest(addresspoolData)
 	if err != nil {
 		log.Error(err.Error())
-		resp := updateErrorResponse(response.PropertyMissing, err.Error(), nil)
+		resp := updateErrorResponse(response.PropertyMissing, err.Error(), []interface{}{missingAttribute})
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(resp)
 		return
@@ -144,18 +143,18 @@ func CreateAddressPool(ctx iris.Context) {
 	ctx.JSON(addresspoolData)
 }
 
-func validateAddressPoolRequest(request model.AddressPool) error {
+func validateAddressPoolRequest(request model.AddressPool) (string, error) {
 	if request.Ethernet == nil {
-		return fmt.Errorf("Ethernet data in request is missing")
+		return "Ethernet", fmt.Errorf("Ethernet data in request is missing")
 	}
 	if request.Ethernet.IPv4 == nil {
-		return fmt.Errorf("Ethernet IPV4 data  in request is missing")
+		return "IPv4", fmt.Errorf("Ethernet IPV4 data  in request is missing")
 	}
 	if request.Ethernet.IPv4.HostAddressRange == nil {
-		return fmt.Errorf("IPV4 HostAddressRange data  in request is missing")
+		return "HostAddressRange", fmt.Errorf("IPV4 HostAddressRange data  in request is missing")
 	}
 	if request.Ethernet.IPv4.HostAddressRange.Lower == "" || request.Ethernet.IPv4.HostAddressRange.Upper == "" {
-		return fmt.Errorf("HostAddressRange Lower or Upper data in request is missing")
+		return "Upper or Lower", fmt.Errorf("HostAddressRange Lower or Upper data in request is missing")
 	}
-	return nil
+	return "", nil
 }
