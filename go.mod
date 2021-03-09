@@ -3,7 +3,7 @@ module github.com/ODIM-Project/PluginCiscoACI
 go 1.13
 
 require (
-	github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210309082256-930ce97836b8
+	github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210309174355-8b7f338a2b41
 	github.com/ODIM-Project/ODIM/lib-messagebus v0.0.0-20210128033657-6247ee21f91f
 	github.com/ODIM-Project/ODIM/lib-utilities v0.0.0-20210223083440-a4950a58a7ed
 	github.com/ciscoecosystem/aci-go-client v1.6.6
