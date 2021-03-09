@@ -18,8 +18,8 @@ package caphandler
 import (
 	"fmt"
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
-	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
+	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	aciModels "github.com/ciscoecosystem/aci-go-client/models"
@@ -64,7 +64,7 @@ func CreateZone(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-	if zone.ZoneType != "ZoneOfZones" && zone.ZoneType != "Default" {
+	if zone.ZoneType != "Default" {
 		ctx.StatusCode(http.StatusNotImplemented)
 		return
 	}
@@ -115,4 +115,3 @@ func CreateDefaultZone(zone model.Zone) (interface{}, int) {
 	}
 	return resp, http.StatusCreated
 }
-
