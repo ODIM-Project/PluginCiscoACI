@@ -119,7 +119,7 @@ func routers() *iris.Application {
 	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports", caphandler.GetPortCollection)
 	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports/{portID}", caphandler.GetPortInfo)
 	fabricRoutes.Get("/{id}/Zones", caphandler.GetFabricResource)
-	fabricRoutes.Post("/{id}/Zones", caphandler.GetFabricResource)
+	fabricRoutes.Post("/{id}/Zones", caphandler.CreateZone)
 	fabricRoutes.Get("/{id}/Zones/{rid}", caphandler.GetFabricResource)
 	fabricRoutes.Delete("/{id}/Zones/{rid}", caphandler.GetFabricResource)
 	fabricRoutes.Patch("/{id}/Zones/{rid}", caphandler.GetFabricResource)

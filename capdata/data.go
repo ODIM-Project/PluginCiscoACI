@@ -55,3 +55,14 @@ var FabricToAddressPoolDataStore map[string][]string
 
 //AddressPoolDataStore all addresspool data
 var AddressPoolDataStore map[string]*model.AddressPool
+
+// ApplicationProfile defines policies, services, and relationships between endpoint groups (EPGs)
+type ApplicationProfile struct {
+	Name string
+}
+
+// ZoneDataStore defines the zone data structure as defined by redfish model
+var ZoneDataStore map[string]*model.Zone
+
+// FabricToZoneDataStore defines the fabric to zone mapping structure
+var FabricToZoneDataStore map[string][]string
