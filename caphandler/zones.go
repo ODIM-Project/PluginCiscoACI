@@ -45,20 +45,23 @@ func CreateVRF() {
 func GetZones(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	zonesData, ok := capdata.FabricToZoneDataStore[fabricID]
+	_, ok := capdata.FabricDataStore.Data[fabricID]
 	if !ok {
-		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
+		errMsg := fmt.Sprintf("Address data for uri %s not found", uri)
 		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"AddressPool", uri})
 		ctx.StatusCode(http.StatusNotFound)
 		ctx.JSON(resp)
 		return
 	}
 	var members = []*model.Link{}
-	for i := 0; i < len(zonesData); i++ {
-		members = append(members, &model.Link{
-			Oid: zonesData[i],
-		})
+
+	for zoneID, zoneData := range capdata.ZoneDataStore {
+		if zoneData.FabricID == fabricID {
+			members = append(members, &model.Link{
+				Oid: zoneID,
+			})
+		}
 	}
 	zoneCollection := model.Collection{
 		ODataContext: "/ODIM/v1/$metadata#ZoneCollection.ZoneCollection",
@@ -97,7 +100,7 @@ func GetZone(ctx iris.Context) {
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(respData)
+	ctx.JSON(respData.Zone)
 }
 
 // CreateZone default function called for creation of any type of zone
@@ -124,18 +127,8 @@ func CreateZone(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-	if zone.ZoneType != "Default" {
-		ctx.StatusCode(http.StatusNotImplemented)
-		return
-	}
-	if zone.ZoneType == "ZoneOfZones" {
-		ctx.StatusCode(http.StatusNotImplemented)
-		//resp, statusCode := CreateZoneOfZones(zone)
-		//ctx.StatusCode(statusCode)
-		//ctx.JSON(resp)
-		return
-	}
-	if zone.ZoneType == "Default" {
+	switch zone.ZoneType {
+	case "Default":
 		resp, statusCode := CreateDefaultZone(zone)
 		if statusCode != http.StatusCreated {
 			ctx.StatusCode(statusCode)
@@ -145,36 +138,49 @@ func CreateZone(ctx iris.Context) {
 		conflictFlag := false
 		var defaultZoneID string
 		for _, value := range capdata.ZoneDataStore {
-			if value.Name == zone.Name {
+			if value.Zone.Name == zone.Name {
 				conflictFlag = true
 			}
 		}
 		if !conflictFlag {
 			defaultZoneID = uuid.NewV4().String()
-			saveZoneData(defaultZoneID, uri, fabricID, zone)
+			zone = saveZoneData(defaultZoneID, uri, fabricID, zone)
 		}
 		common.SetResponseHeader(ctx, map[string]string{
 			"Location": zone.ODataID,
 		})
 		ctx.StatusCode(statusCode)
 		ctx.JSON(zone)
+		return
+	case "ZoneOfZones":
+		_, resp, statusCode := CreateZoneOfZones(uri, fabricID, zone)
+		if statusCode != http.StatusCreated {
+			ctx.StatusCode(statusCode)
+			ctx.JSON(resp)
+			return
+		}
+		defaultZoneID := uuid.NewV4().String()
+		zone = saveZoneData(defaultZoneID, uri, fabricID, zone)
+		updateZoneData()
+		ctx.StatusCode(statusCode)
+		ctx.JSON(zone)
+		return
+	default:
+		ctx.StatusCode(http.StatusNotImplemented)
+		return
 	}
 }
 
-func saveZoneData(defaultZoneID, uri, fabricID string, zone model.Zone) {
+func saveZoneData(defaultZoneID string, uri string, fabricID string, zone model.Zone) model.Zone {
 	zone.ID = defaultZoneID
 	zone.ODataContext = "/ODIM/v1/$metadata#Zone.Zone"
 	zone.ODataType = "#Zone.v1_4_0.Zone"
 	zone.ODataID = fmt.Sprintf("%s/%s", uri, defaultZoneID)
-	data, ok := capdata.FabricToZoneDataStore[fabricID]
-	if ok {
-		data = append(data, zone.ODataID)
-		capdata.FabricToZoneDataStore[fabricID] = data
-	} else {
-		capdata.FabricToZoneDataStore[fabricID] = []string{zone.ODataID}
+	capdata.ZoneDataStore[zone.ODataID] = &capdata.ZoneData{
+		FabricID: fabricID,
+		Zone:     &zone,
 	}
-	capdata.ZoneDataStore[zone.ODataID] = &zone
-
+	return zone
 }
 
 // CreateDefaultZone creates a zone of type 'Default'
@@ -233,8 +239,8 @@ func DeleteZone(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-	if respData.Links != nil {
-		if respData.Links.ContainsZonesCount != 0 {
+	if respData.Zone.Links != nil {
+		if respData.Zone.Links.ContainsZonesCount != 0 {
 			errMsg := fmt.Sprintf("Zone cannot be deleted as there are dependent resources still tied to it")
 			log.Error(errMsg)
 			resp := updateErrorResponse(response.ResourceCannotBeDeleted, errMsg, []interface{}{"Zone", uri})
@@ -244,7 +250,7 @@ func DeleteZone(ctx iris.Context) {
 		}
 	}
 	aciClient := caputilities.GetConnection()
-	err := aciClient.DeleteTenant(respData.Name)
+	err := aciClient.DeleteTenant(respData.Zone.Name)
 	if err != nil {
 		errMsg := "Error while deleting Zone: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
@@ -253,15 +259,45 @@ func DeleteZone(ctx iris.Context) {
 		return
 	}
 	delete(capdata.ZoneDataStore, uri)
-	fabricToZoneData := capdata.FabricToZoneDataStore[fabricID]
-	var index int
-	for i, x := range fabricToZoneData {
-		if x == uri {
-			index = i
-		}
-	}
-	fabricToZoneData = append(fabricToZoneData[:index], fabricToZoneData[index+1:]...)
-	capdata.FabricToZoneDataStore[fabricID] = fabricToZoneData
 	ctx.JSON(http.StatusNoContent)
 
+}
+
+// CreateZoneOfZone takes the request to create zone of zones and translates to create application profiles and VRFs
+func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, interface{}, int) {
+	var apModel aciModels.ApplicationProfileAttributes
+	apModel.Name = zone.Name
+	if zone.Links != nil {
+		if len(zone.Links.ContainedByZones) == 0 {
+			errMsg := fmt.Sprintf("Zone cannot be creaed as there are dependent resources missing")
+			log.Error(errMsg)
+			resp := updateErrorResponse(response.PropertyMissing, errMsg, []interface{}{"ContainedByZones"})
+			return "", resp, http.StatusBadRequest
+		}
+	}
+	log.Println("Request Body")
+	log.Println(zone)
+	// Assuming there is only link under ContainedByZones
+	defaultZoneLinks := zone.Links.ContainedByZones
+	defaultZoneLink := defaultZoneLinks[0].Oid
+	respData, ok := capdata.ZoneDataStore[defaultZoneLink]
+	if !ok {
+		errMsg := fmt.Sprintf("Zone data for uri %s not found", defaultZoneLink)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Zone", defaultZoneLink})
+		return "", resp, http.StatusNotFound
+	}
+
+	apResp, err := CreateApplicationProfile(zone.Name, respData.Zone.Name, respData.Zone.Description, apModel)
+	if err != nil {
+		errMsg := "Error while creating application profile: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return "", resp, http.StatusBadRequest
+	}
+	return defaultZoneLink, apResp, http.StatusCreated
+
+}
+
+func updateZoneData() {
+	return
 }
