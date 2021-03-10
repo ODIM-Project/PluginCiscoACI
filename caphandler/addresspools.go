@@ -24,6 +24,7 @@ import (
 	iris "github.com/kataras/iris/v12"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
+	"net"
 	"net/http"
 )
 
@@ -43,11 +44,13 @@ func GetAddressPoolCollection(ctx iris.Context) {
 		return
 	}
 	var members = []*model.Link{}
-	addresspoolData := capdata.FabricToAddressPoolDataStore[fabricID]
-	for i := 0; i < len(addresspoolData); i++ {
-		members = append(members, &model.Link{
-			Oid: uri + "/" + addresspoolData[i],
-		})
+
+	for addressPoolID, addressPooldData := range capdata.AddressPoolDataStore {
+		if addressPooldData.FabricID == fabricID {
+			members = append(members, &model.Link{
+				Oid: uri + "/" + addressPoolID,
+			})
+		}
 	}
 
 	addressPoolCollectionResponse := model.Collection{
@@ -89,7 +92,7 @@ func GetAddressPoolInfo(ctx iris.Context) {
 	}
 
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(addressPoolResponse)
+	ctx.JSON(addressPoolResponse.AddressPool)
 }
 
 // CreateAddressPool stores the given addresspool against given fabric
@@ -123,19 +126,26 @@ func CreateAddressPool(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
+	for _, data := range capdata.AddressPoolDataStore {
+		if data.AddressPool.Ethernet.IPv4.GatewayIPAddress == addresspoolData.Ethernet.IPv4.GatewayIPAddress {
+			errorMessage := "Requested GatewayIPAddress is already present in the addresspool " + data.AddressPool.ODataID
+			log.Error(errorMessage)
+			resp := updateErrorResponse(response.ResourceAlreadyExists, err.Error(), []interface{}{"AddressPool", "GatewayIPAddress", addresspoolData.Ethernet.IPv4.GatewayIPAddress})
+			ctx.StatusCode(http.StatusConflict)
+			ctx.JSON(resp)
+			return
+		}
+	}
 	addressPoolID := uuid.NewV4().String()
 	addresspoolData.ODataContext = "/ODIM/v1/$metadata#AddressPool.AddressPool"
 	addresspoolData.ODataType = "#AddressPool.v1_1_0.AddressPool"
 	addresspoolData.ODataID = fmt.Sprintf("%s/%s/", uri, addressPoolID)
 	addresspoolData.ID = addressPoolID
-	data, ok := capdata.FabricToAddressPoolDataStore[fabricID]
-	if ok {
-		data = append(data, addressPoolID)
-		capdata.FabricToAddressPoolDataStore[fabricID] = data
-	} else {
-		capdata.FabricToAddressPoolDataStore[fabricID] = []string{addressPoolID}
+
+	capdata.AddressPoolDataStore[addressPoolID] = &capdata.AddressPoolsData{
+		FabricID:    fabricID,
+		AddressPool: &addresspoolData,
 	}
-	capdata.AddressPoolDataStore[addressPoolID] = &addresspoolData
 	common.SetResponseHeader(ctx, map[string]string{
 		"Location": addresspoolData.ODataID,
 	})
@@ -153,5 +163,37 @@ func validateAddressPoolRequest(request model.AddressPool) (string, error) {
 	if request.Ethernet.IPv4.GatewayIPAddress == "" {
 		return "GatewayIPAddress", fmt.Errorf("IPV4 GatewayIPAddress data  in request is missing")
 	}
+	if _, _, err := net.ParseCIDR(request.Ethernet.IPv4.GatewayIPAddress); err != nil {
+		log.Error(err.Error())
+		return "GatewayIPAddress", fmt.Errorf("Invalid value for GatewayIPAddress:%v", err)
+	}
 	return "", nil
+}
+
+// DeleteAddressPoolInfo stores the given addresspool against given fabric
+func DeleteAddressPoolInfo(ctx iris.Context) {
+	uri := ctx.Request().RequestURI
+	fabricID := ctx.Params().Get("id")
+	addressPoolID := ctx.Params().Get("rid")
+	if _, ok := capdata.FabricDataStore.Data[fabricID]; !ok {
+		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
+	_, ok := capdata.AddressPoolDataStore[addressPoolID]
+	if !ok {
+		errMsg := fmt.Sprintf("AddressPool data for uri %s not found", uri)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"AddressPool", fabricID})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
+
+	// Todo:Add the validation  to verify the links
+	delete(capdata.AddressPoolDataStore, addressPoolID)
+	ctx.StatusCode(http.StatusNoContent)
 }

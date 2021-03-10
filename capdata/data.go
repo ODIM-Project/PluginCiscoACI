@@ -41,6 +41,12 @@ type SwitchData struct {
 	Lock sync.RWMutex
 }
 
+// AddressPoolsData hold the AddressPool data
+type AddressPoolsData struct {
+	FabricID    string
+	AddressPool *model.AddressPool
+}
+
 // SwitchDataStore holds the value  aci switch id and switches info
 var SwitchDataStore SwitchData
 
@@ -50,8 +56,5 @@ var SwitchToPortDataStore map[string][]string
 //PortDataStore hold the value of the ports info of the switch
 var PortDataStore map[string]*model.Port
 
-// FabricToAddressPoolDataStore holds the value of all addresspools which are stored under the fabric
-var FabricToAddressPoolDataStore map[string][]string
-
 //AddressPoolDataStore all addresspool data
-var AddressPoolDataStore map[string]*model.AddressPool
+var AddressPoolDataStore map[string]*AddressPoolsData
