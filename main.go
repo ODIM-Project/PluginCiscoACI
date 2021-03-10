@@ -126,7 +126,7 @@ func routers() *iris.Application {
 	fabricRoutes.Get("/{id}/AddressPools", caphandler.GetAddressPoolCollection)
 	fabricRoutes.Post("/{id}/AddressPools", caphandler.CreateAddressPool)
 	fabricRoutes.Get("/{id}/AddressPools/{rid}", caphandler.GetAddressPoolInfo)
-	fabricRoutes.Delete("/{id}/AddressPools/{rid}", caphandler.GetFabricResource)
+	fabricRoutes.Delete("/{id}/AddressPools/{rid}", caphandler.DeleteAddressPoolInfo)
 
 	managers := pluginRoutes.Party("/Managers")
 	managers.Get("/", caphandler.GetManagersCollection)
@@ -174,8 +174,7 @@ func intializeACIData() {
 	capdata.SwitchDataStore.Data = make(map[string]*dmtfmodel.Switch, 0)
 	capdata.SwitchToPortDataStore = make(map[string][]string)
 	capdata.PortDataStore = make(map[string]*dmtfmodel.Port)
-	capdata.FabricToAddressPoolDataStore = make(map[string][]string)
-	capdata.AddressPoolDataStore = make(map[string]*dmtfmodel.AddressPool)
+	capdata.AddressPoolDataStore = make(map[string]*capdata.AddressPoolsData)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
