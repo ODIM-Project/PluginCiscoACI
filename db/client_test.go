@@ -15,8 +15,6 @@
 package db
 
 import (
-	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/ODIM-Project/PluginCiscoACI/config"
@@ -25,24 +23,7 @@ import (
 
 type redisExtCallsImpMock struct{}
 
-func (r redisExtCallsImpMock) newSentinelClient(opt *redis.Options) *redis.SentinelClient {
-	strSlice := strings.Split(opt.Addr, ":")
-	sentinelHost := strSlice[0]
-	sentinelPort := strSlice[1]
-	if sentinelHost == "ValidHost" && sentinelPort == "ValidPort" {
-		return &redis.SentinelClient{}
-	}
-	return nil
-}
-
-func (r redisExtCallsImpMock) getMasterAddrByName(snlClient *redis.SentinelClient) []string {
-	if config.Data.DBConf.MasterSet == "ValidMasterSet" {
-		return []string{"ValidMasterIP", "ValidMasterPort"}
-	}
-	return []string{"", ""}
-}
-
-func (r redisExtCallsImpMock) getNewClient(host, port string) *redis.Client {
+func (r redisExtCallsImpMock) getNewClient() *redis.Client {
 	return &redis.Client{}
 }
 
@@ -56,10 +37,8 @@ func TestGetClient(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "successfully created client",
-			want: &Client{
-				masterIP: "ValidMasterIP",
-			},
+			name:    "successfully created client",
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -69,14 +48,8 @@ func TestGetClient(t *testing.T) {
 				t.Errorf("GetClient() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got.masterIP, tt.want.masterIP) {
-				t.Errorf("GetClient() = %v, want %v", got.masterIP, tt.want.masterIP)
-			}
-			if got.readPool == nil {
-				t.Error("readPool is nil")
-			}
-			if got.writePool == nil {
-				t.Error("writePool is nil")
+			if got.pool == nil {
+				t.Error("pool is nil")
 			}
 		})
 	}
