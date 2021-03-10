@@ -165,6 +165,14 @@ func CreateZone(ctx iris.Context) {
 		ctx.StatusCode(statusCode)
 		ctx.JSON(zone)
 		return
+	case "ZoneOfEndpoints":
+		resp, statusCode := createZoneOfEndpoints(uri, fabricID, zone)
+		if statusCode != http.StatusCreated {
+			ctx.StatusCode(statusCode)
+			ctx.JSON(resp)
+			return
+		}
+		return
 	default:
 		ctx.StatusCode(http.StatusNotImplemented)
 		return
@@ -263,7 +271,7 @@ func DeleteZone(ctx iris.Context) {
 
 }
 
-// CreateZoneOfZone takes the request to create zone of zones and translates to create application profiles and VRFs
+// CreateZoneOfZones takes the request to create zone of zones and translates to create application profiles and VRFs
 func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, interface{}, int) {
 	var apModel aciModels.ApplicationProfileAttributes
 	apModel.Name = zone.Name
@@ -300,4 +308,60 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 
 func updateZoneData() {
 	return
+}
+
+func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (interface{}, int) {
+	// Create the BridgeDomain
+	// get the Tenant name from the ZoneofZone data
+	//validate the request
+	if zone.Links == nil {
+		errorMessage := "Links attribute is missing in the request"
+		return updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"Links"}), http.StatusBadRequest
+	}
+	if zone.Links.ContainedByZones == nil {
+		errorMessage := "ContainedByZones attribute is missing in the request"
+		return updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"ContainedByZones"}), http.StatusBadRequest
+
+	}
+	zoneofZoneURL := zone.Links.ContainedByZones[0].Oid
+	// get the zone of zone data
+	zoneofZoneData, ok := capdata.ZoneDataStore[zoneofZoneURL]
+	if !ok {
+		errMsg := fmt.Sprintf("ZoneofZone data for uri %s not found", uri)
+		log.Error(errMsg)
+		return updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"ZoneofZone", zoneofZoneURL}), http.StatusNotFound
+	}
+	// Get the default zone data
+	defaultZoneURL := zoneofZoneData.Zone.Links.ContainedByZones[0].Oid
+	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL]
+	return createBridgeDomain(defaultZoneData.Zone.Name, zone)
+}
+
+func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, int) {
+	var bridgeDomainAttributes aciModels.BridgeDomainAttributes
+	bridgeDomainAttributes.Name = zone.Name
+	aciClient := caputilities.GetConnection()
+	//var tenantList []*aciModels.Tenant
+	bridgeDomainList, err := aciClient.ListBridgeDomain(tenantName)
+	if err != nil {
+		errMsg := "Error while creating default Zone: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	for _, bd := range bridgeDomainList {
+		if bd.Name == zone.Name {
+			errMsg := "ZoneOfEndpoints already exists with name: " + zone.Name + " for the default zone " + tenantName
+			resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"ZoneOfEndpoints", bd.BridgeDomainAttributes.Name, zone.Name})
+			return resp, http.StatusConflict
+		}
+
+	}
+
+	resp, err := aciClient.CreateBridgeDomain(zone.Name, tenantName, zone.Description, bridgeDomainAttributes)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	return resp, http.StatusCreated
 }
