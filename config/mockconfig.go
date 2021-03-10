@@ -210,6 +210,17 @@ func SetUpMockConfig(t *testing.T) error {
 	lutilconf.SetTLSMaxVersion(Data.TLSConf.MaxVersion)
 	lutilconf.SetPreferredCipherSuites(Data.TLSConf.PreferredCipherSuites)
 
+	Data.DBConf = &DBConf{
+		Protocol:       "tcp",
+		Host:           "100.0.0.0",
+		Port:           "1234",
+		MaxIdleConns:   10,
+		MaxActiveConns: 4,
+		RedisHAEnabled: true,
+		SentinelPort:   "5678",
+		MasterSet:      "master",
+	}
+
 	return nil
 }
 

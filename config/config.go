@@ -36,10 +36,23 @@ type configModel struct {
 	LoadBalancerConf        *LoadBalancerConf `json:"LoadBalancerConf"`
 	EventConf               *EventConf        `json:"EventConf"`
 	MessageBusConf          *MessageBusConf   `json:"MessageBusConf"`
+	DBConf                  *DBConf           `json:"DBConf"`
 	KeyCertConf             *KeyCertConf      `json:"KeyCertConf"`
 	URLTranslation          *URLTranslation   `json:"URLTranslation"`
 	TLSConf                 *TLSConf          `json:"TLSConf"`
 	APICConf                *APICConf         `json:"APICConf"`
+}
+
+// DBConf holds all DB related configurations
+type DBConf struct {
+	Protocol       string `json:"Protocol"`
+	Host           string `json:"Host"`
+	Port           string `json:"Port"`
+	MaxIdleConns   int    `json:"MaxIdleConns"`
+	MaxActiveConns int    `json:"MaxActiveConns"`
+	RedisHAEnabled bool   `json:"RedisHAEnabled"`
+	SentinelPort   string `json:"SentinelPort"`
+	MasterSet      string `json:"MasterSet"`
 }
 
 //PluginConf is for holding all the plugin related configurations
@@ -154,6 +167,9 @@ func ValidateConfiguration() error {
 	checkLBConf()
 	checkURLTranslationConf()
 	if err := checkAPICConf(); err != nil {
+		return err
+	}
+	if err := checkDBConf(); err != nil {
 		return err
 	}
 	return nil
@@ -314,6 +330,46 @@ func checkAPICConf() error {
 	}
 	if Data.APICConf.Password == "" {
 		return fmt.Errorf("no value set for APIC Password")
+	}
+	return nil
+}
+
+func checkDBConf() error {
+	if Data.DBConf == nil {
+		return fmt.Errorf("error: DBConf is not provided")
+	}
+	if Data.DBConf.Protocol != DefaultDBProtocol {
+		log.Warn("Incorrect value configured for DB Protocol, setting default value")
+		Data.DBConf.Protocol = DefaultDBProtocol
+	}
+	if Data.DBConf.Host == "" {
+		return fmt.Errorf("error: no value configured for DB Host")
+	}
+	if Data.DBConf.Port == "" {
+		return fmt.Errorf("error: no value configured for DB Port")
+	}
+	if Data.DBConf.MaxActiveConns == 0 {
+		log.Warn("No value configured for MaxActiveConns, setting default value")
+		Data.DBConf.MaxActiveConns = DefaultDBMaxActiveConns
+	}
+	if Data.DBConf.MaxIdleConns == 0 {
+		log.Warn("No value configured for MaxIdleConns, setting default value")
+		Data.DBConf.MaxIdleConns = DefaultDBMaxIdleConns
+	}
+	if Data.DBConf.RedisHAEnabled {
+		if err := checkDBHAConf(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkDBHAConf() error {
+	if Data.DBConf.SentinelPort == "" {
+		return fmt.Errorf("error: no value configured for DB SentinelPort")
+	}
+	if Data.DBConf.MasterSet == "" {
+		return fmt.Errorf("error: no value configured for DB MasterSet")
 	}
 	return nil
 }
