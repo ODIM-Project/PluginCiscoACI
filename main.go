@@ -174,8 +174,7 @@ func intializeACIData() {
 	capdata.SwitchDataStore.Data = make(map[string]*dmtfmodel.Switch, 0)
 	capdata.SwitchToPortDataStore = make(map[string][]string)
 	capdata.PortDataStore = make(map[string]*dmtfmodel.Port)
-	capdata.ZoneDataStore = make(map[string]*dmtfmodel.Zone)
-	capdata.FabricToZoneDataStore = make(map[string][]string)
+	capdata.ZoneDataStore = make(map[string]*capdata.ZoneData)
 	capdata.AddressPoolDataStore = make(map[string]*capdata.AddressPoolsData)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
@@ -208,7 +207,6 @@ func intializeACIData() {
 			log.Fatal("while intializing ACI Port  Data  PluginCiscoACI got: " + err.Error())
 		}
 		parsePortData(portData, switchID)
-		capdata.FabricToZoneDataStore[fabricID] = []string{}
 	}
 
 	// TODO:
