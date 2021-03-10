@@ -118,10 +118,10 @@ func routers() *iris.Application {
 	fabricRoutes.Get("/{id}/Switches/{rid}", caphandler.GetSwitchInfo)
 	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports", caphandler.GetPortCollection)
 	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports/{portID}", caphandler.GetPortInfo)
-	fabricRoutes.Get("/{id}/Zones", caphandler.GetFabricResource)
-	fabricRoutes.Post("/{id}/Zones", caphandler.GetFabricResource)
-	fabricRoutes.Get("/{id}/Zones/{rid}", caphandler.GetFabricResource)
-	fabricRoutes.Delete("/{id}/Zones/{rid}", caphandler.GetFabricResource)
+	fabricRoutes.Get("/{id}/Zones", caphandler.GetZones)
+	fabricRoutes.Post("/{id}/Zones", caphandler.CreateZone)
+	fabricRoutes.Get("/{id}/Zones/{rid}", caphandler.GetZone)
+	fabricRoutes.Delete("/{id}/Zones/{rid}", caphandler.DeleteZone)
 	fabricRoutes.Patch("/{id}/Zones/{rid}", caphandler.GetFabricResource)
 	fabricRoutes.Get("/{id}/AddressPools", caphandler.GetAddressPoolCollection)
 	fabricRoutes.Post("/{id}/AddressPools", caphandler.CreateAddressPool)
@@ -174,6 +174,8 @@ func intializeACIData() {
 	capdata.SwitchDataStore.Data = make(map[string]*dmtfmodel.Switch, 0)
 	capdata.SwitchToPortDataStore = make(map[string][]string)
 	capdata.PortDataStore = make(map[string]*dmtfmodel.Port)
+	capdata.ZoneDataStore = make(map[string]*dmtfmodel.Zone)
+	capdata.FabricToZoneDataStore = make(map[string][]string)
 	capdata.AddressPoolDataStore = make(map[string]*capdata.AddressPoolsData)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
@@ -206,7 +208,7 @@ func intializeACIData() {
 			log.Fatal("while intializing ACI Port  Data  PluginCiscoACI got: " + err.Error())
 		}
 		parsePortData(portData, switchID)
-
+		capdata.FabricToZoneDataStore[fabricID] = []string{}
 	}
 
 	// TODO:
