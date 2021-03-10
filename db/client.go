@@ -61,6 +61,10 @@ func GetClient() (*Client, error) {
 		} else {
 			client.pool = redisExtCalls.getNewClient()
 		}
+		if client.pool == nil {
+			log.Error("GetClient: unable to create new DB connection pool")
+			return nil, fmt.Errorf("GetClient: unable to create new DB connection pool")
+		}
 		log.Info("GetClient: new pool DB connection pool created.")
 	}
 	return client, nil
@@ -81,12 +85,11 @@ func resetDBConection() (err error) {
 }
 
 func (p *Client) setPool() (err error) {
-	pool := redisExtCalls.getNewClient()
+	pool := retryForSentinelClient()
 	if pool == nil {
 		return fmt.Errorf("sentinel DB pool creation failed")
 	}
 	p.pool = pool
-	p.poolUpdatedTime = time.Now()
 	return
 }
 
