@@ -150,11 +150,8 @@ func validateAddressPoolRequest(request model.AddressPool) (string, error) {
 	if request.Ethernet.IPv4 == nil {
 		return "IPv4", fmt.Errorf("Ethernet IPV4 data  in request is missing")
 	}
-	if request.Ethernet.IPv4.HostAddressRange == nil {
-		return "HostAddressRange", fmt.Errorf("IPV4 HostAddressRange data  in request is missing")
-	}
-	if request.Ethernet.IPv4.HostAddressRange.Lower == "" || request.Ethernet.IPv4.HostAddressRange.Upper == "" {
-		return "Upper or Lower", fmt.Errorf("HostAddressRange Lower or Upper data in request is missing")
+	if request.Ethernet.IPv4.GatewayIPAddress == "" {
+		return "GatewayIPAddress", fmt.Errorf("IPV4 GatewayIPAddress data  in request is missing")
 	}
 	return "", nil
 }
