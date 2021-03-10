@@ -30,25 +30,3 @@ type FabricHealthIMData struct {
 type FabricHealthData struct {
 	Attributes map[string]interface{} `json:"attributes"`
 }
-
-// ErrorResponse struct ...
-type ErrorResponse struct {
-	IMData     []ErrorIMData `json:"imdata"`
-	TotalCount string        `json:"totalCount"`
-}
-
-// ErrorIMData strcut ...
-type ErrorIMData struct {
-	Error AttStruct `json:"error"`
-}
-
-// AttStruct strcut ...
-type AttStruct struct {
-	Attributes Attribute `json:"attributes"`
-}
-
-// Attribute struct ...
-type Attribute struct {
-	code string `json:"code"`
-	text string `json:"text"`
-}
