@@ -153,15 +153,27 @@ func CreateZone(ctx iris.Context) {
 		ctx.JSON(zone)
 		return
 	case "ZoneOfZones":
-		_, resp, statusCode := CreateZoneOfZones(uri, fabricID, zone)
+		defaultZoneLink, resp, statusCode := CreateZoneOfZones(uri, fabricID, zone)
 		if statusCode != http.StatusCreated {
 			ctx.StatusCode(statusCode)
 			ctx.JSON(resp)
 			return
 		}
-		defaultZoneID := uuid.NewV4().String()
-		zone = saveZoneData(defaultZoneID, uri, fabricID, zone)
-		updateZoneData()
+		conflictFlag := false
+		var defaultZoneID string
+		for _, value := range capdata.ZoneDataStore {
+			if value.Zone.Name == zone.Name {
+				conflictFlag = true
+			}
+		}
+		if !conflictFlag {
+			defaultZoneID = uuid.NewV4().String()
+			zone = saveZoneData(defaultZoneID, uri, fabricID, zone)
+		}
+		updateZoneData(defaultZoneLink, zone)
+		common.SetResponseHeader(ctx, map[string]string{
+			"Location": zone.ODataID,
+		})
 		ctx.StatusCode(statusCode)
 		ctx.JSON(zone)
 		return
@@ -176,6 +188,9 @@ func saveZoneData(defaultZoneID string, uri string, fabricID string, zone model.
 	zone.ODataContext = "/ODIM/v1/$metadata#Zone.Zone"
 	zone.ODataType = "#Zone.v1_4_0.Zone"
 	zone.ODataID = fmt.Sprintf("%s/%s", uri, defaultZoneID)
+	zone.Status = &model.Status{}
+	zone.Status.State = "Enabled"
+	zone.Status.Health = "OK"
 	capdata.ZoneDataStore[zone.ODataID] = &capdata.ZoneData{
 		FabricID: fabricID,
 		Zone:     &zone,
@@ -287,6 +302,15 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Zone", defaultZoneLink})
 		return "", resp, http.StatusNotFound
 	}
+	aciClient := caputilities.GetConnection()
+	appProfileList, err := aciClient.ListApplicationProfile(respData.Zone.Name)
+	for _, appProfile := range appProfileList {
+		if appProfile.ApplicationProfileAttributes.Name == zone.Name {
+			errMsg := "Application profile already exists with name: " + zone.Name
+			resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"ApplicationProfile", appProfile.ApplicationProfileAttributes.Name, zone.Name})
+			return "", resp, http.StatusConflict
+		}
+	}
 
 	apResp, err := CreateApplicationProfile(zone.Name, respData.Zone.Name, respData.Zone.Description, apModel)
 	if err != nil {
@@ -298,6 +322,27 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 
 }
 
-func updateZoneData() {
+func updateZoneData(defaultZoneLink string, zone model.Zone) {
+	defaultZoneStore := capdata.ZoneDataStore[defaultZoneLink]
+	defaultZoneData := defaultZoneStore.Zone
+	if defaultZoneData.Links == nil {
+		defaultZoneData.Links = &model.ZoneLinks{}
+	}
+	if defaultZoneData.Links.ContainsZones == nil {
+		var containsList []model.Link
+		log.Println("List of contains")
+		log.Println(containsList)
+		var link model.Link
+		link.Oid = zone.ODataID
+		containsList = append(containsList, link)
+		defaultZoneData.Links.ContainsZones = containsList
+		defaultZoneData.Links.ContainsZonesCount = len(containsList)
+	} else {
+		var link model.Link
+		link.Oid = zone.ODataID
+		defaultZoneData.Links.ContainsZones = append(defaultZoneData.Links.ContainsZones, link)
+	}
+
+	capdata.ZoneDataStore[defaultZoneLink].Zone = defaultZoneData
 	return
 }
