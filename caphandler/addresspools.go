@@ -126,11 +126,22 @@ func CreateAddressPool(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
+	// validate cidr given in request
+	if _, _, err := net.ParseCIDR(addresspoolData.Ethernet.IPv4.GatewayIPAddress); err != nil {
+		errorMessage := "Invalid value for GatewayIPAddress:" + err.Error()
+		log.Errorf(errorMessage)
+		resp := updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"GatewayIPAddress", addresspoolData.Ethernet.IPv4.GatewayIPAddress})
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(resp)
+		return
+
+	}
+
 	for _, data := range capdata.AddressPoolDataStore {
 		if data.AddressPool.Ethernet.IPv4.GatewayIPAddress == addresspoolData.Ethernet.IPv4.GatewayIPAddress {
 			errorMessage := "Requested GatewayIPAddress is already present in the addresspool " + data.AddressPool.ODataID
 			log.Error(errorMessage)
-			resp := updateErrorResponse(response.ResourceAlreadyExists, err.Error(), []interface{}{"AddressPool", "GatewayIPAddress", addresspoolData.Ethernet.IPv4.GatewayIPAddress})
+			resp := updateErrorResponse(response.ResourceAlreadyExists, errorMessage, []interface{}{"AddressPool", "GatewayIPAddress", addresspoolData.Ethernet.IPv4.GatewayIPAddress})
 			ctx.StatusCode(http.StatusConflict)
 			ctx.JSON(resp)
 			return
@@ -162,10 +173,6 @@ func validateAddressPoolRequest(request model.AddressPool) (string, error) {
 	}
 	if request.Ethernet.IPv4.GatewayIPAddress == "" {
 		return "GatewayIPAddress", fmt.Errorf("IPV4 GatewayIPAddress data  in request is missing")
-	}
-	if _, _, err := net.ParseCIDR(request.Ethernet.IPv4.GatewayIPAddress); err != nil {
-		log.Error(err.Error())
-		return "GatewayIPAddress", fmt.Errorf("Invalid value for GatewayIPAddress:%v", err)
 	}
 	return "", nil
 }
