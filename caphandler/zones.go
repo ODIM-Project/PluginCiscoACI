@@ -47,14 +47,13 @@ func GetZones(ctx iris.Context) {
 	fabricID := ctx.Params().Get("id")
 	zonesData, ok := capdata.FabricToZoneDataStore[fabricID]
 	if !ok {
-		errMsg := fmt.Sprintf("Zone data for uri %s not found", uri)
+		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
 		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Zone", fabricID})
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
 		ctx.StatusCode(http.StatusNotFound)
 		ctx.JSON(resp)
 		return
 	}
-
 	var members = []*model.Link{}
 	for i := 0; i < len(zonesData); i++ {
 		members = append(members, &model.Link{
@@ -143,47 +142,68 @@ func CreateZone(ctx iris.Context) {
 			ctx.JSON(resp)
 			return
 		}
-		defaultZoneID := uuid.NewV4().String()
-		zone.ID = defaultZoneID
-		zone.ODataContext = "/ODIM/v1/$metadata#Zone.Zone"
-		zone.ODataType = "#Zone.v1_4_0.Zone"
-		zone.ODataID = fmt.Sprintf("%s/%s", uri, defaultZoneID)
+		conflictFlag := false
+		var defaultZoneID string
+		for _, value := range capdata.ZoneDataStore {
+			if value.Name == zone.Name {
+				conflictFlag = true
+			}
+		}
+		if !conflictFlag {
+			defaultZoneID = uuid.NewV4().String()
+			saveZoneData(defaultZoneID, uri, fabricID, zone)
+		}
 		common.SetResponseHeader(ctx, map[string]string{
 			"Location": zone.ODataID,
 		})
-		data, ok := capdata.FabricToZoneDataStore[fabricID]
-		if ok {
-			data = append(data, zone.ODataID)
-			capdata.FabricToZoneDataStore[fabricID] = data
-		} else {
-			capdata.FabricToZoneDataStore[fabricID] = []string{zone.ODataID}
-		}
-		log.Println("HERE")
-		log.Println(zone.ODataID)
-		capdata.ZoneDataStore[zone.ODataID] = &zone
 		ctx.StatusCode(statusCode)
 		ctx.JSON(zone)
 	}
+}
+
+func saveZoneData(defaultZoneID, uri, fabricID string, zone model.Zone) {
+	zone.ID = defaultZoneID
+	zone.ODataContext = "/ODIM/v1/$metadata#Zone.Zone"
+	zone.ODataType = "#Zone.v1_4_0.Zone"
+	zone.ODataID = fmt.Sprintf("%s/%s", uri, defaultZoneID)
+	data, ok := capdata.FabricToZoneDataStore[fabricID]
+	if ok {
+		data = append(data, zone.ODataID)
+		capdata.FabricToZoneDataStore[fabricID] = data
+	} else {
+		capdata.FabricToZoneDataStore[fabricID] = []string{zone.ODataID}
+	}
+	capdata.ZoneDataStore[zone.ODataID] = &zone
+
 }
 
 // CreateDefaultZone creates a zone of type 'Default'
 func CreateDefaultZone(zone model.Zone) (interface{}, int) {
 	var tenantAttributesStruct aciModels.TenantAttributes
 	tenantAttributesStruct.Name = zone.Name
-	aciClient := caputilities.GetClient()
-	//var resp map[string]interface{}
+	aciClient := caputilities.GetConnection()
+	//var tenantList []*aciModels.Tenant
+	tenantList, err := aciClient.ListTenant()
+	if err != nil {
+		errMsg := "Error while creating default Zone: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	for _, tenant := range tenantList {
+		if tenant.TenantAttributes.Name == zone.Name {
+			errMsg := "Default zone already exists with name: " + zone.Name
+			resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"DefaultZone", tenant.TenantAttributes.Name, zone.Name})
+			return resp, http.StatusConflict
+		}
+
+	}
+
 	resp, err := aciClient.CreateTenant(zone.Name, zone.Description, tenantAttributesStruct)
 	if err != nil {
 		errMsg := "Error while creating default Zone: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return resp, http.StatusBadRequest
 	}
-	//if resp["totalCount"].(string) != "0"{
-	//var errResponse capModels.ErrorResponse
-	log.Println(resp)
-	log.Println(err)
-	//return resp, http.StatusBadRequest
-	//}
 	return resp, http.StatusCreated
 }
 
@@ -201,7 +221,10 @@ func DeleteZone(ctx iris.Context) {
 		return
 	}
 
+	//TODO: Get list of zones which are pre-populated from onstart and compare the members for item no present in odim but present in ACI
+
 	respData, ok := capdata.ZoneDataStore[uri]
+	log.Println(capdata.ZoneDataStore)
 	if !ok {
 		errMsg := fmt.Sprintf("Zone data for uri %s not found", uri)
 		log.Error(errMsg)
@@ -220,7 +243,7 @@ func DeleteZone(ctx iris.Context) {
 			return
 		}
 	}
-	aciClient := caputilities.GetClient()
+	aciClient := caputilities.GetConnection()
 	err := aciClient.DeleteTenant(respData.Name)
 	if err != nil {
 		errMsg := "Error while deleting Zone: " + err.Error()
@@ -230,6 +253,15 @@ func DeleteZone(ctx iris.Context) {
 		return
 	}
 	delete(capdata.ZoneDataStore, uri)
+	fabricToZoneData := capdata.FabricToZoneDataStore[fabricID]
+	var index int
+	for i, x := range fabricToZoneData {
+		if x == uri {
+			index = i
+		}
+	}
+	fabricToZoneData = append(fabricToZoneData[:index], fabricToZoneData[index+1:]...)
+	capdata.FabricToZoneDataStore[fabricID] = fabricToZoneData
 	ctx.JSON(http.StatusNoContent)
 
 }
