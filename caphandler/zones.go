@@ -349,8 +349,9 @@ func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, int) {
 	aciClient := caputilities.GetConnection()
 	//var tenantList []*aciModels.Tenant
 	bridgeDomainList, err := aciClient.ListBridgeDomain(tenantName)
-	if err != nil && !strings.Contains(err.Error(), "Empty response body") {
-		errMsg := "Error while creating default Zone: " + err.Error()
+	if err != nil && !strings.Contains(err.Error(), "Object may not exists") {
+		errMsg := "Error while creating Zone endpoints: " + err.Error()
+		log.Error(errMsg)
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return resp, http.StatusBadRequest
 	}
