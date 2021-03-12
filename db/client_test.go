@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/ODIM-Project/PluginCiscoACI/config"
-	"github.com/go-redis/redis/v8"
+	"github.com/go-redis/redis"
 )
 
 type redisExtCallsImpMock struct{}
