@@ -287,6 +287,14 @@ func DeleteZone(ctx iris.Context) {
 	if respData.Zone.ZoneType == "ZoneOfZones" {
 		err := deleteZoneOfZone(respData, uri)
 		if err != nil {
+			if err.Error() == "Error deleting Application Profile" {
+				resp := updateErrorResponse(response.GeneralError, err.Error(), nil)
+				ctx.StatusCode(http.StatusBadRequest)
+				ctx.JSON(resp)
+				return
+			}
+		}
+		if err != nil {
 			errMsg := fmt.Sprintf("Zone data for uri %s not found", uri)
 			log.Error(errMsg)
 			resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Zone", uri})
@@ -316,16 +324,17 @@ func DeleteZone(ctx iris.Context) {
 
 func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
 	var parentZoneLink model.Link
+	var parentZone *model.Zone
 	if respData.Zone.Links != nil {
 		if respData.Zone.Links.ContainedByZonesCount != 0 {
 			// Assuming contained by link is only one
 			parentZoneLink = respData.Zone.Links.ContainedByZones[0]
 			parentZoneData, ok := capdata.ZoneDataStore[parentZoneLink.Oid]
 			if !ok {
-				errMsg := fmt.Errorf("Zone data for uri %s not found", uri)
+				errMsg := fmt.Errorf("Zone data for uri %s not found " + uri)
 				return errMsg
 			}
-			parentZone := parentZoneData.Zone
+			parentZone = parentZoneData.Zone
 			links := parentZone.Links.ContainsZones
 			var parentZoneIndex int
 			for index, value := range links {
@@ -338,6 +347,17 @@ func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
 			parentZone.Links.ContainsZonesCount = len(parentZone.Links.ContainsZones)
 			parentZoneData.Zone = parentZone
 			capdata.ZoneDataStore[parentZoneLink.Oid] = parentZoneData
+		}
+		aciServiceManager := caputilities.GetConnection()
+		err := aciServiceManager.DeleteApplicationProfile(respData.Zone.Name, parentZone.Name)
+		if err != nil {
+			errMsg := fmt.Errorf("Error deleting Application Profile")
+			return errMsg
+		}
+		vrfErr := aciServiceManager.DeleteVRF(respData.Zone.Name+"-VRF", parentZone.Name)
+		if vrfErr != nil {
+			errMsg := fmt.Errorf("Error deleting VRF")
+			return errMsg
 		}
 		delete(capdata.ZoneDataStore, uri)
 		return nil
@@ -375,8 +395,6 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 	appProfileList, err := aciClient.ListApplicationProfile(respData.Zone.Name)
 	if err != nil && !strings.Contains(err.Error(), "Object may not exists") {
 		errMsg := fmt.Sprintf("Zone cannot be created, error while retriving existing Application profiles: " + err.Error())
-		log.Error(respData.Zone.Name)
-		log.Error(errMsg)
 		resp := updateErrorResponse(response.PropertyMissing, errMsg, []interface{}{"ContainedByZones"})
 		return "", resp, http.StatusBadRequest
 	}
