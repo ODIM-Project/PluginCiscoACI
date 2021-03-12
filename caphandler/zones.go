@@ -27,6 +27,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strings"
 )
 
 // CreateApplicationProfile creates Application profiles using APIC
@@ -37,8 +38,9 @@ func CreateApplicationProfile(name string, tenant string, description string, fv
 }
 
 // CreateVRF creates VRF's using APIC
-func CreateVRF() {
-	return
+func CreateVRF(name string, tenant string, description string, fvCtxattr aciModels.VRFAttributes) (*aciModels.VRF, error) {
+	aciServiceManager := caputilities.GetConnection()
+	return aciServiceManager.CreateVRF(name, tenant, description, fvCtxattr)
 }
 
 // GetZones returns the collection of zones present under a fabric
@@ -191,6 +193,11 @@ func saveZoneData(defaultZoneID string, uri string, fabricID string, zone model.
 	zone.Status = &model.Status{}
 	zone.Status.State = "Enabled"
 	zone.Status.Health = "OK"
+	if zone.Links != nil {
+		if zone.Links.ContainedByZones != nil {
+			zone.Links.ContainedByZonesCount = len(zone.Links.ContainedByZones)
+		}
+	}
 	capdata.ZoneDataStore[zone.ODataID] = &capdata.ZoneData{
 		FabricID: fabricID,
 		Zone:     &zone,
@@ -242,7 +249,7 @@ func DeleteZone(ctx iris.Context) {
 		return
 	}
 
-	//TODO: Get list of zones which are pre-populated from onstart and compare the members for item no present in odim but present in ACI
+	//TODO: Get list of zones which are pre-populated from onstart and compare the members for item not present in odim but present in ACI
 
 	respData, ok := capdata.ZoneDataStore[uri]
 	log.Println(capdata.ZoneDataStore)
@@ -264,27 +271,76 @@ func DeleteZone(ctx iris.Context) {
 			return
 		}
 	}
-	aciClient := caputilities.GetConnection()
-	err := aciClient.DeleteTenant(respData.Zone.Name)
-	if err != nil {
-		errMsg := "Error while deleting Zone: " + err.Error()
-		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(resp)
-		return
+	if respData.Zone.ZoneType == "ZoneOfZones" {
+		err := deleteZoneOfZone(respData, uri)
+		if err != nil {
+			errMsg := fmt.Sprintf("Zone data for uri %s not found", uri)
+			log.Error(errMsg)
+			resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Zone", uri})
+			ctx.StatusCode(http.StatusNotFound)
+			ctx.JSON(resp)
+			return
+		}
+		delete(capdata.ZoneDataStore, uri)
+		ctx.JSON(http.StatusNoContent)
 	}
-	delete(capdata.ZoneDataStore, uri)
-	ctx.JSON(http.StatusNoContent)
+	if respData.Zone.ZoneType == "Default" {
+		aciClient := caputilities.GetConnection()
+		err := aciClient.DeleteTenant(respData.Zone.Name)
+		if err != nil {
+			errMsg := "Error while deleting Zone: " + err.Error()
+			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+			ctx.StatusCode(http.StatusBadRequest)
+			ctx.JSON(resp)
+			return
+		}
 
+		delete(capdata.ZoneDataStore, uri)
+		ctx.JSON(http.StatusNoContent)
+	}
+
+}
+
+func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
+	var parentZoneLink model.Link
+	if respData.Zone.Links != nil {
+		if respData.Zone.Links.ContainedByZonesCount != 0 {
+			// Assuming contained by link is only one
+			parentZoneLink = respData.Zone.Links.ContainedByZones[0]
+			parentZoneData, ok := capdata.ZoneDataStore[parentZoneLink.Oid]
+			if !ok {
+				errMsg := fmt.Errorf("Zone data for uri %s not found", uri)
+				return errMsg
+			}
+			parentZone := parentZoneData.Zone
+			links := parentZone.Links.ContainsZones
+			var parentZoneIndex int
+			for index, value := range links {
+				if value.Oid == uri {
+					parentZoneIndex = index
+					break
+				}
+			}
+			parentZone.Links.ContainsZones = append(links[:parentZoneIndex], links[parentZoneIndex+1:]...)
+			parentZone.Links.ContainsZonesCount = len(parentZone.Links.ContainsZones)
+			parentZoneData.Zone = parentZone
+			capdata.ZoneDataStore[parentZoneLink.Oid] = parentZoneData
+		}
+		delete(capdata.ZoneDataStore, uri)
+		return nil
+	}
+	return nil
 }
 
 // CreateZoneOfZone takes the request to create zone of zones and translates to create application profiles and VRFs
 func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, interface{}, int) {
 	var apModel aciModels.ApplicationProfileAttributes
+	var vrfModel aciModels.VRFAttributes
 	apModel.Name = zone.Name
+	vrfModel.Name = zone.Name + "-VRF"
 	if zone.Links != nil {
 		if len(zone.Links.ContainedByZones) == 0 {
-			errMsg := fmt.Sprintf("Zone cannot be creaed as there are dependent resources missing")
+			errMsg := fmt.Sprintf("Zone cannot be created as there are dependent resources missing")
 			log.Error(errMsg)
 			resp := updateErrorResponse(response.PropertyMissing, errMsg, []interface{}{"ContainedByZones"})
 			return "", resp, http.StatusBadRequest
@@ -304,6 +360,13 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 	}
 	aciClient := caputilities.GetConnection()
 	appProfileList, err := aciClient.ListApplicationProfile(respData.Zone.Name)
+	if err != nil && !strings.Contains(err.Error(), "Object may not exists") {
+		errMsg := fmt.Sprintf("Zone cannot be created, error while retriving existing Application profiles: " + err.Error())
+		log.Error(respData.Zone.Name)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.PropertyMissing, errMsg, []interface{}{"ContainedByZones"})
+		return "", resp, http.StatusBadRequest
+	}
 	for _, appProfile := range appProfileList {
 		if appProfile.ApplicationProfileAttributes.Name == zone.Name {
 			errMsg := "Application profile already exists with name: " + zone.Name
@@ -311,10 +374,30 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 			return "", resp, http.StatusConflict
 		}
 	}
+	vrfList, err := aciClient.ListVRF(respData.Zone.Name)
+	if err != nil && !strings.Contains(err.Error(), "Object may not exists") {
+		errMsg := fmt.Sprintf("Zone cannot be created, error while retriving existing VRFs: " + err.Error())
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.PropertyMissing, errMsg, []interface{}{"ContainedByZones"})
+		return "", resp, http.StatusBadRequest
+	}
+	for _, vrf := range vrfList {
+		if vrf.VRFAttributes.Name == vrfModel.Name {
+			errMsg := "VRF already exists with name: " + vrfModel.Name
+			resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"VRF", vrf.VRFAttributes.Name, vrfModel.Name})
+			return "", resp, http.StatusConflict
+		}
+	}
 
 	apResp, err := CreateApplicationProfile(zone.Name, respData.Zone.Name, respData.Zone.Description, apModel)
 	if err != nil {
 		errMsg := "Error while creating application profile: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return "", resp, http.StatusBadRequest
+	}
+	_, vrfErr := CreateVRF(vrfModel.Name, respData.Zone.Name, respData.Zone.Description, vrfModel)
+	if vrfErr != nil {
+		errMsg := "Error while creating application profile: " + vrfErr.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return "", resp, http.StatusBadRequest
 	}
