@@ -172,6 +172,12 @@ func CreateZone(ctx iris.Context) {
 			ctx.JSON(resp)
 			return
 		}
+		zoneID := uuid.NewV4().String()
+		zone = saveZoneData(zoneID, uri, fabricID, zone)
+		updateZoneData()
+		ctx.StatusCode(statusCode)
+		ctx.JSON(zone)
+		return
 		return
 	default:
 		ctx.StatusCode(http.StatusNotImplemented)
@@ -343,7 +349,7 @@ func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, int) {
 	aciClient := caputilities.GetConnection()
 	//var tenantList []*aciModels.Tenant
 	bridgeDomainList, err := aciClient.ListBridgeDomain(tenantName)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(),"Empty response body") {
 		errMsg := "Error while creating default Zone: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return resp, http.StatusBadRequest
