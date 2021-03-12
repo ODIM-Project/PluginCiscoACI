@@ -30,6 +30,7 @@ var (
 )
 
 const (
+	// scanPaginationSize defines the size of DB keys to be scanned on single query
 	scanPaginationSize = 100
 )
 
