@@ -47,6 +47,12 @@ type AddressPoolsData struct {
 	AddressPool *model.AddressPool
 }
 
+// ZoneData holds the zone data
+type ZoneData struct {
+	FabricID string
+	Zone     *model.Zone
+}
+
 // SwitchDataStore holds the value  aci switch id and switches info
 var SwitchDataStore SwitchData
 
@@ -56,5 +62,13 @@ var SwitchToPortDataStore map[string][]string
 //PortDataStore hold the value of the ports info of the switch
 var PortDataStore map[string]*model.Port
 
-//AddressPoolDataStore all addresspool data
+// ApplicationProfile defines policies, services, and relationships between endpoint groups (EPGs)
+type ApplicationProfile struct {
+	Name string
+}
+
+// ZoneDataStore defines the zone data structure as defined by redfish model
+var ZoneDataStore map[string]*ZoneData
+
+// AddressPoolDataStore defines all addressPool data
 var AddressPoolDataStore map[string]*AddressPoolsData

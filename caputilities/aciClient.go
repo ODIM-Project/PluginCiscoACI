@@ -35,6 +35,19 @@ type ACIHTTPClient struct {
 var aciClient *client.Client
 var aciServiceManager *client.ServiceManager
 
+// GetClient returns a new connection client to APIC
+func GetClient() *client.Client {
+	aciClient = client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
+	return aciClient
+}
+
+// GetConnection returns a new connection to APIC
+func GetConnection() *client.ServiceManager {
+	aciClient = client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
+	aciServiceManager = client.NewServiceManager(client.DefaultMOURL, aciClient)
+	return aciServiceManager
+}
+
 // GetFabricNodeData collects the all switch and fabric  details from the aci
 func GetFabricNodeData() ([]*models.FabricNodeMember, error) {
 	aciClient = client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
