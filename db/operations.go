@@ -29,6 +29,10 @@ var (
 	ErrorKeyNotFound = errors.New("Key not Found in DB")
 )
 
+const (
+	scanPaginationSize = 100
+)
+
 // Create will create a new entry in DB for the value with the given table and key
 func (c *Client) Create(table, key string, data interface{}) (err error) {
 	dataByte, err := json.Marshal(data)
@@ -58,7 +62,7 @@ func (c *Client) GetAllKeys(table string) ([]string, error) {
 	var allKeys []string
 	var cursor uint64
 	for {
-		keys, c, err := c.pool.Scan(cursor, generateKey(table, "*"), 100).Result()
+		keys, c, err := c.pool.Scan(cursor, generateKey(table, "*"), scanPaginationSize).Result()
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch all keys of table %s: %s", table, err.Error())
 		}
