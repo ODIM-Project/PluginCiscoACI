@@ -27,6 +27,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strings"
 )
 
 // CreateApplicationProfile creates Application profiles using APIC
@@ -177,7 +178,6 @@ func CreateZone(ctx iris.Context) {
 		updateZoneData()
 		ctx.StatusCode(statusCode)
 		ctx.JSON(zone)
-		return
 		return
 	default:
 		ctx.StatusCode(http.StatusNotImplemented)
@@ -349,7 +349,7 @@ func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, int) {
 	aciClient := caputilities.GetConnection()
 	//var tenantList []*aciModels.Tenant
 	bridgeDomainList, err := aciClient.ListBridgeDomain(tenantName)
-	if err != nil && !strings.Contains(err.Error(),"Empty response body") {
+	if err != nil && !strings.Contains(err.Error(), "Empty response body") {
 		errMsg := "Error while creating default Zone: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return resp, http.StatusBadRequest
