@@ -45,10 +45,10 @@ func GetAddressPoolCollection(ctx iris.Context) {
 	}
 	var members = []*model.Link{}
 
-	for addressPoolID, addressPooldData := range capdata.AddressPoolDataStore {
+	for addressPoolOID, addressPooldData := range capdata.AddressPoolDataStore {
 		if addressPooldData.FabricID == fabricID {
 			members = append(members, &model.Link{
-				Oid: uri + "/" + addressPoolID,
+				Oid: addressPoolOID,
 			})
 		}
 	}
@@ -69,7 +69,6 @@ func GetAddressPoolCollection(ctx iris.Context) {
 // GetAddressPoolInfo fetches the addresspool info for given addresspool id
 func GetAddressPoolInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
-	addressPoolID := ctx.Params().Get("rid")
 	fabricID := ctx.Params().Get("id")
 	_, ok := capdata.FabricDataStore.Data[fabricID]
 	if !ok {
@@ -81,7 +80,7 @@ func GetAddressPoolInfo(ctx iris.Context) {
 		return
 	}
 	// Get the addresspool data from the memory
-	addressPoolResponse, ok := capdata.AddressPoolDataStore[addressPoolID]
+	addressPoolResponse, ok := capdata.AddressPoolDataStore[uri]
 	if !ok {
 		errMsg := fmt.Sprintf("AddressPool data for uri %s not found", uri)
 		log.Error(errMsg)
@@ -153,7 +152,7 @@ func CreateAddressPool(ctx iris.Context) {
 	addresspoolData.ODataID = fmt.Sprintf("%s/%s/", uri, addressPoolID)
 	addresspoolData.ID = addressPoolID
 
-	capdata.AddressPoolDataStore[addressPoolID] = &capdata.AddressPoolsData{
+	capdata.AddressPoolDataStore[addresspoolData.ODataID] = &capdata.AddressPoolsData{
 		FabricID:    fabricID,
 		AddressPool: &addresspoolData,
 	}
@@ -181,7 +180,6 @@ func validateAddressPoolRequest(request model.AddressPool) (string, error) {
 func DeleteAddressPoolInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	addressPoolID := ctx.Params().Get("rid")
 	if _, ok := capdata.FabricDataStore.Data[fabricID]; !ok {
 		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
 		log.Error(errMsg)
@@ -190,7 +188,7 @@ func DeleteAddressPoolInfo(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-	_, ok := capdata.AddressPoolDataStore[addressPoolID]
+	_, ok := capdata.AddressPoolDataStore[uri]
 	if !ok {
 		errMsg := fmt.Sprintf("AddressPool data for uri %s not found", uri)
 		log.Error(errMsg)
@@ -201,6 +199,18 @@ func DeleteAddressPoolInfo(ctx iris.Context) {
 	}
 
 	// Todo:Add the validation  to verify the links
-	delete(capdata.AddressPoolDataStore, addressPoolID)
+	delete(capdata.AddressPoolDataStore, uri)
 	ctx.StatusCode(http.StatusNoContent)
+}
+
+func getAddressPoolData(addresspoolOID string) (*model.AddressPool, int, interface{}) {
+	addressPoolData, ok := capdata.AddressPoolDataStore[addresspoolOID]
+	if !ok {
+		errMsg := fmt.Sprintf("AddressPool data for uri %s not found", addresspoolOID)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"AddressPool", addresspoolOID})
+
+		return nil, http.StatusNotFound, resp
+	}
+	return addressPoolData.AddressPool, http.StatusOK, nil
 }

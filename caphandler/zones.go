@@ -337,10 +337,29 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (interface{}, 
 		log.Error(errMsg)
 		return updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"ZoneofZone", zoneofZoneURL}), http.StatusNotFound
 	}
+	// validate all given addresspools if it's present
+	if len(zone.Links.AddressPools) == 0 {
+		errorMessage := "AddressPool attribute is missing in the request"
+		return updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"AddressPool"}), http.StatusBadRequest
+	}
+	var addresspoolData []*model.AddressPool
+	for i := 0; i < len(zone.Links.AddressPools); i++ {
+		data, statusCode, resp := getAddressPoolData(zone.Links.AddressPools[i].Oid)
+		if statusCode != http.StatusOK {
+			return resp, statusCode
+		}
+		addresspoolData = append(addresspoolData, data)
+	}
 	// Get the default zone data
 	defaultZoneURL := zoneofZoneData.Zone.Links.ContainedByZones[0].Oid
 	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL]
-	return createBridgeDomain(defaultZoneData.Zone.Name, zone)
+	resp, statusCode := createBridgeDomain(defaultZoneData.Zone.Name, zone)
+	if statusCode != http.StatusCreated {
+		return resp, statusCode
+	}
+	// create the subnet for BD for all given address pool
+	resp, statusCode = createSubnets(defaultZoneData.Zone.Name, zone.Name, addresspoolData)
+	return resp, statusCode
 }
 
 func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, int) {
@@ -371,4 +390,19 @@ func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, int) {
 		return resp, http.StatusBadRequest
 	}
 	return resp, http.StatusCreated
+}
+
+func createSubnets(tenantName, bdName string, addresspoolData []*model.AddressPool) (interface{}, int) {
+	for i := 0; i < len(addresspoolData); i++ {
+		var subnetAttributes aciModels.SubnetAttributes
+		subnetAttributes.Ip = addresspoolData[i].Ethernet.IPv4.GatewayIPAddress
+		aciClient := caputilities.GetConnection()
+		_, err := aciClient.CreateSubnet(subnetAttributes.Ip, bdName, tenantName, "subnet for ip"+subnetAttributes.Ip, subnetAttributes)
+		if err != nil {
+			errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
+			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+			return resp, http.StatusBadRequest
+		}
+	}
+	return nil, http.StatusCreated
 }
