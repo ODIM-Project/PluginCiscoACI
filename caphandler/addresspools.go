@@ -149,7 +149,7 @@ func CreateAddressPool(ctx iris.Context) {
 	addressPoolID := uuid.NewV4().String()
 	addresspoolData.ODataContext = "/ODIM/v1/$metadata#AddressPool.AddressPool"
 	addresspoolData.ODataType = "#AddressPool.v1_1_0.AddressPool"
-	addresspoolData.ODataID = fmt.Sprintf("%s/%s/", uri, addressPoolID)
+	addresspoolData.ODataID = fmt.Sprintf("%s/%s", uri, addressPoolID)
 	addresspoolData.ID = addressPoolID
 
 	capdata.AddressPoolDataStore[addresspoolData.ODataID] = &capdata.AddressPoolsData{
