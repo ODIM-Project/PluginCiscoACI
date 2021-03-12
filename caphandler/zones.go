@@ -188,7 +188,7 @@ func CreateZone(ctx iris.Context) {
 		}
 		zoneID := uuid.NewV4().String()
 		zone = saveZoneData(zoneID, uri, fabricID, zone)
-		updateZoneData()
+		//updateZoneData()
 		ctx.StatusCode(statusCode)
 		ctx.JSON(zone)
 		return
@@ -314,7 +314,6 @@ func DeleteZone(ctx iris.Context) {
 
 }
 
-<<<<<<< HEAD
 func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
 	var parentZoneLink model.Link
 	if respData.Zone.Links != nil {
