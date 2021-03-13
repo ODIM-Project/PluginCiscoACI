@@ -189,6 +189,9 @@ func CreateZone(ctx iris.Context) {
 		zoneID := uuid.NewV4().String()
 		zone = saveZoneData(zoneID, uri, fabricID, zone)
 		//updateZoneData()
+		common.SetResponseHeader(ctx, map[string]string{
+			"Location": zone.ODataID,
+		})
 		ctx.StatusCode(statusCode)
 		ctx.JSON(zone)
 		return
@@ -498,16 +501,20 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (interface{}, 
 	// Get the default zone data
 	defaultZoneURL := zoneofZoneData.Zone.Links.ContainedByZones[0].Oid
 	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL]
-	resp, statusCode := createBridgeDomain(defaultZoneData.Zone.Name, zone)
+	bdResp, bdDN, statusCode := createBridgeDomain(defaultZoneData.Zone.Name, zone)
+	if statusCode != http.StatusCreated {
+		return bdResp, statusCode
+	}
+	// create the subnet for BD for all given address pool
+	resp, statusCode := createSubnets(defaultZoneData.Zone.Name, zone.Name, addresspoolData)
 	if statusCode != http.StatusCreated {
 		return resp, statusCode
 	}
-	// create the subnet for BD for all given address pool
-	resp, statusCode = createSubnets(defaultZoneData.Zone.Name, zone.Name, addresspoolData)
-	return resp, statusCode
+	// link bridgedomain to vrf
+	return linkBDtoVRF(bdDN, zoneofZoneData.Zone.Name+"-VRF")
 }
 
-func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, int) {
+func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, string, int) {
 	var bridgeDomainAttributes aciModels.BridgeDomainAttributes
 	bridgeDomainAttributes.Name = zone.Name
 	aciClient := caputilities.GetConnection()
@@ -517,13 +524,13 @@ func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, int) {
 		errMsg := "Error while creating Zone endpoints: " + err.Error()
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-		return resp, http.StatusBadRequest
+		return resp, "", http.StatusBadRequest
 	}
 	for _, bd := range bridgeDomainList {
 		if bd.Name == zone.Name {
 			errMsg := "ZoneOfEndpoints already exists with name: " + zone.Name + " for the default zone " + tenantName
 			resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"ZoneOfEndpoints", bd.BridgeDomainAttributes.Name, zone.Name})
-			return resp, http.StatusConflict
+			return resp, "", http.StatusConflict
 		}
 
 	}
@@ -532,9 +539,9 @@ func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, int) {
 	if err != nil {
 		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-		return resp, http.StatusBadRequest
+		return resp, "", http.StatusBadRequest
 	}
-	return resp, http.StatusCreated
+	return resp, resp.BaseAttributes.DistinguishedName, http.StatusCreated
 }
 
 func createSubnets(tenantName, bdName string, addresspoolData []*model.AddressPool) (interface{}, int) {
@@ -548,6 +555,17 @@ func createSubnets(tenantName, bdName string, addresspoolData []*model.AddressPo
 			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 			return resp, http.StatusBadRequest
 		}
+	}
+	return nil, http.StatusCreated
+}
+
+func linkBDtoVRF(bdDN, vrfName string) (interface{}, int) {
+	aciClient := caputilities.GetConnection()
+	err := aciClient.CreateRelationfvRsCtxFromBridgeDomain(bdDN, vrfName)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
 	}
 	return nil, http.StatusCreated
 }
