@@ -512,7 +512,11 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (interface{}, 
 		return resp, statusCode
 	}
 	// link bridgedomain to vrf
-	return linkBDtoVRF(bdDN, zoneofZoneData.Zone.Name+"-VRF")
+	resp, statusCode = linkBDtoVRF(bdDN, zoneofZoneData.Zone.Name+"-VRF")
+	if statusCode != http.StatusCreated {
+		return resp, statusCode
+	}
+	return applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name)
 }
 
 func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, string, int) {
@@ -561,6 +565,43 @@ func createSubnets(tenantName, bdName string, addresspoolData *model.AddressPool
 func linkBDtoVRF(bdDN, vrfName string) (interface{}, int) {
 	aciClient := caputilities.GetConnection()
 	err := aciClient.CreateRelationfvRsCtxFromBridgeDomain(bdDN, vrfName)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	return nil, http.StatusCreated
+}
+
+func applicationEPGOperation(tenantName, applicationProfileName, bdName string) (interface{}, int) {
+	//create EPG with name of bd adding -EPG suffix
+	epgName := bdName + "-EPG"
+	resp, appEPGDN, statusCode := createapplicationEPG(tenantName, applicationProfileName, epgName)
+	if statusCode != http.StatusCreated {
+		return resp, statusCode
+	}
+	// Link EPG to BD
+	return linkAPPEPGtoBD(appEPGDN, bdName)
+
+}
+
+func createapplicationEPG(tenantName, applicationProfileName, epgName string) (interface{}, string, int) {
+	var epgAttributes = aciModels.ApplicationEPGAttributes{
+		Name: epgName,
+	}
+	aciClient := caputilities.GetConnection()
+	resp, err := aciClient.CreateApplicationEPG(epgName, applicationProfileName, tenantName, "Application EPG for "+epgName, epgAttributes)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, "", http.StatusBadRequest
+	}
+	return resp, resp.BaseAttributes.DistinguishedName, http.StatusCreated
+}
+
+func linkAPPEPGtoBD(appEPGDN, bdName string) (interface{}, int) {
+	aciClient := caputilities.GetConnection()
+	err := aciClient.CreateRelationfvRsBdFromApplicationEPG(appEPGDN, bdName)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
