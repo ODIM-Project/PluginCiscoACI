@@ -136,7 +136,7 @@ func CreateAddressPool(ctx iris.Context) {
 
 	}
 	if addresspoolData.Ethernet.IPv4.NativeVLAN < 2 ||
-		(addresspoolData.Ethernet.IPv4.NativeVLAN > 1002 && addresspoolData.Ethernet.IPv4.NativeVLAN < 1006) ||
+		(addresspoolData.Ethernet.IPv4.NativeVLAN > 1001 && addresspoolData.Ethernet.IPv4.NativeVLAN < 1006) ||
 		addresspoolData.Ethernet.IPv4.NativeVLAN > 4094 {
 		errorMessage := "Invalid value for NativeVLAN: it should in range of 2 to 1001 or 1006 to 4094"
 		log.Errorf(errorMessage)
