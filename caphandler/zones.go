@@ -491,7 +491,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (interface{}, 
 		return updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"AddressPool"}), http.StatusBadRequest
 	}
 	if len(zone.Links.AddressPools) > 1 {
-		errorMessage := "More than one  AddressPool not required  for the creation ZoneOfEndpoints"
+		errorMessage := "More than one AddressPool not allowed for the creation of ZoneOfEndpoints"
 		return updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest
 	}
 	addresspoolData, statusCode, resp := getAddressPoolData(zone.Links.AddressPools[0].Oid)
