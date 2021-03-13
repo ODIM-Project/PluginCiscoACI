@@ -140,7 +140,7 @@ func CreateAddressPool(ctx iris.Context) {
 		addresspoolData.Ethernet.IPv4.NativeVLAN > 4094 {
 		errorMessage := "Invalid value for NativeVLAN: it should in range of 2 to 1001 or 1006 to 4094"
 		log.Errorf(errorMessage)
-		resp := updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"GatewayIPAddress", addresspoolData.Ethernet.IPv4.GatewayIPAddress})
+		resp := updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"NativeVLAN", addresspoolData.Ethernet.IPv4.NativeVLAN})
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(resp)
 		return
