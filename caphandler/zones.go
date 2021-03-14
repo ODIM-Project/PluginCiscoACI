@@ -22,6 +22,7 @@ import (
 	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
+	"github.com/ODIM-Project/PluginCiscoACI/config"
 	aciModels "github.com/ciscoecosystem/aci-go-client/models"
 	iris "github.com/kataras/iris/v12"
 	uuid "github.com/satori/go.uuid"
@@ -506,6 +507,14 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (interface{}, 
 	if statusCode != http.StatusCreated {
 		return bdResp, statusCode
 	}
+	// get domain from given addresspool native vlan from config
+	key := fmt.Sprintf("NativeVLAN-%d", addresspoolData.Ethernet.IPv4.NativeVLAN)
+	domainName, ok := config.Data.APICConf.DomainData[key]
+	if !ok {
+		errMsg := fmt.Sprintf("Domain not found for  %s", key)
+		log.Error(errMsg)
+		return updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{key, "Domain"}), http.StatusNotFound
+	}
 	// create the subnet for BD for all given address pool
 	resp, statusCode = createSubnets(defaultZoneData.Zone.Name, zone.Name, addresspoolData)
 	if statusCode != http.StatusCreated {
@@ -516,7 +525,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (interface{}, 
 	if statusCode != http.StatusCreated {
 		return resp, statusCode
 	}
-	return applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name)
+	return applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name, domainName)
 }
 
 func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, string, int) {
@@ -573,7 +582,7 @@ func linkBDtoVRF(bdDN, vrfName string) (interface{}, int) {
 	return nil, http.StatusCreated
 }
 
-func applicationEPGOperation(tenantName, applicationProfileName, bdName string) (interface{}, int) {
+func applicationEPGOperation(tenantName, applicationProfileName, bdName, domainName string) (interface{}, int) {
 	//create EPG with name of bd adding -EPG suffix
 	epgName := bdName + "-EPG"
 	resp, appEPGDN, statusCode := createapplicationEPG(tenantName, applicationProfileName, epgName)
@@ -581,8 +590,12 @@ func applicationEPGOperation(tenantName, applicationProfileName, bdName string) 
 		return resp, statusCode
 	}
 	// Link EPG to BD
-	return linkAPPEPGtoBD(appEPGDN, bdName)
-
+	resp, statusCode = linkAPPEPGtoBD(appEPGDN, bdName)
+	if statusCode != http.StatusCreated {
+		return resp, statusCode
+	}
+	// Link EPG to Domain
+	return linkEpgtoDomain(appEPGDN, domainName)
 }
 
 func createapplicationEPG(tenantName, applicationProfileName, epgName string) (interface{}, string, int) {
@@ -602,6 +615,18 @@ func createapplicationEPG(tenantName, applicationProfileName, epgName string) (i
 func linkAPPEPGtoBD(appEPGDN, bdName string) (interface{}, int) {
 	aciClient := caputilities.GetConnection()
 	err := aciClient.CreateRelationfvRsBdFromApplicationEPG(appEPGDN, bdName)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	return nil, http.StatusCreated
+}
+
+func linkEpgtoDomain(appEPGDN, domain string) (interface{}, int) {
+
+	aciClient := caputilities.GetConnection()
+	err := aciClient.CreateRelationfvRsDomAttFromApplicationEPG(appEPGDN, domain)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
