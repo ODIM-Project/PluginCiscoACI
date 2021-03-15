@@ -15,65 +15,53 @@
 package capmodel
 
 import (
-	"fmt"
+	"reflect"
 	"testing"
 
+	dmtf "github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/PluginCiscoACI/db"
 )
 
-type mockConnector struct{}
-
-func TestSaveToDB(t *testing.T) {
+func TestGetPort(t *testing.T) {
 	db.Connector = mockConnector{}
 	type args struct {
-		table      string
-		resourceID string
-		data       interface{}
+		portID string
 	}
 	tests := []struct {
 		name    string
 		args    args
+		want    *dmtf.Port
 		wantErr bool
 	}{
 		{
-			name: "saving data successfully",
+			name: "successful get on port",
 			args: args{
-				table:      "someTable",
-				resourceID: "someResource",
-				data:       args{data: "someData"},
+				portID: "validID",
+			},
+			want: &dmtf.Port{
+				ID: "validID",
 			},
 			wantErr: false,
 		},
 		{
-			name: "invalid data",
+			name: "failed get on port",
 			args: args{
-				table:      "someTable",
-				resourceID: "resourceAlreadyPresent",
-				data:       func() {},
+				portID: "invalidID",
 			},
+			want:    nil,
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := SaveToDB(tt.args.table, tt.args.resourceID, tt.args.data); (err != nil) != tt.wantErr {
-				t.Errorf("SaveToDB() error = %v, wantErr %v", err, tt.wantErr)
+			got, err := GetPort(tt.args.portID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetPort() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetPort() = %v, want %v", got, tt.want)
 			}
 		})
 	}
-}
-
-func (d mockConnector) Create(table, resourceID, data string) error {
-	return nil
-}
-
-func (d mockConnector) GetAllKeysFromTable(table string) ([]string, error) {
-	return []string{}, nil
-}
-
-func (d mockConnector) Get(table, resourceID string) (string, error) {
-	if resourceID == "validID" {
-		return `{"Id": "validID"}`, nil
-	}
-	return "", fmt.Errorf("not found")
 }
