@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-redis/redis"
+	"strings"
 )
 
 // Using below variables as part of errors will enabling errors.Is() function
@@ -34,32 +35,32 @@ const (
 	scanPaginationSize = 100
 )
 
-// Create will create a new entry in DB for the value with the given table and key
-func (c *Client) Create(table, key string, data interface{}) (err error) {
+// Create will create a new entry in DB for the value with the given table and resourceID
+func (c *Client) Create(table, resourceID string, data interface{}) (err error) {
 	dataByte, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("while marshalling data, got: %v", err)
 	}
-	ok, err := c.pool.SetNX(generateKey(table, key), string(dataByte), 0).Result()
+	ok, err := c.pool.SetNX(generateKey(table, resourceID), string(dataByte), 0).Result()
 	switch {
 	case !ok:
 		return fmt.Errorf(
 			"%w: %s",
 			ErrorKeyAlreadyExist,
-			fmt.Sprintf("An entry with key %s is already present in table %s", key, table),
+			fmt.Sprintf("An entry with resource id %s is already present in table %s", resourceID, table),
 		)
 	case err != nil:
 		return fmt.Errorf(
-			"Creating new entry for value %v in table %s with key %s failed: %v",
-			data, table, key, err,
+			"Creating new entry for value %v in table %s with resource id %s failed: %v",
+			data, table, resourceID, err,
 		)
 	default:
 		return nil
 	}
 }
 
-// GetAllKeys will collect all the keys of provided table
-func (c *Client) GetAllKeys(table string) ([]string, error) {
+// GetAllKeysFromTable will collect all the keys of provided table
+func (c *Client) GetAllKeysFromTable(table string) ([]string, error) {
 	var allKeys []string
 	var cursor uint64
 	for {
@@ -73,18 +74,18 @@ func (c *Client) GetAllKeys(table string) ([]string, error) {
 		}
 		cursor = c
 	}
-	return allKeys, nil
+	return trimTableFromKeys(table, allKeys), nil
 }
 
 // Get will collect the data associated with the given key from the given table
-func (c *Client) Get(table, key string) (val string, err error) {
-	val, err = c.pool.Get(generateKey(table, key)).Result()
+func (c *Client) Get(table, resourceID string) (val string, err error) {
+	val, err = c.pool.Get(generateKey(table, resourceID)).Result()
 	switch err {
 	case redis.Nil:
 		return "", fmt.Errorf(
 			"%w: %s",
 			ErrorKeyNotFound,
-			fmt.Sprintf("Data with key %s not found in table %s", key, table),
+			fmt.Sprintf("Data with resource ID %s not found in table %s", resourceID, table),
 		)
 	case nil:
 		return val, nil
@@ -93,6 +94,16 @@ func (c *Client) Get(table, key string) (val string, err error) {
 	}
 }
 
-func generateKey(table, key string) string {
-	return fmt.Sprintf("%s:%s", table, key)
+// generateKey is for concatinating table and resourceID to for a key
+func generateKey(table, resourceID string) string {
+	return fmt.Sprintf("%s:%s", table, resourceID)
+}
+
+// trimTableFromKeys trims <table>: from the slice of keys in the form of <table>:<resourceID>
+func trimTableFromKeys(table string, fullKeys []string) []string {
+	var keys []string
+	for _, fullKey := range fullKeys {
+		keys = append(keys, strings.TrimPrefix(fullKey, generateKey(table,"")))
+	}
+	return keys
 }
