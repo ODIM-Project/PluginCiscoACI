@@ -103,7 +103,7 @@ func generateKey(table, resourceID string) string {
 func trimTableFromKeys(table string, fullKeys []string) []string {
 	var keys []string
 	for _, fullKey := range fullKeys {
-		keys = append(keys, strings.TrimPrefix(fullKey, generateKey(table,"")))
+		keys = append(keys, strings.TrimPrefix(fullKey, generateKey(table, "")))
 	}
 	return keys
 }
