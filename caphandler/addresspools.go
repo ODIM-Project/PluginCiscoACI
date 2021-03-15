@@ -231,12 +231,12 @@ func getAddressPoolData(addresspoolOID string) (*model.AddressPool, int, interfa
 	return addressPoolData.AddressPool, http.StatusOK, nil
 }
 
-func updateAddressPoolData(zoneOID, addresspoolOID, opertion string) {
+func updateAddressPoolData(zoneOID, addresspoolOID, operation string) {
 	addresspoolData := capdata.AddressPoolDataStore[addresspoolOID].AddressPool
 	if addresspoolData.Links == nil {
 		addresspoolData.Links = &model.AddressPoolLinks{}
 	}
-	if opertion == "Add" {
+	if operation == "Add" {
 		addresspoolData.Links.Zones = []model.Link{
 			model.Link{
 				Oid: zoneOID,
