@@ -67,6 +67,8 @@ github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210309082256-930ce97836b8 h1:y9b3
 github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210309082256-930ce97836b8/go.mod h1:T84xlNs4ie0z0qkaLON714rzHuOFs3jLpLtNw0CJrGw=
 github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210309174355-8b7f338a2b41 h1:LR+8CB+NqqzvT7iJoIUo7usQzTxQLrV8pHjcwosKkWE=
 github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210309174355-8b7f338a2b41/go.mod h1:T84xlNs4ie0z0qkaLON714rzHuOFs3jLpLtNw0CJrGw=
+github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210315054111-9ad2c17eef8f h1:+DVrB2z+Aupe4Joa7kPTPvoD6YTDr1eGMUW2zOQ23uc=
+github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20210315054111-9ad2c17eef8f/go.mod h1:T84xlNs4ie0z0qkaLON714rzHuOFs3jLpLtNw0CJrGw=
 github.com/ODIM-Project/ODIM/lib-messagebus v0.0.0-20210128033657-6247ee21f91f h1:F3E8i3h8eje/tk/qhsUNm/jnliGk24W1JaXZZWHoiew=
 github.com/ODIM-Project/ODIM/lib-messagebus v0.0.0-20210128033657-6247ee21f91f/go.mod h1:DNa6dM+k+TeJukEjdIoF7A3CW50e4hmGZAkMZ1O2uQg=
 github.com/ODIM-Project/ODIM/lib-persistence-manager v0.0.0-20200727095517-f2a4bd1bdef7/go.mod h1:NyEEh6a2bgEXock1ThrXDLnp2A5syxleqSGmWwucPPA=

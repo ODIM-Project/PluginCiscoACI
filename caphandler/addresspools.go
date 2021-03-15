@@ -197,7 +197,7 @@ func DeleteAddressPoolInfo(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-	_, ok := capdata.AddressPoolDataStore[uri]
+	addresspoolData, ok := capdata.AddressPoolDataStore[uri]
 	if !ok {
 		errMsg := fmt.Sprintf("AddressPool data for uri %s not found", uri)
 		log.Error(errMsg)
@@ -206,7 +206,14 @@ func DeleteAddressPoolInfo(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-
+	if addresspoolData.AddressPool.Links != nil && len(addresspoolData.AddressPool.Links.Zones) > 0 {
+		errMsg := fmt.Sprintf("AddressPool cannot be deleted as there are depZ Zone  still tied to it")
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceCannotBeDeleted, errMsg, []interface{}{uri, "AddressPool"})
+		ctx.StatusCode(http.StatusNotAcceptable)
+		ctx.JSON(resp)
+		return
+	}
 	// Todo:Add the validation  to verify the links
 	delete(capdata.AddressPoolDataStore, uri)
 	ctx.StatusCode(http.StatusNoContent)
@@ -222,4 +229,21 @@ func getAddressPoolData(addresspoolOID string) (*model.AddressPool, int, interfa
 		return nil, http.StatusNotFound, resp
 	}
 	return addressPoolData.AddressPool, http.StatusOK, nil
+}
+
+func updateAddressPoolData(zoneOID, addresspoolOID, opertion string) {
+	addresspoolData := capdata.AddressPoolDataStore[addresspoolOID].AddressPool
+	if addresspoolData.Links == nil {
+		addresspoolData.Links = &model.AddressPoolLinks{}
+	}
+	if opertion == "Add" {
+		addresspoolData.Links.Zones = []model.Link{
+			model.Link{
+				Oid: zoneOID,
+			},
+		}
+	} else {
+		addresspoolData.Links.Zones = []model.Link{}
+	}
+	capdata.AddressPoolDataStore[addresspoolOID].AddressPool = addresspoolData
 }
