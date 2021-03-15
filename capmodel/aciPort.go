@@ -52,11 +52,11 @@ type PortInfoIMData struct {
 // GetPort collects the port data from the DB
 func GetPort(portID string) (*dmtf.Port, error) {
 	var port dmtf.Port
-	portData, err := db.Connector.Get(TablePort, portID)
+	data, err := db.Connector.Get(TablePort, portID)
 	if err != nil {
 		return nil, fmt.Errorf("while trying to collect port data, got: %w", err)
 	}
-	err = json.Unmarshal([]byte(portData), &port)
+	err = json.Unmarshal([]byte(data), &port)
 	if err != nil {
 		return nil, fmt.Errorf("while trying to unmarshal port data, got: %v", err)
 	}

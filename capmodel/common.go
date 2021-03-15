@@ -30,6 +30,8 @@ const (
 	TableSwitchPorts = "ACISwitchPorts"
 	// TablePort is the table for storing port information
 	TablePort = "ACIPort"
+	// TableZone is the table for storing zone information
+	TableZone = "ACIZone"
 )
 
 // SaveToDB is for adding port data to the DB

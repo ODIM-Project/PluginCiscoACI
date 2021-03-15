@@ -68,12 +68,12 @@ func (d mockConnector) Create(table, resourceID, data string) error {
 }
 
 func (d mockConnector) GetAllKeysFromTable(table string) ([]string, error) {
-	return []string{}, nil
+	return []string{"validID"}, nil
 }
 
 func (d mockConnector) Get(table, resourceID string) (string, error) {
 	if resourceID == "validID" {
-		return `{"Id": "validID"}`, nil
+		return `{"Id": "validID", "FabricID": "validID"}`, nil
 	}
 	return "", fmt.Errorf("not found")
 }

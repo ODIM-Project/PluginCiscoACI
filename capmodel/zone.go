@@ -13,3 +13,42 @@
 // under the License.
 
 package capmodel
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/ODIM-Project/PluginCiscoACI/capdata"
+	"github.com/ODIM-Project/PluginCiscoACI/db"
+)
+
+// GetZone collects the zone data from the DB
+func GetZone(zoneID string) (*capdata.ZoneData, error) {
+	var zone capdata.ZoneData
+	data, err := db.Connector.Get(TableZone, zoneID)
+	if err != nil {
+		return nil, fmt.Errorf("while trying to collect zone data, got: %w", err)
+	}
+	err = json.Unmarshal([]byte(data), &zone)
+	if err != nil {
+		return nil, fmt.Errorf("while trying to unmarshal zone data, got: %v", err)
+	}
+	return &zone, nil
+}
+
+// GetAllZones collects the zone data from the DB
+func GetAllZones() ([]capdata.ZoneData, error) {
+	var allZones []capdata.ZoneData
+	allKeys, err := db.Connector.GetAllKeysFromTable(TableZone)
+	if err != nil {
+		return nil, fmt.Errorf("while trying to collect all zone keys, got: %w", err)
+	}
+	for _, key := range allKeys {
+		zone, err := GetZone(key)
+		if err != nil {
+			return nil, fmt.Errorf("while trying collect individual zone data, got: %w", err)
+		}
+		allZones = append(allZones, *zone)
+	}
+	return allZones, nil
+}
