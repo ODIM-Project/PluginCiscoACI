@@ -464,6 +464,7 @@ func updateZoneData(defaultZoneLink string, zone model.Zone) {
 		var link model.Link
 		link.Oid = zone.ODataID
 		defaultZoneData.Links.ContainsZones = append(defaultZoneData.Links.ContainsZones, link)
+		defaultZoneData.Links.ContainsZonesCount = len(defaultZoneData.Links.ContainsZones)
 	}
 
 	capdata.ZoneDataStore[defaultZoneLink].Zone = defaultZoneData
@@ -672,6 +673,7 @@ func deleteZoneOfEndpoints(zoneData *model.Zone) (interface{}, int) {
 				zoneofZoneData.Links.ContainsZones = zoneofZoneData.Links.ContainsZones[:len(zoneofZoneData.Links.ContainsZones)-1]
 			}
 		}
+		zoneofZoneData.Links.ContainsZonesCount = len(zoneofZoneData.Links.ContainsZones)
 		capdata.ZoneDataStore[zoneofZoneURL].Zone = zoneofZoneData
 	}
 	updateAddressPoolData(zoneData.ODataID, zoneData.Links.AddressPools[0].Oid, "Remove")

@@ -242,8 +242,12 @@ func updateAddressPoolData(zoneOID, addresspoolOID, opertion string) {
 				Oid: zoneOID,
 			},
 		}
+		addresspoolData.Links.ZonesCount = len(addresspoolData.Links.Zones)
 	} else {
 		addresspoolData.Links.Zones = []model.Link{}
+		if len(addresspoolData.Links.Endpoints) == 0 {
+			addresspoolData.Links = nil
+		}
 	}
 	capdata.AddressPoolDataStore[addresspoolOID].AddressPool = addresspoolData
 }
