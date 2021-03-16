@@ -62,6 +62,9 @@
 	"APICConf":{
 		"APICHost":"",
 		"UserName": "",
-		"Password": ""
+		"Password": "",
+		"DomainData":{
+			
+		}
 	}
 }

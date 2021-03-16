@@ -129,13 +129,22 @@ func CreateAddressPool(ctx iris.Context) {
 	if _, _, err := net.ParseCIDR(addresspoolData.Ethernet.IPv4.GatewayIPAddress); err != nil {
 		errorMessage := "Invalid value for GatewayIPAddress:" + err.Error()
 		log.Errorf(errorMessage)
-		resp := updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"GatewayIPAddress", addresspoolData.Ethernet.IPv4.GatewayIPAddress})
+		resp := updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{addresspoolData.Ethernet.IPv4.GatewayIPAddress, "GatewayIPAddress"})
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(resp)
 		return
 
 	}
-
+	if addresspoolData.Ethernet.IPv4.NativeVLAN < 2 ||
+		(addresspoolData.Ethernet.IPv4.NativeVLAN > 1001 && addresspoolData.Ethernet.IPv4.NativeVLAN < 1006) ||
+		addresspoolData.Ethernet.IPv4.NativeVLAN > 4094 {
+		errorMessage := "Invalid value for NativeVLAN: it should in range of 2 to 1001 or 1006 to 4094"
+		log.Errorf(errorMessage)
+		resp := updateErrorResponse(response.PropertyValueNotInList, errorMessage, []interface{}{fmt.Sprintf("%d", addresspoolData.Ethernet.IPv4.NativeVLAN), "NativeVLAN"})
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(resp)
+		return
+	}
 	for _, data := range capdata.AddressPoolDataStore {
 		if data.AddressPool.Ethernet.IPv4.GatewayIPAddress == addresspoolData.Ethernet.IPv4.GatewayIPAddress {
 			errorMessage := "Requested GatewayIPAddress is already present in the addresspool " + data.AddressPool.ODataID
@@ -188,7 +197,7 @@ func DeleteAddressPoolInfo(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-	_, ok := capdata.AddressPoolDataStore[uri]
+	addresspoolData, ok := capdata.AddressPoolDataStore[uri]
 	if !ok {
 		errMsg := fmt.Sprintf("AddressPool data for uri %s not found", uri)
 		log.Error(errMsg)
@@ -197,7 +206,14 @@ func DeleteAddressPoolInfo(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-
+	if addresspoolData.AddressPool.Links != nil && len(addresspoolData.AddressPool.Links.Zones) > 0 {
+		errMsg := fmt.Sprintf("AddressPool cannot be deleted as there are depZ Zone  still tied to it")
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceCannotBeDeleted, errMsg, []interface{}{uri, "AddressPool"})
+		ctx.StatusCode(http.StatusNotAcceptable)
+		ctx.JSON(resp)
+		return
+	}
 	// Todo:Add the validation  to verify the links
 	delete(capdata.AddressPoolDataStore, uri)
 	ctx.StatusCode(http.StatusNoContent)
@@ -213,4 +229,25 @@ func getAddressPoolData(addresspoolOID string) (*model.AddressPool, int, interfa
 		return nil, http.StatusNotFound, resp
 	}
 	return addressPoolData.AddressPool, http.StatusOK, nil
+}
+
+func updateAddressPoolData(zoneOID, addresspoolOID, operation string) {
+	addresspoolData := capdata.AddressPoolDataStore[addresspoolOID].AddressPool
+	if addresspoolData.Links == nil {
+		addresspoolData.Links = &model.AddressPoolLinks{}
+	}
+	if operation == "Add" {
+		addresspoolData.Links.Zones = []model.Link{
+			model.Link{
+				Oid: zoneOID,
+			},
+		}
+		addresspoolData.Links.ZonesCount = len(addresspoolData.Links.Zones)
+	} else {
+		addresspoolData.Links.Zones = []model.Link{}
+		if len(addresspoolData.Links.Endpoints) == 0 {
+			addresspoolData.Links = nil
+		}
+	}
+	capdata.AddressPoolDataStore[addresspoolOID].AddressPool = addresspoolData
 }

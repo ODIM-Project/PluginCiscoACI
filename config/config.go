@@ -111,9 +111,10 @@ type TLSConf struct {
 
 //APICConf is for holding all the cisco APIC related configurations
 type APICConf struct {
-	APICHost string `json:"APICHost"`
-	UserName string `json:"UserName"`
-	Password string `json:"Password"`
+	APICHost   string            `json:"APICHost"`
+	UserName   string            `json:"UserName"`
+	Password   string            `json:"Password"`
+	DomainData map[string]string `json:"DomainData"`
 }
 
 // SetConfiguration will extract the config data from file

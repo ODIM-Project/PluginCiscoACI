@@ -22,6 +22,7 @@ import (
 	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
+	"github.com/ODIM-Project/PluginCiscoACI/config"
 	aciModels "github.com/ciscoecosystem/aci-go-client/models"
 	iris "github.com/kataras/iris/v12"
 	uuid "github.com/satori/go.uuid"
@@ -180,7 +181,7 @@ func CreateZone(ctx iris.Context) {
 		ctx.JSON(zone)
 		return
 	case "ZoneOfEndpoints":
-		resp, statusCode := createZoneOfEndpoints(uri, fabricID, zone)
+		zoneofZoneOID, resp, statusCode := createZoneOfEndpoints(uri, fabricID, zone)
 		if statusCode != http.StatusCreated {
 			ctx.StatusCode(statusCode)
 			ctx.JSON(resp)
@@ -188,7 +189,11 @@ func CreateZone(ctx iris.Context) {
 		}
 		zoneID := uuid.NewV4().String()
 		zone = saveZoneData(zoneID, uri, fabricID, zone)
-		//updateZoneData()
+		updateZoneData(zoneofZoneOID, zone)
+		updateAddressPoolData(zone.ODataID, zone.Links.AddressPools[0].Oid, "Add")
+		common.SetResponseHeader(ctx, map[string]string{
+			"Location": zone.ODataID,
+		})
 		ctx.StatusCode(statusCode)
 		ctx.JSON(zone)
 		return
@@ -317,9 +322,13 @@ func DeleteZone(ctx iris.Context) {
 		}
 
 		delete(capdata.ZoneDataStore, uri)
-		ctx.JSON(http.StatusNoContent)
+		ctx.StatusCode(http.StatusNoContent)
 	}
-
+	if respData.Zone.ZoneType == "ZoneOfEndpoints" {
+		resp, statusCode := deleteZoneOfEndpoints(respData.Zone)
+		ctx.StatusCode(statusCode)
+		ctx.JSON(resp)
+	}
 }
 
 func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
@@ -455,23 +464,24 @@ func updateZoneData(defaultZoneLink string, zone model.Zone) {
 		var link model.Link
 		link.Oid = zone.ODataID
 		defaultZoneData.Links.ContainsZones = append(defaultZoneData.Links.ContainsZones, link)
+		defaultZoneData.Links.ContainsZonesCount = len(defaultZoneData.Links.ContainsZones)
 	}
 
 	capdata.ZoneDataStore[defaultZoneLink].Zone = defaultZoneData
 	return
 }
 
-func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (interface{}, int) {
+func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, interface{}, int) {
 	// Create the BridgeDomain
 	// get the Tenant name from the ZoneofZone data
 	//validate the request
 	if zone.Links == nil {
 		errorMessage := "Links attribute is missing in the request"
-		return updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"Links"}), http.StatusBadRequest
+		return "", updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"Links"}), http.StatusBadRequest
 	}
 	if zone.Links.ContainedByZones == nil {
 		errorMessage := "ContainedByZones attribute is missing in the request"
-		return updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"ContainedByZones"}), http.StatusBadRequest
+		return "", updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"ContainedByZones"}), http.StatusBadRequest
 
 	}
 	zoneofZoneURL := zone.Links.ContainedByZones[0].Oid
@@ -480,34 +490,56 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (interface{}, 
 	if !ok {
 		errMsg := fmt.Sprintf("ZoneofZone data for uri %s not found", uri)
 		log.Error(errMsg)
-		return updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"ZoneofZone", zoneofZoneURL}), http.StatusNotFound
+		return "", updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"ZoneofZone", zoneofZoneURL}), http.StatusNotFound
 	}
 	// validate all given addresspools if it's present
 	if len(zone.Links.AddressPools) == 0 {
-		errorMessage := "AddressPool attribute is missing in the request"
-		return updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"AddressPool"}), http.StatusBadRequest
+		errorMessage := "AddressPools attribute is missing in the request"
+		return "", updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"AddressPool"}), http.StatusBadRequest
 	}
-	var addresspoolData []*model.AddressPool
-	for i := 0; i < len(zone.Links.AddressPools); i++ {
-		data, statusCode, resp := getAddressPoolData(zone.Links.AddressPools[i].Oid)
-		if statusCode != http.StatusOK {
-			return resp, statusCode
-		}
-		addresspoolData = append(addresspoolData, data)
+	if len(zone.Links.AddressPools) > 1 {
+		errorMessage := "More than one AddressPool not allowed for the creation of ZoneOfEndpoints"
+		return "", updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest
+	}
+	addresspoolData, statusCode, resp := getAddressPoolData(zone.Links.AddressPools[0].Oid)
+	if statusCode != http.StatusOK {
+		return "", resp, statusCode
+	}
+
+	if addresspoolData.Links != nil && len(addresspoolData.Links.Zones) > 0 {
+		errorMessage := fmt.Sprintf("Given AddressPool %s is assingned to other ZoneofEndpoints", zone.Links.AddressPools[0].Oid)
+		return "", updateErrorResponse(response.ResourceInUse, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest
 	}
 	// Get the default zone data
 	defaultZoneURL := zoneofZoneData.Zone.Links.ContainedByZones[0].Oid
 	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL]
-	resp, statusCode := createBridgeDomain(defaultZoneData.Zone.Name, zone)
+	bdResp, bdDN, statusCode := createBridgeDomain(defaultZoneData.Zone.Name, zone)
 	if statusCode != http.StatusCreated {
-		return resp, statusCode
+		return "", bdResp, statusCode
+	}
+	// get domain from given addresspool native vlan from config
+	key := fmt.Sprintf("NativeVLAN-%d", addresspoolData.Ethernet.IPv4.NativeVLAN)
+	domainName, ok := config.Data.APICConf.DomainData[key]
+	if !ok {
+		errMsg := fmt.Sprintf("Domain not found for  %s", key)
+		log.Error(errMsg)
+		return "", updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{key, "Domain"}), http.StatusNotFound
 	}
 	// create the subnet for BD for all given address pool
 	resp, statusCode = createSubnets(defaultZoneData.Zone.Name, zone.Name, addresspoolData)
-	return resp, statusCode
+	if statusCode != http.StatusCreated {
+		return "", resp, statusCode
+	}
+	// link bridgedomain to vrf
+	resp, statusCode = linkBDtoVRF(bdDN, zoneofZoneData.Zone.Name+"-VRF")
+	if statusCode != http.StatusCreated {
+		return "", resp, statusCode
+	}
+	resp, statusCode = applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name, domainName)
+	return zoneofZoneURL, resp, statusCode
 }
 
-func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, int) {
+func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, string, int) {
 	var bridgeDomainAttributes aciModels.BridgeDomainAttributes
 	bridgeDomainAttributes.Name = zone.Name
 	aciClient := caputilities.GetConnection()
@@ -517,13 +549,13 @@ func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, int) {
 		errMsg := "Error while creating Zone endpoints: " + err.Error()
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-		return resp, http.StatusBadRequest
+		return resp, "", http.StatusBadRequest
 	}
 	for _, bd := range bridgeDomainList {
 		if bd.Name == zone.Name {
 			errMsg := "ZoneOfEndpoints already exists with name: " + zone.Name + " for the default zone " + tenantName
 			resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"ZoneOfEndpoints", bd.BridgeDomainAttributes.Name, zone.Name})
-			return resp, http.StatusConflict
+			return resp, "", http.StatusConflict
 		}
 
 	}
@@ -532,22 +564,119 @@ func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, int) {
 	if err != nil {
 		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-		return resp, http.StatusBadRequest
+		return resp, "", http.StatusBadRequest
 	}
-	return resp, http.StatusCreated
+	return resp, resp.BaseAttributes.DistinguishedName, http.StatusCreated
 }
 
-func createSubnets(tenantName, bdName string, addresspoolData []*model.AddressPool) (interface{}, int) {
-	for i := 0; i < len(addresspoolData); i++ {
-		var subnetAttributes aciModels.SubnetAttributes
-		subnetAttributes.Ip = addresspoolData[i].Ethernet.IPv4.GatewayIPAddress
-		aciClient := caputilities.GetConnection()
-		_, err := aciClient.CreateSubnet(subnetAttributes.Ip, bdName, tenantName, "subnet for ip"+subnetAttributes.Ip, subnetAttributes)
-		if err != nil {
-			errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
-			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-			return resp, http.StatusBadRequest
-		}
+func createSubnets(tenantName, bdName string, addresspoolData *model.AddressPool) (interface{}, int) {
+	var subnetAttributes aciModels.SubnetAttributes
+	subnetAttributes.Ip = addresspoolData.Ethernet.IPv4.GatewayIPAddress
+	aciClient := caputilities.GetConnection()
+	_, err := aciClient.CreateSubnet(subnetAttributes.Ip, bdName, tenantName, "subnet for ip"+subnetAttributes.Ip, subnetAttributes)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
 	}
 	return nil, http.StatusCreated
+}
+
+func linkBDtoVRF(bdDN, vrfName string) (interface{}, int) {
+	aciClient := caputilities.GetConnection()
+	err := aciClient.CreateRelationfvRsCtxFromBridgeDomain(bdDN, vrfName)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	return nil, http.StatusCreated
+}
+
+func applicationEPGOperation(tenantName, applicationProfileName, bdName, domainName string) (interface{}, int) {
+	//create EPG with name of bd adding -EPG suffix
+	epgName := bdName + "-EPG"
+	resp, appEPGDN, statusCode := createapplicationEPG(tenantName, applicationProfileName, epgName)
+	if statusCode != http.StatusCreated {
+		return resp, statusCode
+	}
+	// Link EPG to BD
+	resp, statusCode = linkAPPEPGtoBD(appEPGDN, bdName)
+	if statusCode != http.StatusCreated {
+		return resp, statusCode
+	}
+	// Link EPG to Domain
+	return linkEpgtoDomain(appEPGDN, domainName)
+}
+
+func createapplicationEPG(tenantName, applicationProfileName, epgName string) (interface{}, string, int) {
+	var epgAttributes = aciModels.ApplicationEPGAttributes{
+		Name: epgName,
+	}
+	aciClient := caputilities.GetConnection()
+	resp, err := aciClient.CreateApplicationEPG(epgName, applicationProfileName, tenantName, "Application EPG for "+epgName, epgAttributes)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, "", http.StatusBadRequest
+	}
+	return resp, resp.BaseAttributes.DistinguishedName, http.StatusCreated
+}
+
+func linkAPPEPGtoBD(appEPGDN, bdName string) (interface{}, int) {
+	aciClient := caputilities.GetConnection()
+	err := aciClient.CreateRelationfvRsBdFromApplicationEPG(appEPGDN, bdName)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	return nil, http.StatusCreated
+}
+
+func linkEpgtoDomain(appEPGDN, domain string) (interface{}, int) {
+
+	aciClient := caputilities.GetConnection()
+	err := aciClient.CreateRelationfvRsDomAttFromApplicationEPG(appEPGDN, domain)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	return nil, http.StatusCreated
+}
+
+func deleteZoneOfEndpoints(zoneData *model.Zone) (interface{}, int) {
+	zoneofZoneURL := zoneData.Links.ContainedByZones[0].Oid
+	// get the zone of zone data
+	zoneofZoneData := capdata.ZoneDataStore[zoneofZoneURL].Zone
+	// Get the default zone data
+	defaultZoneURL := zoneofZoneData.Links.ContainedByZones[0].Oid
+	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL].Zone
+	aciClient := caputilities.GetConnection()
+	err := aciClient.DeleteApplicationEPG(zoneData.Name+"-EPG", zoneofZoneData.Name, defaultZoneData.Name)
+	if err != nil {
+		errMsg := "Error while deleting Zone: " + err.Error()
+		return updateErrorResponse(response.GeneralError, errMsg, nil), http.StatusBadRequest
+	}
+	err = aciClient.DeleteBridgeDomain(zoneData.Name, defaultZoneData.Name)
+	if err != nil {
+		errMsg := "Error while deleting Zone: " + err.Error()
+		return updateErrorResponse(response.GeneralError, errMsg, nil), http.StatusBadRequest
+	}
+	//updating the contains zonesdata
+	if zoneofZoneData.Links != nil {
+		for i := 0; i < len(zoneofZoneData.Links.ContainsZones); i++ {
+			if zoneofZoneData.Links.ContainsZones[i].Oid == zoneData.ODataID {
+				zoneofZoneData.Links.ContainsZones[i] = zoneofZoneData.Links.ContainsZones[len(zoneofZoneData.Links.ContainsZones)-1] // Copy last element to index i.
+				zoneofZoneData.Links.ContainsZones[len(zoneofZoneData.Links.ContainsZones)-1] = model.Link{}                          // Erase last element (write zero value).
+				zoneofZoneData.Links.ContainsZones = zoneofZoneData.Links.ContainsZones[:len(zoneofZoneData.Links.ContainsZones)-1]
+			}
+		}
+		zoneofZoneData.Links.ContainsZonesCount = len(zoneofZoneData.Links.ContainsZones)
+		capdata.ZoneDataStore[zoneofZoneURL].Zone = zoneofZoneData
+	}
+	updateAddressPoolData(zoneData.ODataID, zoneData.Links.AddressPools[0].Oid, "Remove")
+	delete(capdata.ZoneDataStore, zoneData.ODataID)
+	return nil, http.StatusNoContent
 }
