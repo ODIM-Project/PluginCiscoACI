@@ -44,28 +44,29 @@ var redisExtCalls RedisExternalCalls
 
 func init() {
 	redisExtCalls = redisExtCallsImp{}
+	Connector = connector{}
 }
 
-// GetClient retrieves client
-func GetClient() (*Client, error) {
+// getClient retrieves client
+func getClient() (*Client, error) {
 	if client == nil || client.pool == nil {
-		log.Info("GetClient : DB connection pool is nil, creating a new pool.")
+		log.Info("getClient : DB connection pool is nil, creating a new pool.")
 		client = &Client{}
 		client.poolUpdatedTime = time.Now()
 		if config.Data.DBConf.RedisHAEnabled {
 			err := resetDBConection()
 			if err != nil {
-				log.Error("GetClient: unable to create new DB connection: " + err.Error())
+				log.Error("getClient: unable to create new DB connection: " + err.Error())
 				return nil, err
 			}
 		} else {
 			client.pool = redisExtCalls.getNewClient()
 		}
 		if client.pool == nil {
-			log.Error("GetClient: unable to create new DB connection pool")
-			return nil, fmt.Errorf("GetClient: unable to create new DB connection pool")
+			log.Error("getClient: unable to create new DB connection pool")
+			return nil, fmt.Errorf("getClient: unable to create new DB connection pool")
 		}
-		log.Info("GetClient: new pool DB connection pool created.")
+		log.Info("getClient: new pool DB connection pool created.")
 	}
 	return client, nil
 }

@@ -15,7 +15,6 @@
 package db
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/go-redis/redis"
@@ -24,6 +23,8 @@ import (
 
 // Using below variables as part of errors will enabling errors.Is() function
 var (
+	// ErrorServiceUnavailable is for identifing DB connection errors
+	ErrorServiceUnavailable = errors.New("Failed to establish connection with the DB")
 	// ErrorKeyAlreadyExist is for identifing already exist error
 	ErrorKeyAlreadyExist = errors.New("Key already exist in DB")
 	// ErrorKeyNotFound is for identifing not found error
@@ -35,13 +36,25 @@ const (
 	scanPaginationSize = 100
 )
 
+type dbCalls interface {
+	Create(table, resourceID, data string) (err error)
+	GetAllMatchingKeys(table, pattern string) ([]string, error)
+	Get(table, resourceID string) (string, error)
+}
+
+// Connector is the interface which connects the DB functions
+var Connector dbCalls
+
+// connector is used as a receiver for DB communication functions
+type connector struct{}
+
 // Create will create a new entry in DB for the value with the given table and resourceID
-func (c *Client) Create(table, resourceID string, data interface{}) (err error) {
-	dataByte, err := json.Marshal(data)
+func (d connector) Create(table, resourceID, data string) (err error) {
+	c, err := getClient()
 	if err != nil {
-		return fmt.Errorf("while marshalling data, got: %v", err)
+		return fmt.Errorf("%w: %v", ErrorServiceUnavailable, err)
 	}
-	ok, err := c.pool.SetNX(generateKey(table, resourceID), string(dataByte), 0).Result()
+	ok, err := c.pool.SetNX(generateKey(table, resourceID), data, 0).Result()
 	switch {
 	case !ok:
 		return fmt.Errorf(
@@ -60,8 +73,12 @@ func (c *Client) Create(table, resourceID string, data interface{}) (err error) 
 }
 
 // GetAllMatchingKeys will collect all the keys of provided table and pattern
-func (c *Client) GetAllMatchingKeys(table, pattern string) ([]string, error) {
+func (d connector) GetAllMatchingKeys(table, pattern string) ([]string, error) {
 	var allKeys []string
+	c, err := getClient()
+	if err != nil {
+		return allKeys, fmt.Errorf("%w: %v", ErrorServiceUnavailable, err)
+	}
 	var cursor uint64
 	for {
 		keys, c, err := c.pool.Scan(cursor, generateKey(table, pattern+"*"), scanPaginationSize).Result()
@@ -78,8 +95,12 @@ func (c *Client) GetAllMatchingKeys(table, pattern string) ([]string, error) {
 }
 
 // Get will collect the data associated with the given key from the given table
-func (c *Client) Get(table, resourceID string) (val string, err error) {
-	val, err = c.pool.Get(generateKey(table, resourceID)).Result()
+func (d connector) Get(table, resourceID string) (string, error) {
+	c, err := getClient()
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrorServiceUnavailable, err)
+	}
+	val, err := c.pool.Get(generateKey(table, resourceID)).Result()
 	switch err {
 	case redis.Nil:
 		return "", fmt.Errorf(

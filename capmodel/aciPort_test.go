@@ -12,44 +12,55 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-package db
+package capmodel
 
 import (
+	"reflect"
 	"testing"
 
-	"github.com/ODIM-Project/PluginCiscoACI/config"
-	"github.com/go-redis/redis"
+	dmtf "github.com/ODIM-Project/ODIM/lib-dmtf/model"
+	"github.com/ODIM-Project/PluginCiscoACI/db"
 )
 
-type redisExtCallsImpMock struct{}
-
-func (r redisExtCallsImpMock) getNewClient() *redis.Client {
-	return &redis.Client{}
-}
-
-func TestGetClient(t *testing.T) {
-	redisExtCalls = redisExtCallsImpMock{}
-	config.SetUpMockConfig(t)
-
+func TestGetPort(t *testing.T) {
+	db.Connector = mockConnector{}
+	type args struct {
+		portID string
+	}
 	tests := []struct {
 		name    string
-		want    *Client
+		args    args
+		want    *dmtf.Port
 		wantErr bool
 	}{
 		{
-			name:    "successfully created client",
+			name: "successful get on port",
+			args: args{
+				portID: "validID",
+			},
+			want: &dmtf.Port{
+				ID: "validID",
+			},
 			wantErr: false,
+		},
+		{
+			name: "failed get on port",
+			args: args{
+				portID: "invalidID",
+			},
+			want:    nil,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getClient()
+			got, err := GetPort(tt.args.portID)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("getClient() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetPort() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got.pool == nil {
-				t.Error("pool is nil")
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetPort() = %v, want %v", got, tt.want)
 			}
 		})
 	}

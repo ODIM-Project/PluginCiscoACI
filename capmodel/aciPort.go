@@ -12,8 +12,15 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package capmodel ...
 package capmodel
+
+import (
+	"encoding/json"
+	"fmt"
+
+	dmtf "github.com/ODIM-Project/ODIM/lib-dmtf/model"
+	"github.com/ODIM-Project/PluginCiscoACI/db"
+)
 
 //PortCollectionResponse ...
 type PortCollectionResponse struct {
@@ -40,4 +47,18 @@ type PortInfoResponse struct {
 //PortInfoIMData ...
 type PortInfoIMData struct {
 	PhysicalInterface PhysicalInterface `json:"ethpmPhysIf"`
+}
+
+// GetPort collects the port data from the DB
+func GetPort(portID string) (*dmtf.Port, error) {
+	var port dmtf.Port
+	data, err := db.Connector.Get(TablePort, portID)
+	if err != nil {
+		return nil, fmt.Errorf("while trying to collect port data, got: %w", err)
+	}
+	err = json.Unmarshal([]byte(data), &port)
+	if err != nil {
+		return nil, fmt.Errorf("while trying to unmarshal port data, got: %v", err)
+	}
+	return &port, nil
 }
