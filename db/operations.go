@@ -59,8 +59,8 @@ func (c *Client) Create(table, resourceID string, data interface{}) (err error) 
 	}
 }
 
-// GetAllKeysFromTable will collect all the keys of provided table and pattern
-func (c *Client) GetAllKeysFromTable(table, pattern string) ([]string, error) {
+// GetAllMatchingKeys will collect all the keys of provided table and pattern
+func (c *Client) GetAllMatchingKeys(table, pattern string) ([]string, error) {
 	var allKeys []string
 	var cursor uint64
 	for {
