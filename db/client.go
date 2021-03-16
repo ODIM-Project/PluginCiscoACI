@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/ODIM-Project/PluginCiscoACI/config"
-	"github.com/go-redis/redis/v8"
+	"github.com/go-redis/redis"
 	log "github.com/sirupsen/logrus"
 )
 
