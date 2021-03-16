@@ -37,9 +37,9 @@ func GetZone(zoneID string) (*capdata.ZoneData, error) {
 }
 
 // GetAllZones collects the zone data from the DB
-func GetAllZones() ([]capdata.ZoneData, error) {
+func GetAllZones(pattern string) ([]capdata.ZoneData, error) {
 	var allZones []capdata.ZoneData
-	allKeys, err := db.Connector.GetAllKeysFromTable(TableZone)
+	allKeys, err := db.Connector.GetAllMatchingKeys(TableZone, pattern)
 	if err != nil {
 		return nil, fmt.Errorf("while trying to collect all zone keys, got: %w", err)
 	}

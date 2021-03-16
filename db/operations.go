@@ -38,7 +38,7 @@ const (
 
 type dbCalls interface {
 	Create(table, resourceID, data string) (err error)
-	GetAllKeysFromTable(table string) ([]string, error)
+	GetAllMatchingKeys(table, pattern string) ([]string, error)
 	Get(table, resourceID string) (string, error)
 }
 
@@ -72,8 +72,8 @@ func (d connector) Create(table, resourceID, data string) (err error) {
 	}
 }
 
-// GetAllKeysFromTable will collect all the keys of provided table
-func (d connector) GetAllKeysFromTable(table string) ([]string, error) {
+// GetAllMatchingKeys will collect all the keys of provided table and pattern
+func (d connector) GetAllMatchingKeys(table, pattern string) ([]string, error) {
 	var allKeys []string
 	c, err := getClient()
 	if err != nil {
@@ -81,7 +81,7 @@ func (d connector) GetAllKeysFromTable(table string) ([]string, error) {
 	}
 	var cursor uint64
 	for {
-		keys, c, err := c.pool.Scan(cursor, generateKey(table, "*"), scanPaginationSize).Result()
+		keys, c, err := c.pool.Scan(cursor, generateKey(table, pattern+"*"), scanPaginationSize).Result()
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch all keys of table %s: %s", table, err.Error())
 		}

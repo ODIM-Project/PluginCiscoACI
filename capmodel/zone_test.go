@@ -19,9 +19,11 @@ import (
 	"testing"
 
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
+	"github.com/ODIM-Project/PluginCiscoACI/db"
 )
 
 func TestGetZone(t *testing.T) {
+	db.Connector = mockConnector{}
 	type args struct {
 		zoneID string
 	}
@@ -65,6 +67,7 @@ func TestGetZone(t *testing.T) {
 }
 
 func TestGetAllZones(t *testing.T) {
+	db.Connector = mockConnector{}
 	tests := []struct {
 		name    string
 		want    []capdata.ZoneData
@@ -82,7 +85,7 @@ func TestGetAllZones(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetAllZones()
+			got, err := GetAllZones("somePattern")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetAllZones() error = %v, wantErr %v", err, tt.wantErr)
 				return
