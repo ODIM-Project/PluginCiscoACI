@@ -17,6 +17,16 @@
 		"PrivateKeyPath": "",
 		"CertificatePath": ""
 	},
+	"DBConf": {
+		"Protocol": "tcp",
+		"Host": "localhost",
+		"Port": "6380",
+		"MinIdleConns": 10,
+		"PoolSize": 120,
+		"RedisHAEnabled": false,
+		"SentinelPort": "26379",
+		"MasterSet": "mymaster"
+	},
 	"TLSConf" : {
 		"MinVersion": "TLS_1.2",
 		"MaxVersion": "TLS_1.2",

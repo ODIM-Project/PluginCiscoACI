@@ -52,4 +52,7 @@ func TestSetUpMockConfig(t *testing.T) {
 	if Data.TLSConf == nil {
 		t.Error("error: Data.TLSConf is not initialized")
 	}
+	if err := checkDBConf(); err != nil {
+		t.Error("error: Data.DBConf validation failed: " + err.Error())
+	}
 }
