@@ -23,15 +23,15 @@ import (
 
 const (
 	// TableFabric is the table for storing switch and pod ids
-	TableFabric = "ACIFabric"
+	TableFabric = "ACI-Fabric"
 	// TableSwitch is the table for storing switch information
-	TableSwitch = "ACISwitch"
+	TableSwitch = "ACI-Switch"
 	// TableSwitchPorts is the table for storing ports of each switch
-	TableSwitchPorts = "ACISwitchPorts"
+	TableSwitchPorts = "ACI-SwitchPorts"
 	// TablePort is the table for storing port information
-	TablePort = "ACIPort"
+	TablePort = "ACI-Port"
 	// TableZone is the table for storing zone information
-	TableZone = "ACIZone"
+	TableZone = "ACI-Zone"
 )
 
 // SaveToDB is for adding port data to the DB
