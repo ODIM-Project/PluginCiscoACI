@@ -693,7 +693,25 @@ func createContract(vrfName, tenantName, description string) (interface{}, int) 
 		Scope: "context",
 	}
 	aciClient := caputilities.GetConnection()
-	_, err := aciClient.CreateContract(contractName, tenantName, description, contractAttributes)
+	contractResp, err := aciClient.CreateContract(contractName, tenantName, description, contractAttributes)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	// create the contract subject
+	contractSubjectName := contractName + "-Subject"
+	subejctatrribute := aciModels.ContractSubjectAttributes{
+		Name: "ContractSubjectAttributes",
+	}
+	contractSubjectResp, err := aciClient.CreateContractSubject(contractSubjectName, contractName, tenantName, "Contract subject for the Contract "+contractResp.BaseAttributes.DistinguishedName, subejctatrribute)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	// create filter for the contract subject
+	err = aciClient.CreateRelationvzRsSubjFiltAttFromContractSubject(contractSubjectResp.BaseAttributes.DistinguishedName, "default")
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
