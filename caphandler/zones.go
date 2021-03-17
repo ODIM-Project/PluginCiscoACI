@@ -711,7 +711,7 @@ func createContract(vrfName, tenantName, description string) (interface{}, int) 
 		return resp, http.StatusBadRequest
 	}
 	// create filter for the contract subject
-	err = aciClient.CreateRelationvzRsSubjFiltAttFromContractSubject(contractSubjectResp.BaseAttributes.DistinguishedName, "default")
+	err = aciClient.CreateRelationvzRsSubjFiltAttFromContractSubject("uni/tn-common", "default")
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
