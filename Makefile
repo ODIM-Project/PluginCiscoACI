@@ -1,6 +1,6 @@
 .PHONY: dep copy down-containers
 
-COPY = caphandler capmessagebus capmiddleware capmodel capresponse caputilities capdata constants config go.mod go.sum main.go
+COPY = caphandler capmessagebus capmiddleware capmodel capresponse caputilities capdata constants config db go.mod go.sum main.go
 
 
 copy: 
