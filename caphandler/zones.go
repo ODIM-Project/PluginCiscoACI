@@ -703,7 +703,7 @@ func createContract(vrfName, tenantName, description string) (interface{}, int) 
 	// create the contract subject
 	contractSubjectName := contractName + "-Subject"
 	subejctatrribute := aciModels.ContractSubjectAttributes{
-		Name:contractSubjectName ,
+		Name: contractSubjectName,
 	}
 	subjectResp, err := aciClient.CreateContractSubject(contractSubjectName, contractName, tenantName, "Contract subject for the Contract "+contractResp.BaseAttributes.DistinguishedName, subejctatrribute)
 	if err != nil {
