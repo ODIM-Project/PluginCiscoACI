@@ -354,14 +354,14 @@ func LinkFilterToSubjectContract(parentDn, filterName string) error {
 		return err
 	}
 	aciServiceManager = client.NewServiceManager(client.DefaultMOURL, aciClient)
-	dn := fmt.Sprintf("%s/flt-%s", parentDn, filterName)
+
 	containerJSON := []byte(fmt.Sprintf(`{
 		"%s": {
 			"attributes": {
-				"dn": "%s","annotation":"orchestrator:terraform"				
+				"tnVzFilterName":"%s"				
 			}
 		}
-	}`, "vzRsSubjFiltAtt", dn))
+	}`, "vzRsSubjFiltAtt", filterName))
 
 	jsonPayload, err := container.ParseJSON(containerJSON)
 	if err != nil {
@@ -374,8 +374,8 @@ func LinkFilterToSubjectContract(parentDn, filterName string) error {
 	if newClient.httpClient, err = httpConf.GetHTTPClientObj(); err != nil {
 		return err
 	}
-
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s.json", aciServiceManager.MOURL), bytes.NewBuffer(jsonPayload.Bytes()))
+	reqURL := fmt.Sprintf("https://%s%s/%s.json", config.Data.APICConf.APICHost, aciServiceManager.MOURL, parentDn)
+	req, err := http.NewRequest("POST", reqURL, bytes.NewBuffer(jsonPayload.Bytes()))
 	if err != nil {
 		return err
 	}

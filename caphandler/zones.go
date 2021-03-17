@@ -696,24 +696,28 @@ func createContract(vrfName, tenantName, description string) (interface{}, int) 
 	contractResp, err := aciClient.CreateContract(contractName, tenantName, description, contractAttributes)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		log.Error(errMsg)
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return resp, http.StatusBadRequest
 	}
 	// create the contract subject
 	contractSubjectName := contractName + "-Subject"
 	subejctatrribute := aciModels.ContractSubjectAttributes{
-		Name: "ContractSubjectAttributes",
+		Name: contractSubjectName,
 	}
-	_, err = aciClient.CreateContractSubject(contractSubjectName, contractName, tenantName, "Contract subject for the Contract "+contractResp.BaseAttributes.DistinguishedName, subejctatrribute)
+	subjectResp, err := aciClient.CreateContractSubject(contractSubjectName, contractName, tenantName, "Contract subject for the Contract "+contractResp.BaseAttributes.DistinguishedName, subejctatrribute)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		log.Error(errMsg)
+
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return resp, http.StatusBadRequest
 	}
 	// create filter for the contract subject
-	err = caputilities.LinkFilterToSubjectContract("uni/tn-common", "default")
+	err = caputilities.LinkFilterToSubjectContract(subjectResp.BaseAttributes.DistinguishedName, "default")
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		log.Error(errMsg)
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return resp, http.StatusBadRequest
 	}
@@ -724,6 +728,7 @@ func createContract(vrfName, tenantName, description string) (interface{}, int) 
 	vzAnyresp, err := aciClient.CreateAny(vrfName, tenantName, "VRF any for the VRF "+vrfName, vzAnyAttributes)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		log.Error(errMsg)
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return resp, http.StatusBadRequest
 	}
