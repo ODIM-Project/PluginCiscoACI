@@ -16,12 +16,14 @@
 package caputilities
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	"github.com/ciscoecosystem/aci-go-client/client"
+	"github.com/ciscoecosystem/aci-go-client/container"
 	"github.com/ciscoecosystem/aci-go-client/models"
 	"io/ioutil"
 	"net/http"
@@ -341,4 +343,52 @@ func GetPortHealth(podID, switchID, portID string) (*capmodel.Health, error) {
 	json.Unmarshal(body, &portResponseData)
 	return &portResponseData, nil
 
+}
+
+//LinkFilterToSubjectContract links the filter to subjectcontract
+func LinkFilterToSubjectContract(parentDn, filterName string) error {
+	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
+	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json
+	err := aciClient.Authenticate()
+	if err != nil {
+		return err
+	}
+	aciServiceManager = client.NewServiceManager(client.DefaultMOURL, aciClient)
+	dn := fmt.Sprintf("%s/flt-%s", parentDn, filterName)
+	containerJSON := []byte(fmt.Sprintf(`{
+		"%s": {
+			"attributes": {
+				"dn": "%s","annotation":"orchestrator:terraform"				
+			}
+		}
+	}`, "vzRsSubjFiltAtt", dn))
+
+	jsonPayload, err := container.ParseJSON(containerJSON)
+	if err != nil {
+		return err
+	}
+	newClient := ACIHTTPClient{}
+	httpConf := &lutilconf.HTTPConfig{
+		CACertificate: &config.Data.KeyCertConf.RootCACertificate,
+	}
+	if newClient.httpClient, err = httpConf.GetHTTPClientObj(); err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s.json", aciServiceManager.MOURL), bytes.NewBuffer(jsonPayload.Bytes()))
+	if err != nil {
+		return err
+	}
+	req.Close = true
+	req.Header.Set("Accept", "application/json")
+	req.AddCookie(&http.Cookie{
+		Name:  "APIC-Cookie",
+		Value: aciClient.AuthToken.Token,
+	})
+
+	_, err = newClient.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	return nil
 }
