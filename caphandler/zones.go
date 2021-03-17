@@ -703,7 +703,7 @@ func createContract(vrfName, tenantName, description string) (interface{}, int) 
 	// create the contract subject
 	contractSubjectName := contractName + "-Subject"
 	subejctatrribute := aciModels.ContractSubjectAttributes{
-		Name: contractSubjectName,
+		Name:contractSubjectName ,
 	}
 	subjectResp, err := aciClient.CreateContractSubject(contractSubjectName, contractName, tenantName, "Contract subject for the Contract "+contractResp.BaseAttributes.DistinguishedName, subejctatrribute)
 	if err != nil {
@@ -714,7 +714,7 @@ func createContract(vrfName, tenantName, description string) (interface{}, int) 
 		return resp, http.StatusBadRequest
 	}
 	// create filter for the contract subject
-	err = caputilities.LinkFilterToSubjectContract(subjectResp.BaseAttributes.DistinguishedName, "default")
+	err = aciClient.CreateRelationvzRsSubjFiltAttFromContractSubject(subjectResp.BaseAttributes.DistinguishedName, "default")
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
 		log.Error(errMsg)
