@@ -690,7 +690,7 @@ func createContract(vrfName, tenantName, description string) (interface{}, int) 
 	contractName := vrfName + "-Con"
 	contractAttributes := aciModels.ContractAttributes{
 		Name:  contractName,
-		Scope: "VRF",
+		Scope: "context",
 	}
 	aciClient := caputilities.GetConnection()
 	_, err := aciClient.CreateContract(contractName, tenantName, description, contractAttributes)
