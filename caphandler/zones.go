@@ -368,6 +368,13 @@ func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
 			errMsg := fmt.Errorf("Error deleting VRF")
 			return errMsg
 		}
+		// delete contract
+		contractErr := aciServiceManager.DeleteContract(respData.Zone.Name+"-VRF-Con", parentZone.Name)
+		if contractErr != nil {
+			errMsg := fmt.Errorf("Error deleting Contract:%v", contractErr)
+			log.Error(errMsg.Error())
+			return errMsg
+		}
 		delete(capdata.ZoneDataStore, uri)
 		return nil
 	}
