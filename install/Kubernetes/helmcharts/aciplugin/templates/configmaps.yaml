@@ -58,7 +58,7 @@ data:
     	},
     	"APICConf": {
     		"APICHost": {{ .Values.aciplugin.apicHost | quote }},
+        "DomainData": {{ .Values.aciplugin.apicDomainData | quote }},
     		"UserName": {{ .Values.aciplugin.apicUserName | quote }},
-    		"Password": {{ .Values.aciplugin.apicPassword | quote }},
-        "DomainData": {{ .Values.aciplugin.apicDomainData | quote }}
+    		"Password": {{ .Values.aciplugin.apicPassword | quote }}
     }
