@@ -308,7 +308,7 @@ func DeleteZone(ctx iris.Context) {
 			return
 		}
 		delete(capdata.ZoneDataStore, uri)
-		ctx.JSON(http.StatusNoContent)
+		ctx.StatusCode(http.StatusNoContent)
 	}
 	if respData.Zone.ZoneType == "Default" {
 		aciClient := caputilities.GetConnection()
