@@ -22,10 +22,12 @@ ADD go.mod .
 RUN go mod download
 
 ADD caphandler  /aciplugin/caphandler
+ADD capdata /aciplugin/capdata
 ADD capmessagebus  /aciplugin/capmessagebus
 ADD capmiddleware  /aciplugin/capmiddleware
 ADD capmodel  /aciplugin/capmodel
 ADD capresponse  /aciplugin/capresponse
+ADD constants /aciplugin/constants
 ADD caputilities  /aciplugin/caputilities
 ADD main.go /aciplugin/
 ADD config /aciplugin/config
