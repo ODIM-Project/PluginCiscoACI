@@ -308,7 +308,7 @@ func DeleteZone(ctx iris.Context) {
 			return
 		}
 		delete(capdata.ZoneDataStore, uri)
-		ctx.JSON(http.StatusNoContent)
+		ctx.StatusCode(http.StatusNoContent)
 	}
 	if respData.Zone.ZoneType == "Default" {
 		aciClient := caputilities.GetConnection()
@@ -366,6 +366,13 @@ func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
 		vrfErr := aciServiceManager.DeleteVRF(respData.Zone.Name+"-VRF", parentZone.Name)
 		if vrfErr != nil {
 			errMsg := fmt.Errorf("Error deleting VRF")
+			return errMsg
+		}
+		// delete contract
+		contractErr := aciServiceManager.DeleteContract(respData.Zone.Name+"-VRF-Con", parentZone.Name)
+		if contractErr != nil {
+			errMsg := fmt.Errorf("Error deleting Contract:%v", contractErr)
+			log.Error(errMsg.Error())
 			return errMsg
 		}
 		delete(capdata.ZoneDataStore, uri)
@@ -440,6 +447,11 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 		errMsg := "Error while creating application profile: " + vrfErr.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return "", resp, http.StatusBadRequest
+	}
+	// create contract with name vrf and suffix-Con
+	resp, statusCode := createContract(vrfModel.Name, respData.Zone.Name, zone.Name)
+	if statusCode != http.StatusCreated {
+		return "", resp, statusCode
 	}
 	return defaultZoneLink, apResp, http.StatusCreated
 
@@ -679,4 +691,66 @@ func deleteZoneOfEndpoints(zoneData *model.Zone) (interface{}, int) {
 	updateAddressPoolData(zoneData.ODataID, zoneData.Links.AddressPools[0].Oid, "Remove")
 	delete(capdata.ZoneDataStore, zoneData.ODataID)
 	return nil, http.StatusNoContent
+}
+
+func createContract(vrfName, tenantName, description string) (interface{}, int) {
+	contractName := vrfName + "-Con"
+	contractAttributes := aciModels.ContractAttributes{
+		Name:  contractName,
+		Scope: "context",
+	}
+	aciClient := caputilities.GetConnection()
+	contractResp, err := aciClient.CreateContract(contractName, tenantName, description, contractAttributes)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	// create the contract subject
+	contractSubjectName := contractName + "-Subject"
+	subejctatrribute := aciModels.ContractSubjectAttributes{
+		Name: contractSubjectName,
+	}
+	subjectResp, err := aciClient.CreateContractSubject(contractSubjectName, contractName, tenantName, "Contract subject for the Contract "+contractResp.BaseAttributes.DistinguishedName, subejctatrribute)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		log.Error(errMsg)
+
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	// create filter for the contract subject
+	err = aciClient.CreateRelationvzRsSubjFiltAttFromContractSubject(subjectResp.BaseAttributes.DistinguishedName, "default")
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	// create vrfContract
+	vzAnyAttributes := aciModels.AnyAttributes{
+		MatchT: "All",
+	}
+	vzAnyresp, err := aciClient.CreateAny(vrfName, tenantName, "VRF any for the VRF "+vrfName, vzAnyAttributes)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	// relate VRF contract consumer
+	err = aciClient.CreateRelationvzRsAnyToConsFromAny(vzAnyresp.BaseAttributes.DistinguishedName, contractName)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	err = aciClient.CreateRelationvzRsAnyToProvFromAny(vzAnyresp.BaseAttributes.DistinguishedName, contractName)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	return nil, http.StatusCreated
 }

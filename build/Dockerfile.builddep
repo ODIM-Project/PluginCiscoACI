@@ -12,6 +12,7 @@ COPY capresponse  /aci-plugin/capresponse
 COPY caputilities  /aci-plugin/caputilities
 COPY capdata /aci-plugin/capdata
 COPY constants /aci-plugin/constants
+COPY db /aci-plugin/db
 COPY main.go /aci-plugin/
 COPY config /aci-plugin/config
 COPY build.sh /aci-plugin/
