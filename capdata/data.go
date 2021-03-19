@@ -35,6 +35,9 @@ type Fabric struct {
 // FabricDataStore holds the value  aci fabric id and switches
 var FabricDataStore FabricData
 
+// ChassisData holds the switch chassis details
+var ChassisData map[string]*model.Chassis
+
 // SwitchData ...
 type SwitchData struct {
 	Data map[string]*model.Switch
