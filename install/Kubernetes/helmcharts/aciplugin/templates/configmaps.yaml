@@ -56,10 +56,10 @@ data:
     			"ODIM": "redfish"
     		}
     	},
-        "APICConf": {
-                "APICHost": {{ .Values.aciplugin.apicHost | quote }},
-                "UserName": {{ .Values.aciplugin.apicUserName | quote }},
-                "Password": {{ .Values.aciplugin.apicPassword | quote }},
-                "DomainData": {{ .Values.aciplugin.apicDomainData | toJson }}
-        }
+    	"APICConf": {
+    		"APICHost": {{ .Values.aciplugin.apicHost | quote }},
+    		"UserName": {{ .Values.aciplugin.apicUserName | quote }},
+    		"Password": {{ .Values.aciplugin.apicPassword | quote }},
+    		"DomainData": {{ .Values.aciplugin.apicDomainData | toJson }}
+    	}
     }
