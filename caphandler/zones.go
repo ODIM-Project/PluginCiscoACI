@@ -782,7 +782,7 @@ func createStaticPort(epgName, tenantName, applicationProfileName, portProfileDN
 		InstrImedcy: "immediate",
 	}
 	aciClient := caputilities.GetConnection()
-	_, err := aciClient.CreateStaticPath(portProfileDN, epgName, applicationProfileName, tenantName, "Static port for "+portProfileDN, staticPathAttributes)
+	_, err := aciClient.CreateStaticPath(portProfileDN, epgName, applicationProfileName, tenantName, "", staticPathAttributes)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
