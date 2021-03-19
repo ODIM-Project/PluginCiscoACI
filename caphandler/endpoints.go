@@ -274,3 +274,14 @@ func checkEndpointPortMapping(portOID string) (int, interface{}) {
 	}
 	return http.StatusOK, nil
 }
+
+func getEndpointData(endpoinOID string) (*capdata.EndpointData, int, interface{}) {
+	respData, ok := capdata.EndpointDataStore[endpoinOID]
+	if !ok {
+		errMsg := fmt.Sprintf("Endpoint data for uri %s not found", endpoinOID)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Endpoint", endpoinOID})
+		return nil, http.StatusNotFound, resp
+	}
+	return respData, http.StatusOK, nil
+}
