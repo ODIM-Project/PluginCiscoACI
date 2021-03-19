@@ -121,8 +121,8 @@ func CreateEndpoint(ctx iris.Context) {
 	for i := 0; i < len(endpoint.Redundancy[0].RedundancySet); i++ {
 		portURI := endpoint.Redundancy[0].RedundancySet[i].Oid
 		if _, ok := portList[endpoint.Redundancy[0].RedundancySet[i].Oid]; ok {
-			errMsg := "Given Port already present in the request"
-			resp := updateErrorResponse(response.PropertyValueConflict, errMsg, []interface{}{endpoint.Redundancy[0].RedundancySet[i].Oid, "RedundancySet"})
+			errMsg := "Duplicate port passed in the request"
+			resp := updateErrorResponse(response.PropertyValueConflict, errMsg, []interface{}{endpoint.Redundancy[0].RedundancySet[i].Oid, endpoint.Redundancy[0].RedundancySet[i].Oid})
 			ctx.StatusCode(http.StatusBadRequest)
 			ctx.JSON(resp)
 			return
