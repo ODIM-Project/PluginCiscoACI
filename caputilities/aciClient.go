@@ -155,19 +155,19 @@ func GetSwitchInfo(podID, switchID int) (*models.System, error) {
 }
 
 // GetSwitchChassisInfo collects the given switch chassis data from the aci
-func GetSwitchChassisInfo(podID, switchID string) (*capmodel.SwitchChassis, error) {
+func GetSwitchChassisInfo(podID, switchID string) (*capmodel.SwitchChassis, *capmodel.Health, error) {
 	endpoint := fmt.Sprintf("https://%s/api/node/mo/topology/pod-%s/node-%s/sys/ch.json", config.Data.APICConf.APICHost, podID, switchID)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	newClient := ACIHTTPClient{}
 	httpConf := &lutilconf.HTTPConfig{
 		CACertificate: &config.Data.KeyCertConf.RootCACertificate,
 	}
 	if newClient.httpClient, err = httpConf.GetHTTPClientObj(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	req.Close = true
 	req.Header.Set("Accept", "application/json")
@@ -179,21 +179,46 @@ func GetSwitchChassisInfo(podID, switchID string) (*capmodel.SwitchChassis, erro
 
 	resp, err := newClient.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if resp.StatusCode >= 300 {
 		errMsg := fmt.Sprintf("Get on the URL %s is giving response with status code %d with response body %s", endpoint, resp.StatusCode, string(body))
-		return nil, fmt.Errorf(errMsg)
+		return nil, nil, fmt.Errorf(errMsg)
 	}
 
 	var switchChassisData capmodel.SwitchChassis
+	var chassisHealth capmodel.Health
 	json.Unmarshal(body, &switchChassisData)
-	return &switchChassisData, nil
+	healthEndpoint := fmt.Sprintf("https://%s/api/node/mo/topology/pod-%s/node-%s/sys/ch/health.json", config.Data.APICConf.APICHost, podID, switchID)
+
+	healthReq, err := http.NewRequest("GET", healthEndpoint, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	healthReq.Close = true
+	healthReq.Header.Set("Accept", "application/json")
+	healthReq.AddCookie(&http.Cookie{
+		Name:  "APIC-Cookie",
+		Value: aciClient.AuthToken.Token,
+	})
+	healthReq.Close = true
+
+	healthResp, err := newClient.httpClient.Do(healthReq)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer healthResp.Body.Close()
+	healthBody, err := ioutil.ReadAll(healthResp.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+	json.Unmarshal(healthBody, &chassisHealth)
+	return &switchChassisData, &chassisHealth, nil
 }
 
 //GetSwitchHealth queries the switch for it's Health from ACI
