@@ -342,3 +342,14 @@ func GetPortHealth(podID, switchID, portID string) (*capmodel.Health, error) {
 	return &portResponseData, nil
 
 }
+
+// GetPortPolicyGroup collects all policy group for given fabric and  switch
+func GetPortPolicyGroup(podID, switchPath string) ([]*models.FabricPathEndpoint, error) {
+	serviceManager := GetConnection()
+	endPointUrL := fmt.Sprintf("/api/node/class/uni/topology/pod-%s/protpaths%s/fabricPathEp.json", podID, switchPath)
+
+	cont, err := serviceManager.GetViaURL(endPointUrL)
+	list := models.FabricPathEndpointListFromContainer(cont)
+
+	return list, err
+}
