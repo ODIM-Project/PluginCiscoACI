@@ -121,7 +121,7 @@ func CreateEndpoint(ctx iris.Context) {
 		switchURI = switchURI + "-" + switchIDData[1]
 		portIDData := strings.Split(portURIData[8], ":")
 		tmpPortPattern := strings.Replace(portIDData[1], "eth", "", -1)
-		tmpPortPattern = strings.Replace(tmpPortPattern, "-", "-port-", -1)
+		tmpPortPattern = strings.Replace(tmpPortPattern, "-", "-ports-", -1)
 		portPattern = tmpPortPattern
 	}
 
@@ -132,6 +132,7 @@ func CreateEndpoint(ctx iris.Context) {
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"protpaths" + switchURI, "PolicyGroup"})
 		ctx.StatusCode(http.StatusNotFound)
 		ctx.JSON(resp)
+		return
 
 	}
 	policyGroupDN := ""
@@ -146,6 +147,7 @@ func CreateEndpoint(ctx iris.Context) {
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{portPattern, "PolicyGroup"})
 		ctx.StatusCode(http.StatusNotFound)
 		ctx.JSON(resp)
+		return
 	}
 	log.Info("Dn of Policy group" + policyGroupDN)
 	saveEndpointData(uri, fabricID, policyGroupDN, &endpoint)

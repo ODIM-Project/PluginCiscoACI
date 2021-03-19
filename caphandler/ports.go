@@ -158,6 +158,7 @@ func updateErrorResponse(statusMsg, errMsg string, msgArgs []interface{}) interf
 }
 
 func getPortData(portOID string) (*model.Port, int, interface{}) {
+	log.Info("Port uri" + portOID)
 	portData, ok := capdata.PortDataStore[portOID]
 	if !ok {
 		errMsg := fmt.Sprintf("Port data for uri %s not found", portOID)

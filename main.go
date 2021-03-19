@@ -181,6 +181,7 @@ func intializeACIData() {
 	capdata.PortDataStore = make(map[string]*dmtfmodel.Port)
 	capdata.ZoneDataStore = make(map[string]*capdata.ZoneData)
 	capdata.AddressPoolDataStore = make(map[string]*capdata.AddressPoolsData)
+	capdata.EndpointDataStore = make(map[string]*capdata.EndpointData)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
@@ -274,7 +275,7 @@ func parsePortData(portResponseData *capmodel.PortCollectionResponse, switchID, 
 			log.Error("Unable to get mtu for the port" + portID)
 		}
 		portInfo.MaxFrameSize = mtu
-		capdata.PortDataStore[portID] = &portInfo
+		capdata.PortDataStore[portInfo.ODataID] = &portInfo
 	}
 	capdata.SwitchToPortDataStore[switchID] = portData
 }
