@@ -104,12 +104,39 @@ func CreateEndpoint(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
+	// get all existing endpoints under fabric check for the name
+	for _, endpointData := range capdata.EndpointDataStore {
+		if endpoint.Name == endpointData.Endpoint.Name {
+			errMsg := "Endpoint name is already assigned to other endpoint:" + endpointData.Endpoint.Name
+			resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"Endpoint", endpointData.Endpoint.Name, endpoint.Name})
+			ctx.StatusCode(http.StatusConflict)
+			ctx.JSON(resp)
+			return
+		}
+	}
 	var switchURI = ""
 	var portPattern = ""
+	portList := make(map[string]bool)
 	// check if given ports are present in plugin database
 	for i := 0; i < len(endpoint.Redundancy[0].RedundancySet); i++ {
 		portURI := endpoint.Redundancy[0].RedundancySet[i].Oid
+		if _, ok := portList[endpoint.Redundancy[0].RedundancySet[i].Oid]; ok {
+			errMsg := "Duplicate port passed in the request"
+			resp := updateErrorResponse(response.PropertyValueConflict, errMsg, []interface{}{endpoint.Redundancy[0].RedundancySet[i].Oid, endpoint.Redundancy[0].RedundancySet[i].Oid})
+			ctx.StatusCode(http.StatusBadRequest)
+			ctx.JSON(resp)
+			return
+
+		}
+		portList[endpoint.Redundancy[0].RedundancySet[i].Oid] = true
+
 		_, statusCode, resp := getPortData(portURI)
+		if statusCode != http.StatusOK {
+			ctx.StatusCode(statusCode)
+			ctx.JSON(resp)
+			return
+		}
+		statusCode, resp = checkEndpointPortMapping(endpoint.Redundancy[0].RedundancySet[i].Oid)
 		if statusCode != http.StatusOK {
 			ctx.StatusCode(statusCode)
 			ctx.JSON(resp)
@@ -149,7 +176,7 @@ func CreateEndpoint(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-	log.Info("Dn of Policy group" + policyGroupDN)
+	log.Info("Dn of Policy group:" + policyGroupDN)
 	saveEndpointData(uri, fabricID, policyGroupDN, &endpoint)
 	common.SetResponseHeader(ctx, map[string]string{
 		"Location": endpoint.ODataID,
@@ -188,7 +215,36 @@ func GetEndpointInfo(ctx iris.Context) {
 
 //DeleteEndpointInfo : deletes  endpoints under given fabric
 func DeleteEndpointInfo(ctx iris.Context) {
-	ctx.StatusCode(http.StatusNotImplemented)
+	uri := ctx.Request().RequestURI
+	fabricID := ctx.Params().Get("id")
+	if _, ok := capdata.FabricDataStore.Data[fabricID]; !ok {
+		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
+	endpointData, ok := capdata.EndpointDataStore[uri]
+	if !ok {
+		errMsg := fmt.Sprintf("Endpoint data for uri %s not found", uri)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Endpoint", fabricID})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
+	if endpointData.Endpoint.Links != nil && len(endpointData.Endpoint.Links.AddressPools) > 0 {
+		errMsg := fmt.Sprintf("Endpoint cannot be deleted as there are dependent upon AddressPool")
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceCannotBeDeleted, errMsg, []interface{}{uri, "Endpoint"})
+		ctx.StatusCode(http.StatusNotAcceptable)
+		ctx.JSON(resp)
+		return
+	}
+	// Todo:Add the validation  to verify the links
+	delete(capdata.EndpointDataStore, uri)
+	ctx.StatusCode(http.StatusNoContent)
 }
 
 func saveEndpointData(uri, fabricID, policyGroupDN string, endpoint *model.Endpoint) {
@@ -203,4 +259,29 @@ func saveEndpointData(uri, fabricID, policyGroupDN string, endpoint *model.Endpo
 		PolicyGroupDN: policyGroupDN,
 	}
 
+}
+
+func checkEndpointPortMapping(portOID string) (int, interface{}) {
+	// get all existing endpoints check if port is assinged to other endpoint
+	for _, endpointData := range capdata.EndpointDataStore {
+		for i := 0; i < len(endpointData.Endpoint.Redundancy[0].RedundancySet); i++ {
+			if endpointData.Endpoint.Redundancy[0].RedundancySet[i].Oid == portOID {
+				errMsg := "Port already assigned to other endpoint:" + portOID
+				resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"Endpoint", endpointData.Endpoint.Redundancy[0].RedundancySet[i].Oid, portOID})
+				return http.StatusConflict, resp
+			}
+		}
+	}
+	return http.StatusOK, nil
+}
+
+func getEndpointData(endpoinOID string) (*capdata.EndpointData, int, interface{}) {
+	respData, ok := capdata.EndpointDataStore[endpoinOID]
+	if !ok {
+		errMsg := fmt.Sprintf("Endpoint data for uri %s not found", endpoinOID)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Endpoint", endpoinOID})
+		return nil, http.StatusNotFound, resp
+	}
+	return respData, http.StatusOK, nil
 }
