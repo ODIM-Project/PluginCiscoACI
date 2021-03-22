@@ -116,7 +116,7 @@ func PatchPort(ctx iris.Context) {
 			if len(port.Links.ConnectedPorts) > 0 {
 				//Assuming we have only one connected port
 				ethernetURI := port.Links.ConnectedPorts[0].Oid
-				//Check on ODIM if ehternet is valid
+				//Check on ODIM if ethernet is valid
 				reqURL := config.Data.ODIMConf.URL + ethernetURI
 				odimUsername := config.Data.ODIMConf.UserName
 				odimPassword := config.Data.ODIMConf.Password
@@ -137,7 +137,6 @@ func PatchPort(ctx iris.Context) {
 					ctx.JSON(resp)
 					return
 				}
-				//Check on ODIM if ehternet is valid
 				portData.Links = &model.PortLinks{}
 				portData.Links.ConnectedPorts = []model.Link{}
 				portData.Links.ConnectedPorts = append(portData.Links.ConnectedPorts, model.Link{Oid: ethernetURI})
