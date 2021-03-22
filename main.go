@@ -15,7 +15,14 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
 	dmtfmodel "github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	dc "github.com/ODIM-Project/ODIM/lib-messagebus/datacommunicator"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
@@ -28,15 +35,12 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	"github.com/ODIM-Project/PluginCiscoACI/constants"
+	"github.com/ODIM-Project/PluginCiscoACI/db"
+
 	"github.com/ciscoecosystem/aci-go-client/models"
 	iris "github.com/kataras/iris/v12"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var subscriptionInfo []capmodel.Device
@@ -188,21 +192,22 @@ func intializeACIData() {
 	}
 	for _, aciNodeData := range aciNodesData {
 		switchID := uuid.NewV4().String() + ":" + aciNodeData.NodeId
-		capdata.FabricDataStore.Lock.Lock()
 		fabricID := config.Data.RootServiceUUID + ":" + aciNodeData.FabricId
-		if data, ok := capdata.FabricDataStore.Data[fabricID]; ok {
-			data.SwitchData = append(data.SwitchData, switchID)
-			data.PodID = aciNodeData.PodId
-		} else {
-
-			capdata.FabricDataStore.Data[fabricID] = &capdata.Fabric{
+		if data, err := capmodel.GetFabric(fabricID); errors.Is(err, db.ErrorKeyNotFound) {
+			data := &capdata.Fabric{
 				SwitchData: []string{
 					switchID,
 				},
 				PodID: aciNodeData.PodId,
 			}
+			if err := capmodel.SaveFabric(fabricID, data); err != nil {
+				log.Fatal("storing " + fabricID + " fabric failed with " + err.Error())
+			}
+		} else {
+			// is this requried now that the data is persisted
+			data.SwitchData = append(data.SwitchData, switchID)
+			data.PodID = aciNodeData.PodId
 		}
-		capdata.FabricDataStore.Lock.Unlock()
 		switchData := getSwitchData(aciNodeData, switchID)
 		capdata.SwitchDataStore.Lock.Lock()
 		capdata.SwitchDataStore.Data[switchID] = switchData
