@@ -513,6 +513,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 		errorMessage := "More than one AddressPool not allowed for the creation of ZoneOfEndpoints"
 		return "", updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest
 	}
+
 	addresspoolData, statusCode, resp := getAddressPoolData(zone.Links.AddressPools[0].Oid)
 	if statusCode != http.StatusOK {
 		return "", resp, statusCode
@@ -522,9 +523,23 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 		errorMessage := fmt.Sprintf("Given AddressPool %s is assingned to other ZoneofEndpoints", zone.Links.AddressPools[0].Oid)
 		return "", updateErrorResponse(response.ResourceInUse, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest
 	}
+	// Get the endpoints from the db
+	// validate all given addresspools if it's present
+	if len(zone.Links.Endpoints) == 0 {
+		errorMessage := "Endpoints attribute is missing in the request"
+		return "", updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"Endpoints"}), http.StatusBadRequest
+	}
+	if len(zone.Links.Endpoints) > 1 {
+		errorMessage := "More than one Endpoints not allowed for the creation of ZoneOfEndpoints"
+		return "", updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"Endpoints", "Endpoints"}), http.StatusBadRequest
+	}
 	// Get the default zone data
 	defaultZoneURL := zoneofZoneData.Zone.Links.ContainedByZones[0].Oid
 	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL]
+	endpointData, statusCode, resp := getEndpointData(zone.Links.Endpoints[0].Oid)
+	if statusCode != http.StatusOK {
+		return "", resp, statusCode
+	}
 	bdResp, bdDN, statusCode := createBridgeDomain(defaultZoneData.Zone.Name, zone)
 	if statusCode != http.StatusCreated {
 		return "", bdResp, statusCode
@@ -547,7 +562,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 	if statusCode != http.StatusCreated {
 		return "", resp, statusCode
 	}
-	resp, statusCode = applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name, domainName)
+	resp, statusCode = applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name, domainName, endpointData.PolicyGroupDN, addresspoolData.Ethernet.IPv4.NativeVLAN)
 	return zoneofZoneURL, resp, statusCode
 }
 
@@ -605,7 +620,7 @@ func linkBDtoVRF(bdDN, vrfName string) (interface{}, int) {
 	return nil, http.StatusCreated
 }
 
-func applicationEPGOperation(tenantName, applicationProfileName, bdName, domainName string) (interface{}, int) {
+func applicationEPGOperation(tenantName, applicationProfileName, bdName, domainName, portProfileDN string, nativeVLAN int) (interface{}, int) {
 	//create EPG with name of bd adding -EPG suffix
 	epgName := bdName + "-EPG"
 	resp, appEPGDN, statusCode := createapplicationEPG(tenantName, applicationProfileName, epgName)
@@ -618,7 +633,12 @@ func applicationEPGOperation(tenantName, applicationProfileName, bdName, domainN
 		return resp, statusCode
 	}
 	// Link EPG to Domain
-	return linkEpgtoDomain(appEPGDN, domainName)
+	resp, statusCode = linkEpgtoDomain(appEPGDN, domainName)
+	if statusCode != http.StatusCreated {
+		return resp, statusCode
+	}
+	// Create static port
+	return createStaticPort(epgName, tenantName, applicationProfileName, portProfileDN, nativeVLAN)
 }
 
 func createapplicationEPG(tenantName, applicationProfileName, epgName string) (interface{}, string, int) {
@@ -747,6 +767,22 @@ func createContract(vrfName, tenantName, description string) (interface{}, int) 
 		return resp, http.StatusBadRequest
 	}
 	err = aciClient.CreateRelationvzRsAnyToProvFromAny(vzAnyresp.BaseAttributes.DistinguishedName, contractName)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	return nil, http.StatusCreated
+}
+
+func createStaticPort(epgName, tenantName, applicationProfileName, portProfileDN string, nativeVLAN int) (interface{}, int) {
+	staticPathAttributes := aciModels.StaticPathAttributes{
+		TDn:         portProfileDN,
+		Encap:       fmt.Sprintf("vlan-%d", nativeVLAN),
+		InstrImedcy: "immediate",
+	}
+	aciClient := caputilities.GetConnection()
+	_, err := aciClient.CreateStaticPath(portProfileDN, epgName, applicationProfileName, tenantName, "", staticPathAttributes)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
