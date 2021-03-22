@@ -116,6 +116,8 @@ func routers() *iris.Application {
 	pluginRoutes.Delete("/Subscriptions", capmiddleware.BasicAuth, caphandler.DeleteEventSubscription)
 	pluginRoutes.Get("/Status", capmiddleware.BasicAuth, caphandler.GetPluginStatus)
 	pluginRoutes.Post("/Startup", capmiddleware.BasicAuth, caphandler.GetPluginStartup)
+	pluginRoutes.Get("/Chassis", capmiddleware.BasicAuth, caphandler.GetChassisCollection)
+	pluginRoutes.Get("/Chassis/{id}", capmiddleware.BasicAuth, caphandler.GetChassis)
 	fabricRoutes := pluginRoutes.Party("/Fabrics", capmiddleware.BasicAuth)
 	fabricRoutes.Get("/", caphandler.GetFabricResource)
 	fabricRoutes.Get("/{id}", caphandler.GetFabricData)
@@ -123,6 +125,7 @@ func routers() *iris.Application {
 	fabricRoutes.Get("/{id}/Switches/{rid}", caphandler.GetSwitchInfo)
 	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports", caphandler.GetPortCollection)
 	fabricRoutes.Get("/{id}/Switches/{switchID}/Ports/{portID}", caphandler.GetPortInfo)
+	fabricRoutes.Patch("/{id}/Switches/{switchID}/Ports/{portID}", caphandler.PatchPort)
 	fabricRoutes.Get("/{id}/Zones", caphandler.GetZones)
 	fabricRoutes.Post("/{id}/Zones", caphandler.CreateZone)
 	fabricRoutes.Get("/{id}/Zones/{rid}", caphandler.GetZone)
@@ -184,6 +187,7 @@ func intializeACIData() {
 	capdata.SwitchToPortDataStore = make(map[string][]string)
 	capdata.PortDataStore = make(map[string]*dmtfmodel.Port)
 	capdata.ZoneDataStore = make(map[string]*capdata.ZoneData)
+	capdata.ChassisData = make(map[string]*dmtfmodel.Chassis)
 	capdata.AddressPoolDataStore = make(map[string]*capdata.AddressPoolsData)
 	capdata.EndpointDataStore = make(map[string]*capdata.EndpointData)
 	aciNodesData, err := caputilities.GetFabricNodeData()
@@ -208,8 +212,9 @@ func intializeACIData() {
 			data.SwitchData = append(data.SwitchData, switchID)
 			data.PodID = aciNodeData.PodId
 		}
-		switchData := getSwitchData(aciNodeData, switchID)
+		switchData, chassisData := getSwitchData(fabricID, aciNodeData, switchID)
 		capdata.SwitchDataStore.Lock.Lock()
+		capdata.ChassisData[chassisData.ID] = chassisData
 		capdata.SwitchDataStore.Data[switchID] = switchData
 		capdata.SwitchDataStore.Lock.Unlock()
 		// adding logic to collect the ports data
@@ -285,11 +290,12 @@ func parsePortData(portResponseData *capmodel.PortCollectionResponse, switchID, 
 	capdata.SwitchToPortDataStore[switchID] = portData
 }
 
-func getSwitchData(fabricNodeData *models.FabricNodeMember, switchID string) *dmtfmodel.Switch {
+func getSwitchData(fabricID string, fabricNodeData *models.FabricNodeMember, switchID string) (*dmtfmodel.Switch, *dmtfmodel.Chassis) {
 	switchUUIDData := strings.Split(switchID, ":")
 	var switchData = dmtfmodel.Switch{
 		ODataContext: "/ODIM/v1/$metadata#Switch.Switch",
 		ODataType:    "#Switch.v1_4_0.Switch",
+		ODataID:      "/ODIM/v1/Fabrics/" + fabricID + "/Switches/" + switchID,
 		ID:           switchID,
 		Name:         fabricNodeData.Name,
 		SwitchType:   "Ethernet",
@@ -310,11 +316,60 @@ func getSwitchData(fabricNodeData *models.FabricNodeMember, switchID string) *dm
 		log.Fatal("Unable to get the Switch info:" + err.Error())
 	}
 	switchData.FirmwareVersion = switchRespData.SystemAttributes.Version
-	switchChassisData, err := caputilities.GetSwitchChassisInfo(fabricNodeData.PodId, fabricNodeData.NodeId)
+	switchChassisData, healthChassisData, err := caputilities.GetSwitchChassisInfo(fabricNodeData.PodId, fabricNodeData.NodeId)
 	if err != nil {
 		log.Fatal("Unable to get the Switch Chassis info for node " + fabricNodeData.NodeId + " :" + err.Error())
 	}
 	switchData.Manufacturer = switchChassisData.IMData[0].SwitchChassisData.Attributes["vendor"].(string)
 	switchData.Model = switchChassisData.IMData[0].SwitchChassisData.Attributes["model"].(string)
-	return &switchData
+	chassisID := switchChassisData.IMData[0].SwitchChassisData.Attributes["id"].(string)
+	chassisUUID := uuid.NewV4().String()
+	var chassisHealth string
+
+	//take health value
+	data := healthChassisData.IMData[0].HealthData.Attributes
+	currentHealthValue := data["cur"].(string)
+	healthValue, err := strconv.Atoi(currentHealthValue)
+	if err != nil {
+		log.Fatal("Unable to convert current Health value:" + currentHealthValue + " go the error" + err.Error())
+	}
+
+	if healthValue > 90 {
+		chassisHealth = "OK"
+	} else if healthValue <= 90 && healthValue < 30 {
+		chassisHealth = "Warning"
+	} else {
+		chassisHealth = "Critical"
+	}
+	var chassisData = dmtfmodel.Chassis{
+		Ocontext:     "/ODIM/v1/$metadata#Chassis.Chassis",
+		Otype:        "#Chassis.v1_4_0.Chassis",
+		Oid:          "/ODIM/v1/Chassis/" + chassisUUID + ":" + chassisID,
+		ID:           chassisUUID + ":" + chassisID,
+		Name:         fabricNodeData.Name + "_chassis",
+		ChassisType:  "RackMount",
+		UUID:         chassisUUID,
+		SerialNumber: switchChassisData.IMData[0].SwitchChassisData.Attributes["ser"].(string),
+		Manufacturer: switchChassisData.IMData[0].SwitchChassisData.Attributes["vendor"].(string),
+		Model:        switchChassisData.IMData[0].SwitchChassisData.Attributes["model"].(string),
+		PowerState:   switchChassisData.IMData[0].SwitchChassisData.Attributes["operSt"].(string),
+		Status: &dmtfmodel.Status{
+			State:  "Enabled",
+			Health: chassisHealth,
+		},
+		Links: &dmtfmodel.Links{
+			Switches: []*dmtfmodel.Link{
+				&dmtfmodel.Link{
+					Oid: switchData.ODataID,
+				},
+			},
+		},
+	}
+	switchData.Links = &dmtfmodel.SwitchLinks{
+		Chassis: &dmtfmodel.Link{
+			Oid: chassisData.Oid,
+		},
+	}
+
+	return &switchData, &chassisData
 }

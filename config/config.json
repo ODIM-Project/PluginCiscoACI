@@ -64,7 +64,11 @@
 		"UserName": "",
 		"Password": "",
 		"DomainData":{
-			
+
 		}
+	},
+	"ODIMConf":{
+		"URL":"",
+		"UserName":"",
+		"Password":""
 	}
-}
