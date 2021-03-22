@@ -91,6 +91,7 @@ func GetPortInfo(ctx iris.Context) {
 
 }
 
+// PatchPort Update the given port with provied information
 func PatchPort(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	var port model.Port
@@ -123,7 +124,7 @@ func PatchPort(ctx iris.Context) {
 				for key, value := range config.Data.URLTranslation.SouthBoundURL {
 					reqURL = strings.Replace(reqURL, key, value, -1)
 				}
-				err, checkFlag = caputilities.CheckValidityOfEthernet(reqURL, odimUsername, odimPassword)
+				checkFlag, err = caputilities.CheckValidityOfEthernet(reqURL, odimUsername, odimPassword)
 				if err != nil {
 					errMsg := fmt.Sprintf("Error while trying to contact ODIM")
 					log.Error(errMsg)
