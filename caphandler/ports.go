@@ -16,17 +16,22 @@
 package caphandler
 
 import (
+	"errors"
 	"fmt"
-	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
-	"github.com/ODIM-Project/ODIM/lib-utilities/response"
-	"github.com/ODIM-Project/PluginCiscoACI/capdata"
-	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
-	"github.com/ODIM-Project/PluginCiscoACI/config"
-	iris "github.com/kataras/iris/v12"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
+	"github.com/ODIM-Project/ODIM/lib-utilities/response"
+	"github.com/ODIM-Project/PluginCiscoACI/capdata"
+	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
+	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
+	"github.com/ODIM-Project/PluginCiscoACI/config"
+	"github.com/ODIM-Project/PluginCiscoACI/db"
+
+	iris "github.com/kataras/iris/v12"
+	log "github.com/sirupsen/logrus"
 )
 
 // GetPortCollection fetches the ports  which are linked to that switch
@@ -70,8 +75,8 @@ func GetPortInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	switchID := ctx.Params().Get("switchID")
 	fabricID := ctx.Params().Get("id")
-	fabricData, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
+	fabricData, err := capmodel.GetFabric(fabricID)
+	if errors.Is(err, db.ErrorKeyNotFound) {
 		errMsg := fmt.Sprintf("Port data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})

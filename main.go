@@ -15,7 +15,14 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
 	dmtfmodel "github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	dc "github.com/ODIM-Project/ODIM/lib-messagebus/datacommunicator"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
@@ -28,15 +35,12 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	"github.com/ODIM-Project/PluginCiscoACI/constants"
+	"github.com/ODIM-Project/PluginCiscoACI/db"
+
 	"github.com/ciscoecosystem/aci-go-client/models"
 	iris "github.com/kataras/iris/v12"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var subscriptionInfo []capmodel.Device
@@ -178,7 +182,6 @@ func intializePluginStatus() {
 
 // intializeACIData reads required fabric,switch and port data from aci and stored it in the data store
 func intializeACIData() {
-	capdata.FabricDataStore.Data = make(map[string]*capdata.Fabric)
 	capdata.SwitchDataStore.Data = make(map[string]*dmtfmodel.Switch, 0)
 	capdata.SwitchToPortDataStore = make(map[string][]string)
 	capdata.PortDataStore = make(map[string]*dmtfmodel.Port)
@@ -192,21 +195,22 @@ func intializeACIData() {
 	}
 	for _, aciNodeData := range aciNodesData {
 		switchID := uuid.NewV4().String() + ":" + aciNodeData.NodeId
-		capdata.FabricDataStore.Lock.Lock()
 		fabricID := config.Data.RootServiceUUID + ":" + aciNodeData.FabricId
-		if data, ok := capdata.FabricDataStore.Data[fabricID]; ok {
-			data.SwitchData = append(data.SwitchData, switchID)
-			data.PodID = aciNodeData.PodId
-		} else {
-
-			capdata.FabricDataStore.Data[fabricID] = &capdata.Fabric{
+		if data, err := capmodel.GetFabric(fabricID); errors.Is(err, db.ErrorKeyNotFound) {
+			data := &capdata.Fabric{
 				SwitchData: []string{
 					switchID,
 				},
 				PodID: aciNodeData.PodId,
 			}
+			if err := capmodel.SaveFabric(fabricID, data); err != nil {
+				log.Fatal("storing " + fabricID + " fabric failed with " + err.Error())
+			}
+		} else {
+			// is this requried now that the data is persisted
+			data.SwitchData = append(data.SwitchData, switchID)
+			data.PodID = aciNodeData.PodId
 		}
-		capdata.FabricDataStore.Lock.Unlock()
 		switchData, chassisData := getSwitchData(fabricID, aciNodeData, switchID)
 		capdata.SwitchDataStore.Lock.Lock()
 		capdata.ChassisData[chassisData.ID] = chassisData
@@ -226,8 +230,8 @@ func intializeACIData() {
 	//updating the plugin status
 	caputilities.Status.Available = "yes"
 	// Send resource added event odim
-	capdata.FabricDataStore.Lock.RLock()
-	for fabricID := range capdata.FabricDataStore.Data {
+	allFabric, err := capmodel.GetAllFabric("")
+	for fabricID, _ := range allFabric {
 		var event = common.Event{
 			EventID:   uuid.NewV4().String(),
 			MessageID: constants.ResourceCreatedMessageID,
@@ -250,7 +254,6 @@ func intializeACIData() {
 		}
 		capmessagebus.Publish(eventData)
 	}
-	capdata.FabricDataStore.Lock.RUnlock()
 
 	return
 }
