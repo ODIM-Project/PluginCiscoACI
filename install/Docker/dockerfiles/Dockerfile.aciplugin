@@ -23,6 +23,7 @@ RUN go mod download
 
 ADD caphandler  /aciplugin/caphandler
 ADD capdata /aciplugin/capdata
+ADD db /aciplugin/db
 ADD capmessagebus  /aciplugin/capmessagebus
 ADD capmiddleware  /aciplugin/capmiddleware
 ADD capmodel  /aciplugin/capmodel
