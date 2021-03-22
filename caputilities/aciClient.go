@@ -16,6 +16,7 @@
 package caputilities
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
@@ -377,4 +378,25 @@ func GetPortPolicyGroup(podID, switchPath string) ([]*models.FabricPathEndpoint,
 	list := models.FabricPathEndpointListFromContainer(cont)
 
 	return list, err
+}
+
+func CheckValidityOfEthernet(reqURL string, odimUsername string, odimPassword string) (error, bool) {
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return err, false
+	}
+	newClient, err := GetRedfishClient()
+	if err != nil {
+		return err, false
+	}
+	auth := odimUsername + ":" + odimPassword
+	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
+	resp, err := newClient.httpClient.Do(req)
+	if err != nil {
+		return err, false
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, false
+	}
+	return nil, true
 }

@@ -66,4 +66,9 @@
 		"DomainData":{
 
 		}
+	},
+	"ODIMConf":{
+		"URL":"",
+		"UserName":"",
+		"Password":""
 	}
