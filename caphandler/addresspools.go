@@ -16,16 +16,21 @@
 package caphandler
 
 import (
+	"errors"
 	"fmt"
+	"net"
+	"net/http"
+
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
 	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
+	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
+	"github.com/ODIM-Project/PluginCiscoACI/db"
+
 	iris "github.com/kataras/iris/v12"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
-	"net"
-	"net/http"
 )
 
 // GetAddressPoolCollection fetches the addresspool which are linked to that fabric
@@ -34,8 +39,7 @@ func GetAddressPoolCollection(ctx iris.Context) {
 	fabricID := ctx.Params().Get("id")
 	// get all switches which are store under that fabric
 
-	_, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
+	if _, err := capmodel.GetFabric(fabricID); errors.Is(err, db.ErrorKeyNotFound) {
 		errMsg := fmt.Sprintf("Address data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"AddressPool", uri})
@@ -70,8 +74,7 @@ func GetAddressPoolCollection(ctx iris.Context) {
 func GetAddressPoolInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	_, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
+	if _, err := capmodel.GetFabric(fabricID); errors.Is(err, db.ErrorKeyNotFound) {
 		errMsg := fmt.Sprintf("AddressPool data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
@@ -98,7 +101,7 @@ func GetAddressPoolInfo(ctx iris.Context) {
 func CreateAddressPool(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	if _, ok := capdata.FabricDataStore.Data[fabricID]; !ok {
+	if _, err := capmodel.GetFabric(fabricID); errors.Is(err, db.ErrorKeyNotFound) {
 		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
@@ -189,7 +192,7 @@ func validateAddressPoolRequest(request model.AddressPool) (string, error) {
 func DeleteAddressPoolInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	if _, ok := capdata.FabricDataStore.Data[fabricID]; !ok {
+	if _, err := capmodel.GetFabric(fabricID); errors.Is(err, db.ErrorKeyNotFound) {
 		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})

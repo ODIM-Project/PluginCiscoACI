@@ -36,6 +36,23 @@ func GetFabric(fabricID string) (capdata.Fabric, error) {
 	return fabric, nil
 }
 
+// GetAllFabric collects the fabric data from the DB
+func GetAllFabric(pattern string) (map[string]capdata.Fabric, error) {
+	allFabricData := make(map[string]capdata.Fabric)
+	fabricIDs, err := db.Connector.GetAllMatchingKeys(TableFabric, pattern)
+	if err != nil {
+		return nil, fmt.Errorf("while trying to collect all fabric data, got: %w", err)
+	}
+	for _, fabricID := range fabricIDs {
+		fabric, err := GetFabric(fabricID)
+		if err != nil {
+			return nil, fmt.Errorf("while trying collect individual fabric data, got: %w", err)
+		}
+		allFabricData[fabricID] = fabric
+	}
+	return allFabricData, nil
+}
+
 // SaveFabric stores the fabric data in the DB
 func SaveFabric(fabricID string, data *capdata.Fabric) error {
 	return SaveToDB(TableFabric, fabricID, &data)

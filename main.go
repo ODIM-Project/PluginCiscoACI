@@ -182,7 +182,6 @@ func intializePluginStatus() {
 
 // intializeACIData reads required fabric,switch and port data from aci and stored it in the data store
 func intializeACIData() {
-	capdata.FabricDataStore.Data = make(map[string]*capdata.Fabric)
 	capdata.SwitchDataStore.Data = make(map[string]*dmtfmodel.Switch, 0)
 	capdata.SwitchToPortDataStore = make(map[string][]string)
 	capdata.PortDataStore = make(map[string]*dmtfmodel.Port)
@@ -231,8 +230,8 @@ func intializeACIData() {
 	//updating the plugin status
 	caputilities.Status.Available = "yes"
 	// Send resource added event odim
-	capdata.FabricDataStore.Lock.RLock()
-	for fabricID := range capdata.FabricDataStore.Data {
+	allFabric, err := capmodel.GetAllFabric("")
+	for fabricID, _ := range allFabric {
 		var event = common.Event{
 			EventID:   uuid.NewV4().String(),
 			MessageID: constants.ResourceCreatedMessageID,
@@ -255,7 +254,6 @@ func intializeACIData() {
 		}
 		capmessagebus.Publish(eventData)
 	}
-	capdata.FabricDataStore.Lock.RUnlock()
 
 	return
 }

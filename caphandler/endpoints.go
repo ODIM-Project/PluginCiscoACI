@@ -16,26 +16,29 @@
 package caphandler
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
 	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
+	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
+	"github.com/ODIM-Project/PluginCiscoACI/db"
+
 	iris "github.com/kataras/iris/v12"
 	uuid "github.com/satori/go.uuid"
-
 	log "github.com/sirupsen/logrus"
-	"net/http"
-	"strings"
 )
 
 //GetEndpointCollection : Fetches details of the given resource from the device
 func GetEndpointCollection(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	_, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
+	if _, err := capmodel.GetFabric(fabricID); errors.Is(err, db.ErrorKeyNotFound) {
 		errMsg := fmt.Sprintf("Endpoint data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Endpoint", uri})
@@ -70,8 +73,8 @@ func CreateEndpoint(ctx iris.Context) {
 	// Add logic to check if given ports exits
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	fabricData, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
+	fabricData, err := capmodel.GetFabric(fabricID)
+	if errors.Is(err, db.ErrorKeyNotFound) {
 		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
@@ -81,8 +84,7 @@ func CreateEndpoint(ctx iris.Context) {
 	}
 
 	var endpoint model.Endpoint
-	err := ctx.ReadJSON(&endpoint)
-	if err != nil {
+	if err = ctx.ReadJSON(&endpoint); err != nil {
 		errorMessage := "error while trying to get JSON body from the  request: " + err.Error()
 		log.Error(errorMessage)
 		resp := updateErrorResponse(response.MalformedJSON, errorMessage, nil)
@@ -189,8 +191,7 @@ func CreateEndpoint(ctx iris.Context) {
 func GetEndpointInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	_, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
+	if _, err := capmodel.GetFabric(fabricID); errors.Is(err, db.ErrorKeyNotFound) {
 		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
@@ -217,7 +218,7 @@ func GetEndpointInfo(ctx iris.Context) {
 func DeleteEndpointInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	if _, ok := capdata.FabricDataStore.Data[fabricID]; !ok {
+	if _, err := capmodel.GetFabric(fabricID); errors.Is(err, db.ErrorKeyNotFound) {
 		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
