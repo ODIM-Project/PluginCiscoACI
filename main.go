@@ -15,6 +15,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	dmtfmodel "github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	dc "github.com/ODIM-Project/ODIM/lib-messagebus/datacommunicator"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
@@ -129,6 +130,10 @@ func routers() *iris.Application {
 	fabricRoutes.Post("/{id}/AddressPools", caphandler.CreateAddressPool)
 	fabricRoutes.Get("/{id}/AddressPools/{rid}", caphandler.GetAddressPoolInfo)
 	fabricRoutes.Delete("/{id}/AddressPools/{rid}", caphandler.DeleteAddressPoolInfo)
+	fabricRoutes.Get("/{id}/Endpoints", caphandler.GetEndpointCollection)
+	fabricRoutes.Post("/{id}/Endpoints", caphandler.CreateEndpoint)
+	fabricRoutes.Get("/{id}/Endpoints/{rid}", caphandler.GetEndpointInfo)
+	fabricRoutes.Delete("/{id}/Endpoints/{rid}", caphandler.DeleteEndpointInfo)
 
 	managers := pluginRoutes.Party("/Managers")
 	managers.Get("/", caphandler.GetManagersCollection)
@@ -179,6 +184,7 @@ func intializeACIData() {
 	capdata.ZoneDataStore = make(map[string]*capdata.ZoneData)
 	capdata.ChassisData = make(map[string]*dmtfmodel.Chassis)
 	capdata.AddressPoolDataStore = make(map[string]*capdata.AddressPoolsData)
+	capdata.EndpointDataStore = make(map[string]*capdata.EndpointData)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
@@ -210,7 +216,7 @@ func intializeACIData() {
 		if err != nil {
 			log.Fatal("while intializing ACI Port  Data  PluginCiscoACI got: " + err.Error())
 		}
-		parsePortData(portData, switchID)
+		parsePortData(portData, switchID, fabricID)
 	}
 
 	// TODO:
@@ -249,7 +255,7 @@ func intializeACIData() {
 }
 
 // parsePortData parses the portData and stores it  in the inmemory
-func parsePortData(portResponseData *capmodel.PortCollectionResponse, switchID string) {
+func parsePortData(portResponseData *capmodel.PortCollectionResponse, switchID, fabricID string) {
 	var portData []string
 	for _, imdata := range portResponseData.IMData {
 		portAttributes := imdata.PhysicalInterface.Attributes
@@ -260,6 +266,7 @@ func parsePortData(portResponseData *capmodel.PortCollectionResponse, switchID s
 		portInfo := dmtfmodel.Port{
 			ODataContext:          "/ODIM/v1/$metadata#Port.Port",
 			ODataType:             "#Port.v1_3_0.Port",
+			ODataID:               fmt.Sprintf("/ODIM/v1/Fabrics/%s/Switches/%s/Ports/%s", fabricID, switchID, portID),
 			ID:                    portID,
 			Name:                  "Port-" + portAttributes["id"].(string),
 			PortID:                portAttributes["id"].(string),
@@ -272,7 +279,7 @@ func parsePortData(portResponseData *capmodel.PortCollectionResponse, switchID s
 			log.Error("Unable to get mtu for the port" + portID)
 		}
 		portInfo.MaxFrameSize = mtu
-		capdata.PortDataStore[portID] = &portInfo
+		capdata.PortDataStore[portInfo.ODataID] = &portInfo
 	}
 	capdata.SwitchToPortDataStore[switchID] = portData
 }

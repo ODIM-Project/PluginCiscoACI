@@ -75,3 +75,13 @@ var ZoneDataStore map[string]*ZoneData
 
 // AddressPoolDataStore defines all addressPool data
 var AddressPoolDataStore map[string]*AddressPoolsData
+
+// EndpointData hold the EndpointData data
+type EndpointData struct {
+	FabricID      string
+	Endpoint      *model.Endpoint
+	PolicyGroupDN string
+}
+
+// EndpointDataStore defines all Endpoint
+var EndpointDataStore map[string]*EndpointData

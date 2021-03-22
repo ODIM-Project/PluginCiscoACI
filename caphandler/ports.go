@@ -78,17 +78,12 @@ func GetPortInfo(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-	portID := ctx.Params().Get("portID")
-	portData, ok := capdata.PortDataStore[portID]
-	if !ok {
-		errMsg := fmt.Sprintf("Port data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Port", uri})
-		ctx.StatusCode(http.StatusNotFound)
+	portData, statusCode, resp := getPortData(uri)
+	if statusCode != http.StatusOK {
+		ctx.StatusCode(statusCode)
 		ctx.JSON(resp)
 		return
 	}
-	portData.ODataID = uri
 	getPortAddtionalAttributes(fabricData.PodID, switchID, portData)
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(portData)
@@ -160,4 +155,16 @@ func updateErrorResponse(statusMsg, errMsg string, msgArgs []interface{}) interf
 		},
 	}
 	return args.CreateGenericErrorResponse()
+}
+
+func getPortData(portOID string) (*model.Port, int, interface{}) {
+	log.Info("Port uri" + portOID)
+	portData, ok := capdata.PortDataStore[portOID]
+	if !ok {
+		errMsg := fmt.Sprintf("Port data for uri %s not found", portOID)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{portOID, "Ports"})
+		return portData, http.StatusNotFound, resp
+	}
+	return portData, http.StatusOK, nil
 }
