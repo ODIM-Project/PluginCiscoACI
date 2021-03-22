@@ -26,6 +26,8 @@ const (
 	TableFabric = "ACI-Fabric"
 	// TableSwitch is the table for storing switch information
 	TableSwitch = "ACI-Switch"
+	// TableSwitchChassis is the table for storing switch chassis information
+	TableSwitchChassis = "ACI-SwitchChassis"
 	// TableSwitchPorts is the table for storing ports of each switch
 	TableSwitchPorts = "ACI-SwitchPorts"
 	// TablePort is the table for storing port information
