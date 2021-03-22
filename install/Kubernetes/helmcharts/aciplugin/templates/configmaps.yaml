@@ -24,10 +24,25 @@ data:
     		"PrivateKeyPath": "/etc/odimra_certs/odimra_server.key",
     		"CertificatePath": "/etc/odimra_certs/odimra_server.crt"
     	},
-    	"TLSConf" : {
+        "DBConf": {
+                "Protocol": "tcp",
+                {{ if eq .Values.odimra.haDeploymentEnabled false }}
+                "Host": "redis-ondisk",
+                "MasterSet": "mymaster",
+                {{ else }}
+                "Host": "redis-ha-ondisk",
+                "MasterSet": "primaryset",
+                {{ end }}
+                "Port": "6379",
+                "MinIdleConns": 10,
+                "PoolSize": 120,
+                "RedisHAEnabled": {{ .Values.odimra.haDeploymentEnabled }},
+                "SentinelPort": "26379"
+        },
+        "TLSConf" : {
     		"MinVersion": "TLS_1.2",
     		"MaxVersion": "TLS_1.2",
-    		"VerifyPeer": true,
+    		"VerifyPeer": false,
     		"PreferredCipherSuites": [
                         "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
                         "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
