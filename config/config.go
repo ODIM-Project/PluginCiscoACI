@@ -42,6 +42,7 @@ type configModel struct {
 	URLTranslation          *URLTranslation   `json:"URLTranslation"`
 	TLSConf                 *TLSConf          `json:"TLSConf"`
 	APICConf                *APICConf         `json:"APICConf"`
+	ODIMConf                *ODIMConf         `json:"ODIMConf"`
 }
 
 // DBConf holds all DB related configurations
@@ -117,6 +118,12 @@ type APICConf struct {
 	DomainData map[string]string `json:"DomainData"`
 }
 
+type ODIMConf struct {
+	URL      string `json:"URL"`
+	UserName string `json:"UserName"`
+	Password string `json:"Password"`
+}
+
 // SetConfiguration will extract the config data from file
 func SetConfiguration() error {
 	configFilePath := os.Getenv("PLUGIN_CONFIG_FILE_PATH")
@@ -152,6 +159,9 @@ func ValidateConfiguration() error {
 		Data.SessionTimeoutInMinutes = 30
 	}
 	if err := checkPluginConf(); err != nil {
+		return err
+	}
+	if err := checkODIMConf(); err != nil {
 		return err
 	}
 	if err := checkEventConf(); err != nil {
@@ -196,6 +206,22 @@ func checkPluginConf() error {
 	}
 	if Data.PluginConf.Password == "" {
 		return fmt.Errorf("no value set for Plugin Password")
+	}
+	return nil
+}
+
+func checkODIMConf() error {
+	if Data.ODIMConf == nil {
+		return fmt.Errorf("no value found for ODIMConf")
+	}
+	if Data.ODIMConf.URL == "" {
+		return fmt.Errorf("no value set for ODIM URL")
+	}
+	if Data.ODIMConf.Password == "" {
+		return fmt.Errorf("no value set for ODIM Password")
+	}
+	if Data.ODIMConf.UserName == "" {
+		return fmt.Errorf("no value set for ODIM Username")
 	}
 	return nil
 }
