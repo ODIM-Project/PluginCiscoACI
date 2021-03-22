@@ -21,6 +21,7 @@ import (
 	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
+	"github.com/ODIM-Project/PluginCiscoACI/config"
 	iris "github.com/kataras/iris/v12"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -88,6 +89,69 @@ func GetPortInfo(ctx iris.Context) {
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(portData)
 
+}
+
+func PatchPort(ctx iris.Context) {
+	uri := ctx.Request().RequestURI
+	var port model.Port
+	err := ctx.ReadJSON(&port)
+	if err != nil {
+		errorMessage := "error while trying to get JSON body from the  request: " + err.Error()
+		log.Error(errorMessage)
+		resp := updateErrorResponse(response.MalformedJSON, errorMessage, nil)
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(resp)
+		return
+	}
+	portData, statusCode, resp := getPortData(uri)
+	if statusCode != http.StatusOK {
+		ctx.StatusCode(statusCode)
+		ctx.JSON(resp)
+		return
+	}
+	checkFlag := false
+
+	if port.Links != nil {
+		if port.Links.ConnectedPorts != nil {
+			if len(port.Links.ConnectedPorts) > 0 {
+				//Assuming we have only one connected port
+				ethernetURI := port.Links.ConnectedPorts[0].Oid
+				//Check on ODIM if ethernet is valid
+				reqURL := config.Data.ODIMConf.URL + ethernetURI
+				odimUsername := config.Data.ODIMConf.UserName
+				odimPassword := config.Data.ODIMConf.Password
+				for key, value := range config.Data.URLTranslation.SouthBoundURL {
+					reqURL = strings.Replace(reqURL, key, value, -1)
+				}
+				err, checkFlag = caputilities.CheckValidityOfEthernet(reqURL, odimUsername, odimPassword)
+				if err != nil {
+					errMsg := fmt.Sprintf("Error while trying to contact ODIM")
+					log.Error(errMsg)
+					resp := updateErrorResponse(response.InternalError, errMsg, nil)
+					ctx.StatusCode(http.StatusServiceUnavailable)
+					ctx.JSON(resp)
+					return
+				}
+				if !checkFlag {
+					errMsg := fmt.Sprintf("Ethernet data for uri %s not found", uri)
+					log.Error(errMsg)
+					resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Ethernet", uri})
+					ctx.StatusCode(http.StatusNotFound)
+					ctx.JSON(resp)
+					return
+				}
+				portData.Links = &model.PortLinks{}
+				portData.Links.ConnectedPorts = []model.Link{}
+				portData.Links.ConnectedPorts = append(portData.Links.ConnectedPorts, model.Link{Oid: ethernetURI})
+			} else {
+				portData.Links.ConnectedPorts = nil
+			}
+		} else {
+			portData.Links.ConnectedPorts = nil
+		}
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(portData)
 }
 
 func getPortAddtionalAttributes(fabricID, switchID string, p *model.Port) {
