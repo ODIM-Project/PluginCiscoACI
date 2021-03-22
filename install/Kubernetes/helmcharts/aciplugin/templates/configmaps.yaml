@@ -30,7 +30,7 @@ data:
                 "Host": "redis-ondisk",
                 "MasterSet": "mymaster",
                 {{ else }}
-		"Host": "redis-ha-ondisk",
+                "Host": "redis-ha-ondisk",
                 "MasterSet": "primaryset",
                 {{ end }}
                 "Port": "6379",
@@ -39,7 +39,7 @@ data:
                 "RedisHAEnabled": {{ .Values.odimra.haDeploymentEnabled }},
                 "SentinelPort": "26379"
         },
-    	"TLSConf" : {
+        "TLSConf" : {
     		"MinVersion": "TLS_1.2",
     		"MaxVersion": "TLS_1.2",
     		"VerifyPeer": true,
