@@ -120,6 +120,9 @@ func PatchPort(ctx iris.Context) {
 				reqURL := config.Data.ODIMConf.URL + ethernetURI
 				odimUsername := config.Data.ODIMConf.UserName
 				odimPassword := config.Data.ODIMConf.Password
+				for key, value := range config.Data.URLTranslation.SouthBoundURL {
+					reqURL = strings.Replace(reqURL, key, value, -1)
+				}
 				err, checkFlag = caputilities.CheckValidityOfEthernet(reqURL, odimUsername, odimPassword)
 				if err != nil {
 					errMsg := fmt.Sprintf("Error while trying to contact ODIM")

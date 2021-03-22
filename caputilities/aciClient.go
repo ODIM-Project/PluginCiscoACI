@@ -385,15 +385,12 @@ func CheckValidityOfEthernet(reqURL string, odimUsername string, odimPassword st
 	if err != nil {
 		return err, false
 	}
-	newClient := ACIHTTPClient{}
-	httpConf := &lutilconf.HTTPConfig{
-		CACertificate: &config.Data.KeyCertConf.RootCACertificate,
-	}
-	if newClient.httpClient, err = httpConf.GetHTTPClientObj(); err != nil {
+	newClient, err := GetRedfishClient()
+	if err != nil {
 		return err, false
 	}
 	auth := odimUsername + ":" + odimPassword
-	req.Header.Set("Authorization", base64.StdEncoding.EncodeToString([]byte(auth)))
+	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
 	resp, err := newClient.httpClient.Do(req)
 	if err != nil {
 		return err, false
