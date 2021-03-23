@@ -171,7 +171,8 @@ func CreateZone(ctx iris.Context) {
 		if !conflictFlag {
 			defaultZoneID = uuid.NewV4().String()
 			zone = saveZoneData(defaultZoneID, uri, fabricID, zone)
-			saveZoneToDomainDNData(uri, domainDN)
+			log.Info("Domain DN:" + domainDN)
+			saveZoneToDomainDNData(zone.ODataID, domainDN)
 		}
 		updateZoneData(defaultZoneLink, zone)
 		updateAddressPoolData(zone.ODataID, zone.Links.AddressPools[0].Oid, "Add")
@@ -377,6 +378,12 @@ func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
 			return errMsg
 		}
 		err = aciServiceManager.DeletePhysicalDomain(respData.Zone.Name + "-DOM")
+		if err != nil {
+			errMsg := fmt.Errorf("Error deleting Physical domain:%v", contractErr)
+			log.Error(errMsg.Error())
+			return errMsg
+		}
+		err = aciServiceManager.DeleteVLANPool("static", respData.Zone.Name+"-DOM-VLAN")
 		if err != nil {
 			errMsg := fmt.Errorf("Error deleting Physical domain:%v", contractErr)
 			log.Error(errMsg.Error())
@@ -840,7 +847,7 @@ func createACIDomain(addressPoolData *model.AddressPool, zoneName string) (inter
 		Name:      domainName + "-VLAN",
 		AllocMode: "static",
 	}
-	_, err = aciClient.CreateVLANPool(vlanPoolAttributes.AllocMode, vlanPoolAttributes.Name, "", vlanPoolAttributes)
+	vlanPoolResp, err := aciClient.CreateVLANPool(vlanPoolAttributes.AllocMode, vlanPoolAttributes.Name, "", vlanPoolAttributes)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
@@ -851,13 +858,13 @@ func createACIDomain(addressPoolData *model.AddressPool, zoneName string) (inter
 		To:        fmt.Sprintf("vlan-%d", addressPoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper),
 		AllocMode: vlanPoolAttributes.AllocMode,
 	}
-	_, err = aciClient.CreateRanges(rangesAttribute.From, rangesAttribute.To, rangesAttribute.AllocMode, vlanPoolAttributes.Name, "", rangesAttribute)
+	_, err = aciClient.CreateRanges(rangesAttribute.To, rangesAttribute.From, rangesAttribute.AllocMode, vlanPoolAttributes.Name, "", rangesAttribute)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return resp, http.StatusBadRequest, ""
 	}
-	err = aciClient.CreateRelationinfraRsVlanNsFromPhysicalDomain(physDomResp.BaseAttributes.DistinguishedName, vlanPoolAttributes.Name)
+	err = aciClient.CreateRelationinfraRsVlanNsFromPhysicalDomain(physDomResp.BaseAttributes.DistinguishedName, vlanPoolResp.BaseAttributes.DistinguishedName)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
