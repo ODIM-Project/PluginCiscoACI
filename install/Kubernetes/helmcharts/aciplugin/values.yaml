@@ -17,3 +17,6 @@ aciplugin:
   apicUserName:
   apicPassword:
   apicDomainData:
+  odimURL:
+  odimUserName:
+  odimPassword:

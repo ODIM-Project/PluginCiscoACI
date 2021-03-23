@@ -76,5 +76,10 @@ data:
     		"UserName": {{ .Values.aciplugin.apicUserName | quote }},
     		"Password": {{ .Values.aciplugin.apicPassword | quote }},
     		"DomainData": {{ .Values.aciplugin.apicDomainData | toJson }}
+    	},
+    	"ODIMConf": {
+    		"URL": {{ .Values.aciplugin.odimURL | quote }},
+    		"UserName": {{ .Values.aciplugin.odimUserName | quote }},
+    		"Password": {{ .Values.aciplugin.odimPassword | quote }}
     	}
     }
