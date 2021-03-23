@@ -85,3 +85,6 @@ type EndpointData struct {
 
 // EndpointDataStore defines all Endpoint
 var EndpointDataStore map[string]*EndpointData
+
+// ZoneTODomainDN holds the value of DOMAIN which is created for ZoneOfZone
+var ZoneTODomainDN map[string]string
