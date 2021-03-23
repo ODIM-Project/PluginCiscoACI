@@ -205,9 +205,10 @@ func intializeACIData() {
 				log.Fatal("storing " + fabricID + " fabric failed with " + err.Error())
 			}
 		} else {
-			// is this requried now that the data is persisted
-			data.SwitchData = append(data.SwitchData, switchID)
-			data.PodID = aciNodeData.PodId
+			if !checkSwitchIDExists(data.SwitchData, aciNodeData.NodeId) {
+				data.SwitchData = append(data.SwitchData, switchID)
+				data.PodID = aciNodeData.PodId
+			}
 		}
 		switchData, chassisData := getSwitchData(fabricID, aciNodeData, switchID)
 		if err := capmodel.SaveSwitchChassis(chassisData.ID, chassisData); err != nil {
@@ -370,4 +371,13 @@ func getSwitchData(fabricID string, fabricNodeData *models.FabricNodeMember, swi
 	}
 
 	return &switchData, &chassisData
+}
+
+func checkSwitchIDExists(switchIDs []string, nodeID string) (exists bool) {
+	for _, switchid := range switchIDs {
+		if strings.HasSuffix(switchid, ":"+nodeID) {
+			return true
+		}
+	}
+	return false
 }
