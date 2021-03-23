@@ -212,7 +212,7 @@ func intializeACIData() {
 			if fabricExists {
 				fabricData.SwitchData = append(fabricData.SwitchData, switchID)
 				fabricData.PodID = aciNodeData.PodId
-				if err := capmodel.SaveFabric(fabricID, fabricData); err != nil {
+				if err := capmodel.SaveFabric(fabricID, &fabricData); err != nil {
 					log.Fatal("updating " + fabricID + " fabric failed with " + err.Error())
 				}
 			}
