@@ -38,6 +38,7 @@ const (
 
 type dbCalls interface {
 	Create(table, resourceID, data string) (err error)
+	Update(table, resourceID, data string) (err error)
 	GetAllMatchingKeys(table, pattern string) ([]string, error)
 	Get(table, resourceID string) (string, error)
 }
@@ -70,6 +71,21 @@ func (d connector) Create(table, resourceID, data string) (err error) {
 	default:
 		return nil
 	}
+}
+
+// Update will update an entry in DB with the value for the given table and resourceID
+func (d connector) Update(table, resourceID, data string) (err error) {
+	c, err := getClient()
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrorServiceUnavailable, err)
+	}
+	if err = c.pool.Set(generateKey(table, resourceID), data, 0).Err(); err != nil {
+		return fmt.Errorf(
+			"Updating entry for resource id %s with value %v in table %s failed: %v",
+			data, table, resourceID, err,
+		)
+	}
+	return nil
 }
 
 // GetAllMatchingKeys will collect all the keys of provided table and pattern

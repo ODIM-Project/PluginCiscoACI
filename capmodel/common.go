@@ -44,3 +44,12 @@ func SaveToDB(table, resourceID string, data interface{}) error {
 	}
 	return db.Connector.Create(table, resourceID, string(dataByte))
 }
+
+// UpdateDbData is for updating data in the DB
+func UpdateDbData(table, resourceID string, data interface{}) error {
+	dataByte, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("while marshalling data, got: %v", err)
+	}
+	return db.Connector.Update(table, resourceID, string(dataByte))
+}

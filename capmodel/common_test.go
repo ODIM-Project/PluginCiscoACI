@@ -67,6 +67,10 @@ func (d mockConnector) Create(table, resourceID, data string) error {
 	return nil
 }
 
+func (d mockConnector) Update(table, resourceID, data string) error {
+	return nil
+}
+
 func (d mockConnector) GetAllMatchingKeys(table, pattern string) ([]string, error) {
 	return []string{"validID"}, nil
 }
