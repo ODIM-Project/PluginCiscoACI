@@ -55,5 +55,5 @@ func GetAllFabric(pattern string) (map[string]capdata.Fabric, error) {
 
 // SaveFabric stores the fabric data in the DB
 func SaveFabric(fabricID string, data *capdata.Fabric) error {
-	return SaveToDB(TableFabric, fabricID, &data)
+	return SaveToDB(TableFabric, fabricID, *data)
 }
