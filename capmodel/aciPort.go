@@ -62,3 +62,27 @@ func GetPort(portID string) (*dmtf.Port, error) {
 	}
 	return &port, nil
 }
+
+// GetSwitchPort collects the switch-port data from the DB
+func GetSwitchPort(switchID string) ([]string, error) {
+	var port []string
+	data, err := db.Connector.Get(TableSwitchPorts, switchID)
+	if err != nil {
+		return nil, fmt.Errorf("while trying to collect port data, got: %w", err)
+	}
+	err = json.Unmarshal([]byte(data), &port)
+	if err != nil {
+		return nil, fmt.Errorf("while trying to unmarshal port data, got: %v", err)
+	}
+	return port, nil
+}
+
+// SavePort stores the port data in the DB
+func SavePort(portID string, data *dmtf.Port) error {
+	return SaveToDB(TablePort, portID, *data)
+}
+
+// SaveSwitchPort stores the switch-port data in the DB
+func SaveSwitchPort(switchID string, data []string) error {
+	return SaveToDB(TablePort, switchID, data)
+}

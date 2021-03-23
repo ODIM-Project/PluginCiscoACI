@@ -24,7 +24,6 @@ import (
 
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/ODIM/lib-utilities/response"
-	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
@@ -40,8 +39,8 @@ func GetPortCollection(ctx iris.Context) {
 	switchID := ctx.Params().Get("switchID")
 
 	// get all port which are store under that switch
-	portData, ok := capdata.SwitchToPortDataStore[switchID]
-	if !ok {
+	portData, err := capmodel.GetSwitchPort(switchID)
+	if errors.Is(err, db.ErrorKeyNotFound) {
 		errMsg := fmt.Sprintf("Port data for uri %s not found", uri)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Port", uri})
@@ -96,6 +95,7 @@ func GetPortInfo(ctx iris.Context) {
 
 }
 
+// PatchPort updates the port info for given port id
 func PatchPort(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	var port model.Port
@@ -228,8 +228,8 @@ func updateErrorResponse(statusMsg, errMsg string, msgArgs []interface{}) interf
 
 func getPortData(portOID string) (*model.Port, int, interface{}) {
 	log.Info("Port uri" + portOID)
-	portData, ok := capdata.PortDataStore[portOID]
-	if !ok {
+	portData, err := capmodel.GetPort(portOID)
+	if errors.Is(err, db.ErrorKeyNotFound) {
 		errMsg := fmt.Sprintf("Port data for uri %s not found", portOID)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{portOID, "Ports"})
