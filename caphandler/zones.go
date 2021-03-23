@@ -829,7 +829,7 @@ func createACIDomain(addressPoolData *model.AddressPool, zoneName string) (inter
 	physicalDomainAttributes := aciModels.PhysicalDomainAttributes{
 		Name: domainName,
 	}
-	physDomResp, err := aciClient.CreatePhysicalDomain(domainName, "Physical domain for "+domainName, physicalDomainAttributes)
+	physDomResp, err := aciClient.CreatePhysicalDomain(domainName, "", physicalDomainAttributes)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
