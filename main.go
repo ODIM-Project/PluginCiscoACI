@@ -194,7 +194,10 @@ func intializeACIData() {
 	for _, aciNodeData := range aciNodesData {
 		switchID := uuid.NewV4().String() + ":" + aciNodeData.NodeId
 		fabricID := config.Data.RootServiceUUID + ":" + aciNodeData.FabricId
-		if data, err := capmodel.GetFabric(fabricID); errors.Is(err, db.ErrorKeyNotFound) {
+		fabricExists := true
+		fabricData, err := capmodel.GetFabric(fabricID)
+		if errors.Is(err, db.ErrorKeyNotFound) {
+			fabricExists = false
 			data := &capdata.Fabric{
 				SwitchData: []string{
 					switchID,
@@ -204,18 +207,22 @@ func intializeACIData() {
 			if err := capmodel.SaveFabric(fabricID, data); err != nil {
 				log.Fatal("storing " + fabricID + " fabric failed with " + err.Error())
 			}
-		} else {
-			if !checkSwitchIDExists(data.SwitchData, aciNodeData.NodeId) {
-				data.SwitchData = append(data.SwitchData, switchID)
-				data.PodID = aciNodeData.PodId
+		}
+		if !checkSwitchIDExists(fabricData.SwitchData, aciNodeData.NodeId) {
+			if fabricExists {
+				fabricData.SwitchData = append(fabricData.SwitchData, switchID)
+				fabricData.PodID = aciNodeData.PodId
+				if err := capmodel.SaveFabric(fabricID, fabricData); err != nil {
+					log.Fatal("updating " + fabricID + " fabric failed with " + err.Error())
+				}
 			}
-		}
-		switchData, chassisData := getSwitchData(fabricID, aciNodeData, switchID)
-		if err := capmodel.SaveSwitchChassis(chassisData.ID, chassisData); err != nil {
-			log.Fatal("storing " + chassisData.ID + " chassis failed with " + err.Error())
-		}
-		if err := capmodel.SaveSwitch(switchID, switchData); err != nil {
-			log.Fatal("storing " + switchID + " switch failed with " + err.Error())
+			switchData, chassisData := getSwitchData(fabricID, aciNodeData, switchID)
+			if err := capmodel.SaveSwitchChassis(chassisData.ID, chassisData); err != nil {
+				log.Fatal("storing " + chassisData.ID + " chassis failed with " + err.Error())
+			}
+			if err := capmodel.SaveSwitch(switchID, switchData); err != nil {
+				log.Fatal("storing " + switchID + " switch failed with " + err.Error())
+			}
 		}
 		// adding logic to collect the ports data
 		portData, err := caputilities.GetPortData(aciNodeData.PodId, aciNodeData.NodeId)
