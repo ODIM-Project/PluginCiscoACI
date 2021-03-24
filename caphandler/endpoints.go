@@ -162,32 +162,8 @@ func CreateEndpoint(ctx iris.Context) {
 		return
 	}
 
-	portPolicyGroupList, err := caputilities.GetPortPolicyGroup(fabricData.PodID, switchURI)
-	if err != nil || len(portPolicyGroupList) == 0 {
-		errMsg := "Port policy group not found for given ports"
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"protpaths" + switchURI, "PolicyGroup"})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
-		return
-
-	}
-
-	for i := 0; i < len(portPolicyGroupList); i++ {
-		if strings.Contains(portPolicyGroupList[i].BaseAttributes.DistinguishedName, portPattern) {
-			policyGroupDN = portPolicyGroupList[i].BaseAttributes.DistinguishedName
-		}
-	}
-	if policyGroupDN == "" {
-		errMsg := "Port policy group not found for given ports"
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{portPattern, "PolicyGroup"})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
-		return
-	}
 	log.Info("Dn of Policy group:" + policyGroupDN)
-	aciPolicyGroupData.PolicyGroupDN = policyGroupDN
+	aciPolicyGroupData.PolicyGroupDN = fmt.Sprintf("topology/pod-%s/protpaths%s/pathep-[%s]", fabricData.PodID, switchURI, aciPolicyGroupData.PcVPCPolicyGroupName)
 	saveEndpointData(uri, fabricID, aciPolicyGroupData, &endpoint)
 	common.SetResponseHeader(ctx, map[string]string{
 		"Location": endpoint.ODataID,
@@ -254,6 +230,12 @@ func DeleteEndpointInfo(ctx iris.Context) {
 		return
 	}
 	// Todo:Add the validation  to verify the links
+	resp, statusCode := deletePolicyGroup(endpointData.ACIPolicyGroupData)
+	if statusCode != http.StatusOK {
+		ctx.JSON(resp)
+		ctx.StatusCode(statusCode)
+		return
+	}
 	delete(capdata.EndpointDataStore, uri)
 	ctx.StatusCode(http.StatusNoContent)
 }
@@ -301,6 +283,111 @@ func createPolicyGroup(switchPattern, portPattern string) (interface{}, int, *ca
 	// check if switch profile is present
 	aciClient := caputilities.GetConnection()
 	var err error
+
+	switchProfileSelectorName := "Switch" + switchPattern + "_Profile_ifselector"
+	accesPortSeletorName := "Switch" + switchPattern + "_" + portPattern
+
+	var switchInterfaceProfileResp *aciModels.LeafInterfaceProfile
+	portPatternData := strings.Split(portPattern, "-ports-")
+	switchInterfaceProfileResp, err = aciClient.ReadLeafInterfaceProfile(switchProfileSelectorName)
+	if err != nil {
+		if !strings.Contains(err.Error(), "Object may not exists") {
+			errMsg := "Error while creating Endpoint: " + err.Error()
+			log.Error(errMsg)
+			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+			return resp, http.StatusBadRequest, nil
+		}
+		// switch profile is not found creating the switch profile
+		leafInterfaceAttributes := aciModels.LeafInterfaceProfileAttributes{
+			Name: switchProfileSelectorName,
+		}
+		switchInterfaceProfileResp, err = aciClient.CreateLeafInterfaceProfile(switchProfileSelectorName, "", leafInterfaceAttributes)
+		if err != nil {
+			errMsg := "Error while creating Endpoint: " + err.Error()
+			log.Error(errMsg)
+			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+			return resp, http.StatusBadRequest, nil
+		}
+	}
+	// create access port seletor
+	accessPortSelectorAttributes := aciModels.AccessPortSelectorAttributes{
+		Name:                    accesPortSeletorName,
+		AccessPortSelector_type: "range",
+	}
+	accessPortSelectorResp, err := aciClient.CreateAccessPortSelector(accessPortSelectorAttributes.AccessPortSelector_type, accesPortSeletorName, switchProfileSelectorName, "", accessPortSelectorAttributes)
+	if err != nil {
+		errMsg := "Error while creating Endpoint: " + err.Error()
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest, nil
+	}
+	portBlockName := "block-" + portPatternData[1]
+	portBlockAttributes := aciModels.AccessPortBlockAttributes{
+		Name:     portBlockName,
+		FromPort: portPatternData[1],
+		ToPort:   portPatternData[1],
+	}
+	_, err = aciClient.CreateAccessPortBlock(portBlockName, accessPortSelectorAttributes.AccessPortSelector_type, accesPortSeletorName, switchProfileSelectorName, "", portBlockAttributes)
+	if err != nil {
+		errMsg := "Error while creating Endpoint: " + err.Error()
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest, nil
+	}
+	// check if vpc port policy is created with name ODIM-PORT-VPCPolicy
+	portVPCPolicyName := "ODIM-PORT-VPCPolicy"
+
+	_, err = aciClient.ReadLACPPolicy(portVPCPolicyName)
+	if err != nil {
+		if !strings.Contains(err.Error(), "Object may not exists") {
+			errMsg := "Error while creating Endpoint: " + err.Error()
+			log.Error(errMsg)
+			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+			return resp, http.StatusBadRequest, nil
+		}
+		// switch profile is not found creating the switch profile
+		lacpPolicyAttributes := aciModels.LACPPolicyAttributes{
+			Name: portVPCPolicyName,
+			Mode: "active",
+		}
+		_, err = aciClient.CreateLACPPolicy(portVPCPolicyName, "", lacpPolicyAttributes)
+		if err != nil {
+			errMsg := "Error while creating Endpoint: " + err.Error()
+			log.Error(errMsg)
+			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+			return resp, http.StatusBadRequest, nil
+		}
+	}
+	// createPCVPC interface policy group
+	pcVPCPolicyGroupName := "Switch" + switchPattern + "_" + portPattern + "_PolGrp"
+	var pcVPCPolicyGroupAtrributes = aciModels.PCVPCInterfacePolicyGroupAttributes{
+		Name: pcVPCPolicyGroupName,
+		LagT: "node",
+	}
+	pcVPCPolicyGroupResp, err := aciClient.CreatePCVPCInterfacePolicyGroup(pcVPCPolicyGroupName, "", pcVPCPolicyGroupAtrributes)
+	if err != nil {
+		errMsg := "Error while creating Endpoint: " + err.Error()
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest, nil
+	}
+	log.Info("Attaching policy group to port selector")
+	err = aciClient.CreateRelationinfraRsAccBaseGrpFromAccessPortSelector(accessPortSelectorResp.BaseAttributes.DistinguishedName, pcVPCPolicyGroupResp.BaseAttributes.DistinguishedName)
+	if err != nil {
+		errMsg := "Error while creating Endpoint: " + err.Error()
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest, nil
+
+	}
+	err = aciClient.CreateRelationinfraRsLacpPolFromPCVPCInterfacePolicyGroup(pcVPCPolicyGroupResp.BaseAttributes.DistinguishedName, portVPCPolicyName)
+	if err != nil {
+		errMsg := "Error while creating Endpoint: " + err.Error()
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest, nil
+
+	}
 	// if leaf profile is created else create the same
 	var switchProfileName = "Switch" + switchPattern + "_Profile"
 	switchPatternData := strings.Split(switchPattern, "-")
@@ -360,101 +447,6 @@ func createPolicyGroup(switchPattern, portPattern string) (interface{}, int, *ca
 		}
 	}
 
-	switchProfileSelectorName := "Switch" + switchPattern + "_Profile_ifselector"
-	accesPortSeletorName := "Switch" + switchPattern + "_" + portPattern
-
-	var switchInterfaceProfileResp *aciModels.LeafInterfaceProfile
-	portPatternData := strings.Split(portPattern, "-ports-")
-	switchInterfaceProfileResp, err = aciClient.ReadLeafInterfaceProfile(switchProfileSelectorName)
-	if err != nil {
-		if !strings.Contains(err.Error(), "Object may not exists") {
-			errMsg := "Error while creating Endpoint: " + err.Error()
-			log.Error(errMsg)
-			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-			return resp, http.StatusBadRequest, nil
-		}
-		// switch profile is not found creating the switch profile
-		leafInterfaceAttributes := aciModels.LeafInterfaceProfileAttributes{
-			Name: switchProfileSelectorName,
-		}
-		switchInterfaceProfileResp, err = aciClient.CreateLeafInterfaceProfile(switchProfileSelectorName, "", leafInterfaceAttributes)
-		if err != nil {
-			errMsg := "Error while creating Endpoint: " + err.Error()
-			log.Error(errMsg)
-			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-			return resp, http.StatusBadRequest, nil
-		}
-	}
-	// create access port seletor
-	accessPortSelectorAttributes := aciModels.AccessPortSelectorAttributes{
-		Name:                    accesPortSeletorName,
-		AccessPortSelector_type: "range",
-	}
-	_, err = aciClient.CreateAccessPortSelector(accessPortSelectorAttributes.AccessPortSelector_type, accesPortSeletorName, switchProfileSelectorName, "", accessPortSelectorAttributes)
-	if err != nil {
-		errMsg := "Error while creating Endpoint: " + err.Error()
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-		return resp, http.StatusBadRequest, nil
-	}
-	portBlockName := "block-" + portPatternData[1]
-	portBlockAttributes := aciModels.AccessPortBlockAttributes{
-		Name:     portBlockName,
-		FromPort: portPatternData[1],
-		ToPort:   portPatternData[1],
-	}
-	_, err = aciClient.CreateAccessPortBlock(portBlockName, accessPortSelectorAttributes.AccessPortSelector_type, accesPortSeletorName, switchProfileName, "", portBlockAttributes)
-	if err != nil {
-		errMsg := "Error while creating Endpoint: " + err.Error()
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-		return resp, http.StatusBadRequest, nil
-	}
-	// check if vpc port policy is created with name ODIM-PORT-VPCPolicy
-	portVPCPolicyName := "ODIM-PORT-VPCPolicy"
-
-	_, err = aciClient.ReadLACPPolicy(portVPCPolicyName)
-	if err != nil {
-		if !strings.Contains(err.Error(), "Object may not exists") {
-			errMsg := "Error while creating Endpoint: " + err.Error()
-			log.Error(errMsg)
-			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-			return resp, http.StatusBadRequest, nil
-		}
-		// switch profile is not found creating the switch profile
-		lacpPolicyAttributes := aciModels.LACPPolicyAttributes{
-			Name: portVPCPolicyName,
-			Mode: "active",
-		}
-		_, err = aciClient.CreateLACPPolicy(portVPCPolicyName, "", lacpPolicyAttributes)
-		if err != nil {
-			errMsg := "Error while creating Endpoint: " + err.Error()
-			log.Error(errMsg)
-			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-			return resp, http.StatusBadRequest, nil
-		}
-	}
-	// createPCVPC interface policy group
-	pcVPCPolicyGroupName := "Switch" + switchPattern + "_" + portPattern + "_PolGrp"
-	var pcVPCPolicyGroupAtrributes = aciModels.PCVPCInterfacePolicyGroupAttributes{
-		Name: pcVPCPolicyGroupName,
-		LagT: "node",
-	}
-	pcVPCPolicyGroupResp, err := aciClient.CreatePCVPCInterfacePolicyGroup(pcVPCPolicyGroupName, "", pcVPCPolicyGroupAtrributes)
-	if err != nil {
-		errMsg := "Error while creating Endpoint: " + err.Error()
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-		return resp, http.StatusBadRequest, nil
-	}
-	err = aciClient.CreateRelationinfraRsLacpPolFromPCVPCInterfacePolicyGroup(pcVPCPolicyGroupResp.BaseAttributes.DistinguishedName, portVPCPolicyName)
-	if err != nil {
-		errMsg := "Error while creating Endpoint: " + err.Error()
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-		return resp, http.StatusBadRequest, nil
-
-	}
 	// check if switch profile is associated with the switch interface profile
 	_, err = aciClient.ReadRelationinfraRsAccPortPFromLeafProfile(switchProfileResp.BaseAttributes.DistinguishedName)
 	if err != nil {
@@ -473,7 +465,9 @@ func createPolicyGroup(switchPattern, portPattern string) (interface{}, int, *ca
 			return resp, http.StatusBadRequest, nil
 
 		}
+
 	}
+
 	aciPolicyGroupData := capdata.ACIPolicyGroupData{
 		SwitchProfileName:         switchProfileName,
 		SwitchAssoicationName:     switchAssoicationName,
@@ -513,4 +507,24 @@ func createNodeBlock(switchProfileName, switchAssoicationName, switchID string, 
 		}
 	}
 	return nil, http.StatusCreated
+}
+
+func deletePolicyGroup(aciPolicyGroupData *capdata.ACIPolicyGroupData) (interface{}, int) {
+	aciClient := caputilities.GetConnection()
+
+	err := aciClient.DeleteAccessPortSelector("range", aciPolicyGroupData.AccesPortSeletorName, aciPolicyGroupData.SwitchProfileSelectorName)
+	if err != nil {
+		errMsg := "Error while deleting Endpoint: " + err.Error()
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	err = aciClient.DeletePCVPCInterfacePolicyGroup(aciPolicyGroupData.PcVPCPolicyGroupName)
+	if err != nil {
+		errMsg := "Error while deleting  Endpoint: " + err.Error()
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	return nil, http.StatusOK
 }
