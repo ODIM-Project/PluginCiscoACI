@@ -21,10 +21,10 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/db"
 )
 
-type mockConnector struct{}
+type MockConnector struct{}
 
 func TestSaveToDB(t *testing.T) {
-	db.Connector = mockConnector{}
+	db.Connector = MockConnector{}
 	type args struct {
 		table      string
 		resourceID string
@@ -63,21 +63,29 @@ func TestSaveToDB(t *testing.T) {
 	}
 }
 
-func (d mockConnector) Create(table, resourceID, data string) error {
+func (d MockConnector) Create(table, resourceID, data string) error {
 	return nil
 }
 
-func (d mockConnector) Update(table, resourceID, data string) error {
-	return nil
-}
-
-func (d mockConnector) GetAllMatchingKeys(table, pattern string) ([]string, error) {
+func (d MockConnector) GetAllMatchingKeys(table, pattern string) ([]string, error) {
 	return []string{"validID"}, nil
 }
 
-func (d mockConnector) Get(table, resourceID string) (string, error) {
+func (d MockConnector) Get(table, resourceID string) (string, error) {
 	if resourceID == "validID" {
-		return `{"Id": "validID", "FabricID": "validID"}`, nil
+		switch table {
+		case TableFabric:
+			return `{"SwitchData": ["test"], "PodID": "test"}`, nil
+		case TableSwitch:
+			return `{"Id": "validID", "FabricID": "validID"}`, nil
+		case TableSwitchPorts:
+			return `{"Id": "validID", "FabricID": "validID"}`, nil
+		case TablePort:
+			return `{"Id": "validID", "FabricID": "validID"}`, nil
+		case TableZone:
+			return `{"Id": "validID", "FabricID": "validID"}`, nil
+		default:
+		}
 	}
 	return "", fmt.Errorf("not found")
 }
