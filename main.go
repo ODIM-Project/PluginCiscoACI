@@ -186,7 +186,7 @@ func intializeACIData() {
 	capdata.ChassisData = make(map[string]*dmtfmodel.Chassis)
 	capdata.AddressPoolDataStore = make(map[string]*capdata.AddressPoolsData)
 	capdata.EndpointDataStore = make(map[string]*capdata.EndpointData)
-	capdata.ZoneTODomainDN = make(map[string]string)
+	capdata.ZoneTODomainDN = make(map[string]*capdata.ACIDomainData)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
