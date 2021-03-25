@@ -380,23 +380,24 @@ func GetPortPolicyGroup(podID, switchPath string) ([]*models.FabricPathEndpoint,
 	return list, err
 }
 
-func CheckValidityOfEthernet(reqURL string, odimUsername string, odimPassword string) (error, bool) {
+// CheckValidityOfEthernet check if provided Ethernet is available in ODIM
+func CheckValidityOfEthernet(reqURL string, odimUsername string, odimPassword string) (bool, error) {
 	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
-		return err, false
+		return false, err
 	}
 	newClient, err := GetRedfishClient()
 	if err != nil {
-		return err, false
+		return false, err
 	}
 	auth := odimUsername + ":" + odimPassword
 	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
 	resp, err := newClient.httpClient.Do(req)
 	if err != nil {
-		return err, false
+		return false, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, false
+		return false, nil
 	}
-	return nil, true
+	return true, nil
 }

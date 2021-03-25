@@ -118,6 +118,7 @@ type APICConf struct {
 	DomainData map[string]string `json:"DomainData"`
 }
 
+// ODIMConf hold the value of the ODIMConfiguration to plugin
 type ODIMConf struct {
 	URL      string `json:"URL"`
 	UserName string `json:"UserName"`

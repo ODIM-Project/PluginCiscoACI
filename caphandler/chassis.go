@@ -27,7 +27,7 @@ import (
 	iris "github.com/kataras/iris/v12"
 )
 
-//GetChassisCollection fetches details of the chassis collection
+// GetChassisCollection collects all the chassis details which are managed by plugin
 func GetChassisCollection(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	var members []*model.Link
@@ -55,7 +55,7 @@ func GetChassisCollection(ctx iris.Context) {
 
 }
 
-//GetChassis fetches details of the chassis
+// GetChassis collects retrives the specific  chassis details which is managed by plugin
 func GetChassis(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	chassisID := ctx.Params().Get("id")
