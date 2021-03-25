@@ -76,12 +76,9 @@ func GetPortInfo(ctx iris.Context) {
 	switchID := ctx.Params().Get("switchID")
 	fabricID := ctx.Params().Get("id")
 	fabricData, err := capmodel.GetFabric(fabricID)
-	if errors.Is(err, db.ErrorKeyNotFound) {
-		errMsg := fmt.Sprintf("Port data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch port data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
 		return
 	}
 	portData, statusCode, resp := getPortData(uri)
@@ -224,6 +221,27 @@ func updateErrorResponse(statusMsg, errMsg string, msgArgs []interface{}) interf
 		},
 	}
 	return args.CreateGenericErrorResponse()
+}
+
+func createDbErrResp(ctx iris.Context, err error, errMsg string, msgArgs []interface{}) {
+	var resp interface{}
+	switch {
+	case errors.Is(err, db.ErrorKeyNotFound):
+		resp = updateErrorResponse(response.ResourceNotFound, errMsg, msgArgs)
+		ctx.StatusCode(http.StatusNotFound)
+	case errors.Is(err, db.ErrorServiceUnavailable):
+		resp = updateErrorResponse(response.CouldNotEstablishConnection, errMsg, nil)
+		ctx.StatusCode(http.StatusServiceUnavailable)
+	case errors.Is(err, db.ErrorKeyAlreadyExist):
+		resp = updateErrorResponse(response.ResourceAlreadyExists, errMsg, msgArgs)
+		ctx.StatusCode(http.StatusConflict)
+	default:
+		resp = updateErrorResponse(response.InternalError, errMsg, nil)
+		ctx.StatusCode(http.StatusInternalServerError)
+	}
+	log.Error(errMsg)
+	ctx.JSON(resp)
+	return
 }
 
 func getPortData(portOID string) (*model.Port, int, interface{}) {
