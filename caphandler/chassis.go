@@ -16,14 +16,13 @@
 package caphandler
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/capresponse"
-	"github.com/ODIM-Project/PluginCiscoACI/db"
 
 	iris "github.com/kataras/iris/v12"
 )
@@ -58,11 +57,12 @@ func GetChassisCollection(ctx iris.Context) {
 
 //GetChassis fetches details of the chassis
 func GetChassis(ctx iris.Context) {
+	uri := ctx.Request().RequestURI
 	chassisID := ctx.Params().Get("id")
 	data, err := capmodel.GetSwitchChassis(chassisID)
-	if errors.Is(err, db.ErrorKeyNotFound) {
-		msgArgs := []interface{}{"Chassis", chassisID}
-		capresponse.SetErrorResponse(ctx, http.StatusNotFound, response.ResourceNotFound, err.Error(), msgArgs)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch switch chassis data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Chassis", chassisID})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)

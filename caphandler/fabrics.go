@@ -16,16 +16,13 @@
 package caphandler
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
-	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
-	"github.com/ODIM-Project/PluginCiscoACI/db"
 
 	iris "github.com/kataras/iris/v12"
 	log "github.com/sirupsen/logrus"
@@ -41,12 +38,9 @@ func GetFabricData(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
 	fabricData, err := capmodel.GetFabric(fabricID)
-	if errors.Is(err, db.ErrorKeyNotFound) {
-		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", uri})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch fabric data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", uri})
 		return
 	}
 	var fabricResponse = model.Fabric{

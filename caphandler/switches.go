@@ -16,17 +16,14 @@
 package caphandler
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
-	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
-	"github.com/ODIM-Project/PluginCiscoACI/db"
 
 	iris "github.com/kataras/iris/v12"
 	log "github.com/sirupsen/logrus"
@@ -39,16 +36,13 @@ func GetSwitchCollection(ctx iris.Context) {
 
 	// get all switches which are store under that fabric
 	fabricData, err := capmodel.GetFabric(fabricID)
-	if errors.Is(err, db.ErrorKeyNotFound) {
-		errMsg := fmt.Sprintf("Switch data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Switch", uri})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch switch data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Switch", uri})
 		return
 	}
-	var members = []*model.Link{}
 
+	var members = []*model.Link{}
 	for i := 0; i < len(fabricData.SwitchData); i++ {
 		members = append(members, &model.Link{
 			Oid: uri + "/" + fabricData.SwitchData[i],
@@ -74,22 +68,17 @@ func GetSwitchInfo(ctx iris.Context) {
 	switchID := ctx.Params().Get("rid")
 	fabricID := ctx.Params().Get("id")
 	fabricData, err := capmodel.GetFabric(fabricID)
-	if errors.Is(err, db.ErrorKeyNotFound) {
-		errMsg := fmt.Sprintf("Switch data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch switch data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
 		return
 	}
+
 	// Get the switch data from the memory
 	switchResponse, err := capmodel.GetSwitch(switchID)
-	if errors.Is(err, db.ErrorKeyNotFound) {
-		errMsg := fmt.Sprintf("Switch data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Switch", uri})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch switch data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Switch", uri})
 		return
 	}
 	switchResponse.ODataID = uri
