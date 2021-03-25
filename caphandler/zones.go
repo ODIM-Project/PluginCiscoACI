@@ -26,7 +26,6 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
-	"github.com/ODIM-Project/PluginCiscoACI/config"
 
 	aciModels "github.com/ciscoecosystem/aci-go-client/models"
 	iris "github.com/kataras/iris/v12"
@@ -147,7 +146,7 @@ func CreateZone(ctx iris.Context) {
 		ctx.JSON(zone)
 		return
 	case "ZoneOfZones":
-		defaultZoneLink, resp, statusCode := CreateZoneOfZones(uri, fabricID, zone)
+		defaultZoneLink, resp, statusCode, domainData := CreateZoneOfZones(uri, fabricID, zone)
 		if statusCode != http.StatusCreated {
 			ctx.StatusCode(statusCode)
 			ctx.JSON(resp)
@@ -163,8 +162,10 @@ func CreateZone(ctx iris.Context) {
 		if !conflictFlag {
 			defaultZoneID = uuid.NewV4().String()
 			zone = saveZoneData(defaultZoneID, uri, fabricID, zone)
+			saveZoneToDomainDNData(zone.ODataID, domainData)
 		}
 		updateZoneData(defaultZoneLink, zone)
+		updateAddressPoolData(zone.ODataID, zone.Links.AddressPools[0].Oid, "Add")
 		common.SetResponseHeader(ctx, map[string]string{
 			"Location": zone.ODataID,
 		})
@@ -362,14 +363,34 @@ func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
 			log.Error(errMsg.Error())
 			return errMsg
 		}
+		err = aciServiceManager.DeleteAttachableAccessEntityProfile(respData.Zone.Name + "-DOM-EntityProfile")
+		if err != nil {
+			errMsg := fmt.Errorf("Error deleting  domain profile:%v", contractErr)
+			log.Error(errMsg.Error())
+			return errMsg
+		}
+		err = aciServiceManager.DeletePhysicalDomain(respData.Zone.Name + "-DOM")
+		if err != nil {
+			errMsg := fmt.Errorf("Error deleting Physical domain:%v", contractErr)
+			log.Error(errMsg.Error())
+			return errMsg
+		}
+		err = aciServiceManager.DeleteVLANPool("static", respData.Zone.Name+"-DOM-VLAN")
+		if err != nil {
+			errMsg := fmt.Errorf("Error deleting Physical domain:%v", contractErr)
+			log.Error(errMsg.Error())
+			return errMsg
+		}
+		updateAddressPoolData(respData.Zone.ODataID, respData.Zone.Links.AddressPools[0].Oid, "Remove")
 		delete(capdata.ZoneDataStore, uri)
+		delete(capdata.ZoneTODomainDN, uri)
 		return nil
 	}
 	return nil
 }
 
 // CreateZoneOfZones takes the request to create zone of zones and translates to create application profiles and VRFs
-func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, interface{}, int) {
+func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, interface{}, int, *capdata.ACIDomainData) {
 	var apModel aciModels.ApplicationProfileAttributes
 	var vrfModel aciModels.VRFAttributes
 	apModel.Name = zone.Name
@@ -379,7 +400,7 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 			errMsg := fmt.Sprintf("Zone cannot be created as there are dependent resources missing")
 			log.Error(errMsg)
 			resp := updateErrorResponse(response.PropertyMissing, errMsg, []interface{}{"ContainedByZones"})
-			return "", resp, http.StatusBadRequest
+			return "", resp, http.StatusBadRequest, nil
 		}
 	}
 	log.Println("Request Body")
@@ -392,20 +413,38 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 		errMsg := fmt.Sprintf("Zone data for uri %s not found", defaultZoneLink)
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Zone", defaultZoneLink})
-		return "", resp, http.StatusNotFound
+		return "", resp, http.StatusNotFound, nil
+	}
+	// validate all given addresspools if it's present
+	if len(zone.Links.AddressPools) == 0 {
+		errorMessage := "AddressPools attribute is missing in the request"
+		return "", updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"AddressPool"}), http.StatusBadRequest, nil
+	}
+	if len(zone.Links.AddressPools) > 1 {
+		errorMessage := "More than one AddressPool not allowed for the creation of ZoneOfZones"
+		return "", updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest, nil
+	}
+
+	addresspoolData, statusCode, resp := getAddressPoolData(zone.Links.AddressPools[0].Oid)
+	if statusCode != http.StatusOK {
+		return "", resp, statusCode, nil
+	}
+	if addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange == nil {
+		errorMessage := "Provided AddressPool doesn't contain the VLANIdentifierAddressRange"
+		return "", updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"VLANIdentifierAddressRange"}), http.StatusBadRequest, nil
 	}
 	aciClient := caputilities.GetConnection()
 	appProfileList, err := aciClient.ListApplicationProfile(respData.Zone.Name)
 	if err != nil && !strings.Contains(err.Error(), "Object may not exists") {
 		errMsg := fmt.Sprintf("Zone cannot be created, error while retriving existing Application profiles: " + err.Error())
 		resp := updateErrorResponse(response.PropertyMissing, errMsg, []interface{}{"ContainedByZones"})
-		return "", resp, http.StatusBadRequest
+		return "", resp, http.StatusBadRequest, nil
 	}
 	for _, appProfile := range appProfileList {
 		if appProfile.ApplicationProfileAttributes.Name == zone.Name {
 			errMsg := "Application profile already exists with name: " + zone.Name
 			resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"ApplicationProfile", appProfile.ApplicationProfileAttributes.Name, zone.Name})
-			return "", resp, http.StatusConflict
+			return "", resp, http.StatusConflict, nil
 		}
 	}
 	vrfList, err := aciClient.ListVRF(respData.Zone.Name)
@@ -413,13 +452,13 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 		errMsg := fmt.Sprintf("Zone cannot be created, error while retriving existing VRFs: " + err.Error())
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.PropertyMissing, errMsg, []interface{}{"ContainedByZones"})
-		return "", resp, http.StatusBadRequest
+		return "", resp, http.StatusBadRequest, nil
 	}
 	for _, vrf := range vrfList {
 		if vrf.VRFAttributes.Name == vrfModel.Name {
 			errMsg := "VRF already exists with name: " + vrfModel.Name
 			resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"VRF", vrf.VRFAttributes.Name, vrfModel.Name})
-			return "", resp, http.StatusConflict
+			return "", resp, http.StatusConflict, nil
 		}
 	}
 
@@ -427,20 +466,26 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 	if err != nil {
 		errMsg := "Error while creating application profile: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-		return "", resp, http.StatusBadRequest
+		return "", resp, http.StatusBadRequest, nil
 	}
 	_, vrfErr := CreateVRF(vrfModel.Name, respData.Zone.Name, respData.Zone.Description, vrfModel)
 	if vrfErr != nil {
 		errMsg := "Error while creating application profile: " + vrfErr.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
-		return "", resp, http.StatusBadRequest
+		return "", resp, http.StatusBadRequest, nil
 	}
 	// create contract with name vrf and suffix-Con
-	resp, statusCode := createContract(vrfModel.Name, respData.Zone.Name, zone.Name)
+	resp, statusCode = createContract(vrfModel.Name, respData.Zone.Name, zone.Name)
 	if statusCode != http.StatusCreated {
-		return "", resp, statusCode
+		return "", resp, statusCode, nil
 	}
-	return defaultZoneLink, apResp, http.StatusCreated
+	// create the domain for the given addresspool
+	var domainData *capdata.ACIDomainData
+	resp, statusCode, domainData = createACIDomain(addresspoolData, zone.Name)
+	if statusCode != http.StatusCreated {
+		return "", resp, statusCode, nil
+	}
+	return defaultZoneLink, apResp, http.StatusCreated, domainData
 
 }
 
@@ -527,18 +572,18 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 	if statusCode != http.StatusOK {
 		return "", resp, statusCode
 	}
+	// get domain from given addresspool native vlan from config
+	domainData, ok := getZoneTODomainDNData(zoneofZoneURL)
+	if !ok {
+		errMsg := fmt.Sprintf("Domain not found for  %s", zoneofZoneURL)
+		log.Error(errMsg)
+		return "", updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{zoneofZoneURL, "Domain"}), http.StatusNotFound
+	}
 	bdResp, bdDN, statusCode := createBridgeDomain(defaultZoneData.Zone.Name, zone)
 	if statusCode != http.StatusCreated {
 		return "", bdResp, statusCode
 	}
-	// get domain from given addresspool native vlan from config
-	key := fmt.Sprintf("NativeVLAN-%d", addresspoolData.Ethernet.IPv4.NativeVLAN)
-	domainName, ok := config.Data.APICConf.DomainData[key]
-	if !ok {
-		errMsg := fmt.Sprintf("Domain not found for  %s", key)
-		log.Error(errMsg)
-		return "", updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{key, "Domain"}), http.StatusNotFound
-	}
+
 	// create the subnet for BD for all given address pool
 	resp, statusCode = createSubnets(defaultZoneData.Zone.Name, zone.Name, addresspoolData)
 	if statusCode != http.StatusCreated {
@@ -549,7 +594,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 	if statusCode != http.StatusCreated {
 		return "", resp, statusCode
 	}
-	resp, statusCode = applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name, domainName, endpointData.PolicyGroupDN, addresspoolData.Ethernet.IPv4.NativeVLAN)
+	resp, statusCode = applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name, domainData, endpointData.ACIPolicyGroupData, addresspoolData.Ethernet.IPv4.NativeVLAN)
 	return zoneofZoneURL, resp, statusCode
 }
 
@@ -607,7 +652,7 @@ func linkBDtoVRF(bdDN, vrfName string) (interface{}, int) {
 	return nil, http.StatusCreated
 }
 
-func applicationEPGOperation(tenantName, applicationProfileName, bdName, domainName, portProfileDN string, nativeVLAN int) (interface{}, int) {
+func applicationEPGOperation(tenantName, applicationProfileName, bdName string, domainData *capdata.ACIDomainData, aciPolicyGroupData *capdata.ACIPolicyGroupData, nativeVLAN int) (interface{}, int) {
 	//create EPG with name of bd adding -EPG suffix
 	epgName := bdName + "-EPG"
 	resp, appEPGDN, statusCode := createapplicationEPG(tenantName, applicationProfileName, epgName)
@@ -620,12 +665,12 @@ func applicationEPGOperation(tenantName, applicationProfileName, bdName, domainN
 		return resp, statusCode
 	}
 	// Link EPG to Domain
-	resp, statusCode = linkEpgtoDomain(appEPGDN, domainName)
+	resp, statusCode = linkEpgtoDomain(appEPGDN, domainData.DomainDN)
 	if statusCode != http.StatusCreated {
 		return resp, statusCode
 	}
 	// Create static port
-	return createStaticPort(epgName, tenantName, applicationProfileName, portProfileDN, nativeVLAN)
+	return createStaticPort(epgName, tenantName, applicationProfileName, aciPolicyGroupData, nativeVLAN, domainData)
 }
 
 func createapplicationEPG(tenantName, applicationProfileName, epgName string) (interface{}, string, int) {
@@ -762,18 +807,91 @@ func createContract(vrfName, tenantName, description string) (interface{}, int) 
 	return nil, http.StatusCreated
 }
 
-func createStaticPort(epgName, tenantName, applicationProfileName, portProfileDN string, nativeVLAN int) (interface{}, int) {
+func createStaticPort(epgName, tenantName, applicationProfileName string, aciPolicyGroupData *capdata.ACIPolicyGroupData, nativeVLAN int, domainData *capdata.ACIDomainData) (interface{}, int) {
 	staticPathAttributes := aciModels.StaticPathAttributes{
-		TDn:         portProfileDN,
+		TDn:         aciPolicyGroupData.PolicyGroupDN,
 		Encap:       fmt.Sprintf("vlan-%d", nativeVLAN),
 		InstrImedcy: "immediate",
 	}
 	aciClient := caputilities.GetConnection()
-	_, err := aciClient.CreateStaticPath(portProfileDN, epgName, applicationProfileName, tenantName, "", staticPathAttributes)
+	_, err := aciClient.CreateStaticPath(aciPolicyGroupData.PolicyGroupDN, epgName, applicationProfileName, tenantName, "", staticPathAttributes)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	// Attach the domain entity profile to given policy group
+	err = aciClient.CreateRelationinfraRsAttEntPFromPCVPCInterfacePolicyGroup(aciPolicyGroupData.PCVPCPolicyGroupDN, domainData.DomaineEntityProfileDn)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return resp, http.StatusBadRequest
 	}
 	return nil, http.StatusCreated
+}
+
+func createACIDomain(addressPoolData *model.AddressPool, zoneName string) (interface{}, int, *capdata.ACIDomainData) {
+	aciClient := caputilities.GetConnection()
+	domainName := zoneName + "-DOM"
+	physicalDomainAttributes := aciModels.PhysicalDomainAttributes{
+		Name: domainName,
+	}
+	physDomResp, err := aciClient.CreatePhysicalDomain(domainName, "", physicalDomainAttributes)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest, nil
+	}
+	// createVLANpool
+	vlanPoolAttributes := aciModels.VLANPoolAttributes{
+		Name:      domainName + "-VLAN",
+		AllocMode: "static",
+	}
+	vlanPoolResp, err := aciClient.CreateVLANPool(vlanPoolAttributes.AllocMode, vlanPoolAttributes.Name, "", vlanPoolAttributes)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest, nil
+	}
+	rangesAttribute := aciModels.RangesAttributes{
+		From:      fmt.Sprintf("vlan-%d", addressPoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower),
+		To:        fmt.Sprintf("vlan-%d", addressPoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper),
+		AllocMode: vlanPoolAttributes.AllocMode,
+	}
+	_, err = aciClient.CreateRanges(rangesAttribute.To, rangesAttribute.From, rangesAttribute.AllocMode, vlanPoolAttributes.Name, "", rangesAttribute)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest, nil
+	}
+	err = aciClient.CreateRelationinfraRsVlanNsFromPhysicalDomain(physDomResp.BaseAttributes.DistinguishedName, vlanPoolResp.BaseAttributes.DistinguishedName)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest, nil
+	}
+	//CreateDomainEntityProfile for the given Domain
+	entityProfileAttribute := aciModels.AttachableAccessEntityProfileAttributes{
+		Name: domainName + "-EntityProfile",
+	}
+	entityProfileResp, err := aciClient.CreateAttachableAccessEntityProfile(entityProfileAttribute.Name, "", entityProfileAttribute)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest, nil
+	}
+	err = aciClient.CreateRelationinfraRsDomPFromAttachableAccessEntityProfile(entityProfileResp.BaseAttributes.DistinguishedName, physDomResp.BaseAttributes.DistinguishedName)
+	return nil, http.StatusCreated, &capdata.ACIDomainData{
+		DomainDN:               physDomResp.BaseAttributes.DistinguishedName,
+		DomaineEntityProfileDn: entityProfileResp.BaseAttributes.DistinguishedName,
+	}
+}
+
+func saveZoneToDomainDNData(zoneID string, domainData *capdata.ACIDomainData) {
+	capdata.ZoneTODomainDN[zoneID] = domainData
+}
+
+func getZoneTODomainDNData(zoneID string) (*capdata.ACIDomainData, bool) {
+	data, ok := capdata.ZoneTODomainDN[zoneID]
+	return data, ok
 }
