@@ -117,7 +117,7 @@ func CreateAddressPool(ctx iris.Context) {
 		return
 	}
 	// Todo :Add required validation for the request params
-	missingAttribute, err := validateAddressPoolRequest(addresspoolData)
+	missingAttribute, vlanIdentifierAddressRangeFlag, err := validateAddressPoolRequest(addresspoolData)
 	if err != nil {
 		log.Error(err.Error())
 		resp := updateErrorResponse(response.PropertyMissing, err.Error(), []interface{}{missingAttribute})
@@ -125,32 +125,43 @@ func CreateAddressPool(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-	// validate cidr given in request
-	if _, _, err := net.ParseCIDR(addresspoolData.Ethernet.IPv4.GatewayIPAddress); err != nil {
-		errorMessage := "Invalid value for GatewayIPAddress:" + err.Error()
-		log.Errorf(errorMessage)
-		resp := updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{addresspoolData.Ethernet.IPv4.GatewayIPAddress, "GatewayIPAddress"})
-		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(resp)
-		return
+	if !vlanIdentifierAddressRangeFlag {
+		// validate cidr given in request
+		if _, _, err := net.ParseCIDR(addresspoolData.Ethernet.IPv4.GatewayIPAddress); err != nil {
+			errorMessage := "Invalid value for GatewayIPAddress:" + err.Error()
+			log.Errorf(errorMessage)
+			resp := updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{addresspoolData.Ethernet.IPv4.GatewayIPAddress, "GatewayIPAddress"})
+			ctx.StatusCode(http.StatusBadRequest)
+			ctx.JSON(resp)
+			return
 
-	}
-	if addresspoolData.Ethernet.IPv4.NativeVLAN < 2 ||
-		(addresspoolData.Ethernet.IPv4.NativeVLAN > 1001 && addresspoolData.Ethernet.IPv4.NativeVLAN < 1006) ||
-		addresspoolData.Ethernet.IPv4.NativeVLAN > 4094 {
-		errorMessage := "Invalid value for NativeVLAN: it should in range of 2 to 1001 or 1006 to 4094"
-		log.Errorf(errorMessage)
-		resp := updateErrorResponse(response.PropertyValueNotInList, errorMessage, []interface{}{fmt.Sprintf("%d", addresspoolData.Ethernet.IPv4.NativeVLAN), "NativeVLAN"})
-		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(resp)
-		return
-	}
-	for _, data := range capdata.AddressPoolDataStore {
-		if data.AddressPool.Ethernet.IPv4.GatewayIPAddress == addresspoolData.Ethernet.IPv4.GatewayIPAddress {
-			errorMessage := "Requested GatewayIPAddress is already present in the addresspool " + data.AddressPool.ODataID
+		}
+		if addresspoolData.Ethernet.IPv4.NativeVLAN < 2 ||
+			(addresspoolData.Ethernet.IPv4.NativeVLAN > 1001 && addresspoolData.Ethernet.IPv4.NativeVLAN < 1006) ||
+			addresspoolData.Ethernet.IPv4.NativeVLAN > 4094 {
+			errorMessage := "Invalid value for NativeVLAN: it should in range of 2 to 1001 or 1006 to 4094"
+			log.Errorf(errorMessage)
+			resp := updateErrorResponse(response.PropertyValueNotInList, errorMessage, []interface{}{fmt.Sprintf("%d", addresspoolData.Ethernet.IPv4.NativeVLAN), "NativeVLAN"})
+			ctx.StatusCode(http.StatusBadRequest)
+			ctx.JSON(resp)
+			return
+		}
+		for _, data := range capdata.AddressPoolDataStore {
+			if data.AddressPool.Ethernet.IPv4.GatewayIPAddress == addresspoolData.Ethernet.IPv4.GatewayIPAddress {
+				errorMessage := "Requested GatewayIPAddress is already present in the addresspool " + data.AddressPool.ODataID
+				log.Error(errorMessage)
+				resp := updateErrorResponse(response.ResourceAlreadyExists, errorMessage, []interface{}{"AddressPool", "GatewayIPAddress", addresspoolData.Ethernet.IPv4.GatewayIPAddress})
+				ctx.StatusCode(http.StatusConflict)
+				ctx.JSON(resp)
+				return
+			}
+		}
+	} else {
+		if addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower == addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper {
+			errorMessage := fmt.Sprintf("Requested VLANIdentifierAddressRange Lower %d and Upper %dare same", addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper)
 			log.Error(errorMessage)
-			resp := updateErrorResponse(response.ResourceAlreadyExists, errorMessage, []interface{}{"AddressPool", "GatewayIPAddress", addresspoolData.Ethernet.IPv4.GatewayIPAddress})
-			ctx.StatusCode(http.StatusConflict)
+			resp := updateErrorResponse(response.PropertyUnknown, errorMessage, []interface{}{"VLANIdentifierAddressRange"})
+			ctx.StatusCode(http.StatusBadRequest)
 			ctx.JSON(resp)
 			return
 		}
@@ -172,17 +183,22 @@ func CreateAddressPool(ctx iris.Context) {
 	ctx.JSON(addresspoolData)
 }
 
-func validateAddressPoolRequest(request model.AddressPool) (string, error) {
+func validateAddressPoolRequest(request model.AddressPool) (string, bool, error) {
 	if request.Ethernet == nil {
-		return "Ethernet", fmt.Errorf("Ethernet data in request is missing")
+		return "Ethernet", false, fmt.Errorf("Ethernet data in request is missing")
 	}
-	if request.Ethernet.IPv4 == nil {
-		return "IPv4", fmt.Errorf("Ethernet IPV4 data  in request is missing")
+	if request.Ethernet.IPv4.VLANIdentifierAddressRange == nil {
+		if request.Ethernet.IPv4 == nil {
+			return "IPv4", false, fmt.Errorf("Ethernet IPV4 data  in request is missing")
+
+		}
+		if request.Ethernet.IPv4.GatewayIPAddress == "" {
+			return "GatewayIPAddress", false, fmt.Errorf("IPV4 GatewayIPAddress data  in request is missing")
+		}
+		return "", false, nil
 	}
-	if request.Ethernet.IPv4.GatewayIPAddress == "" {
-		return "GatewayIPAddress", fmt.Errorf("IPV4 GatewayIPAddress data  in request is missing")
-	}
-	return "", nil
+
+	return "", true, nil
 }
 
 // DeleteAddressPoolInfo stores the given addresspool against given fabric
