@@ -94,17 +94,17 @@ func (d connector) GetAllMatchingKeys(table, pattern string) ([]string, error) {
 	if err != nil {
 		return allKeys, fmt.Errorf("%w: %v", ErrorServiceUnavailable, err)
 	}
-	var cursor uint64
+	var cursor uint64 = 0
 	for {
 		keys, c, err := c.pool.Scan(cursor, generateKey(table, pattern+"*"), scanPaginationSize).Result()
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch all keys of table %s: %s", table, err.Error())
 		}
+		cursor = c
 		allKeys = append(allKeys, keys...)
 		if cursor == 0 {
 			break
 		}
-		cursor = c
 	}
 	return trimTableFromKeys(table, allKeys), nil
 }
