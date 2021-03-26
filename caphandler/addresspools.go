@@ -235,7 +235,6 @@ func getAddressPoolData(fabricID, addresspoolOID string) (*model.AddressPool, in
 	addresspoolData, err := capmodel.GetAddressPool(fabricID, addresspoolOID)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch AddressPool data for %s:%s: %s", fabricID, addresspoolOID, err.Error())
-		log.Error(errMsg)
 		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Fabric", fabricID})
 		return nil, statusCode, resp
 	}

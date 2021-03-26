@@ -25,12 +25,6 @@ type Fabric struct {
 	PodID      string
 }
 
-// AddressPoolsData hold the AddressPool data
-type AddressPoolsData struct {
-	FabricID    string
-	AddressPool *model.AddressPool
-}
-
 // ZoneData holds the zone data
 type ZoneData struct {
 	FabricID string
@@ -42,7 +36,6 @@ var ZoneDataStore map[string]*ZoneData
 
 // EndpointData hold the EndpointData data
 type EndpointData struct {
-	FabricID           string
 	Endpoint           *model.Endpoint
 	ACIPolicyGroupData *ACIPolicyGroupData
 }
@@ -57,9 +50,6 @@ type ACIPolicyGroupData struct {
 	PcVPCPolicyGroupName      string
 	PCVPCPolicyGroupDN        string
 }
-
-// EndpointDataStore defines all Endpoint
-var EndpointDataStore map[string]*EndpointData
 
 // ACIDomainData hold dn of ACI DOMAIN and DomaineEntity
 type ACIDomainData struct {

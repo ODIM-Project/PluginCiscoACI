@@ -579,7 +579,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 	// Get the default zone data
 	defaultZoneURL := zoneofZoneData.Zone.Links.ContainedByZones[0].Oid
 	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL]
-	endpointData, statusCode, resp := getEndpointData(zone.Links.Endpoints[0].Oid)
+	endpointData, statusCode, resp := getEndpointData(fabricID, zone.Links.Endpoints[0].Oid)
 	if statusCode != http.StatusOK {
 		return "", resp, statusCode
 	}
