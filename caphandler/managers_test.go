@@ -61,6 +61,22 @@ func (d mockConnector) Get(table, resourceID string) (string, error) {
 	return "", fmt.Errorf("not found")
 }
 
+func (d mockConnector) UpdateKeySet(key string, members ...interface{}) (err error) {
+	return nil
+}
+
+func (d mockConnector) GetKeySetMembers(key string) (list []string, err error) {
+	return []string{"validID"}, nil
+}
+
+func (d mockConnector) Delete(table, resourceID string) (err error) {
+	return nil
+}
+
+func (d mockConnector) DeleteKeySetMembers(key string, members ...interface{}) (err error) {
+	return nil
+}
+
 func TestGetManagerCollection(t *testing.T) {
 	db.Connector = mockConnector{}
 	config.SetUpMockConfig(t)

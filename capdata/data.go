@@ -40,9 +40,6 @@ type ZoneData struct {
 // ZoneDataStore defines the zone data structure as defined by redfish model
 var ZoneDataStore map[string]*ZoneData
 
-// AddressPoolDataStore defines all addressPool data
-var AddressPoolDataStore map[string]*AddressPoolsData
-
 // EndpointData hold the EndpointData data
 type EndpointData struct {
 	FabricID           string

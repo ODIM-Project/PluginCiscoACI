@@ -165,7 +165,11 @@ func CreateZone(ctx iris.Context) {
 			saveZoneToDomainDNData(zone.ODataID, domainData)
 		}
 		updateZoneData(defaultZoneLink, zone)
-		updateAddressPoolData(zone.ODataID, zone.Links.AddressPools[0].Oid, "Add")
+		if err = updateAddressPoolData(fabricID, zone.ODataID, zone.Links.AddressPools[0].Oid, "Add"); err != nil {
+			errMsg := fmt.Sprintf("failed to update AddressPool data for uri %s: %s", uri, err.Error())
+			createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+			return
+		}
 		common.SetResponseHeader(ctx, map[string]string{
 			"Location": zone.ODataID,
 		})
@@ -182,7 +186,11 @@ func CreateZone(ctx iris.Context) {
 		zoneID := uuid.NewV4().String()
 		zone = saveZoneData(zoneID, uri, fabricID, zone)
 		updateZoneData(zoneofZoneOID, zone)
-		updateAddressPoolData(zone.ODataID, zone.Links.AddressPools[0].Oid, "Add")
+		if err = updateAddressPoolData(fabricID, zone.ODataID, zone.Links.AddressPools[0].Oid, "Add"); err != nil {
+			errMsg := fmt.Sprintf("failed to update AddressPool data for uri %s: %s", uri, err.Error())
+			createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+			return
+		}
 		common.SetResponseHeader(ctx, map[string]string{
 			"Location": zone.ODataID,
 		})
@@ -278,7 +286,7 @@ func DeleteZone(ctx iris.Context) {
 		}
 	}
 	if respData.Zone.ZoneType == "ZoneOfZones" {
-		err := deleteZoneOfZone(respData, uri)
+		err := deleteZoneOfZone(fabricID, uri, respData)
 		if err != nil {
 			if err.Error() == "Error deleting Application Profile" {
 				resp := updateErrorResponse(response.GeneralError, err.Error(), nil)
@@ -313,13 +321,13 @@ func DeleteZone(ctx iris.Context) {
 		ctx.StatusCode(http.StatusNoContent)
 	}
 	if respData.Zone.ZoneType == "ZoneOfEndpoints" {
-		resp, statusCode := deleteZoneOfEndpoints(respData.Zone)
+		resp, statusCode := deleteZoneOfEndpoints(fabricID, respData.Zone)
 		ctx.StatusCode(statusCode)
 		ctx.JSON(resp)
 	}
 }
 
-func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
+func deleteZoneOfZone(fabricID, uri string, respData *capdata.ZoneData) error {
 	var parentZoneLink model.Link
 	var parentZone *model.Zone
 	if respData.Zone.Links != nil {
@@ -381,7 +389,10 @@ func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
 			log.Error(errMsg.Error())
 			return errMsg
 		}
-		updateAddressPoolData(respData.Zone.ODataID, respData.Zone.Links.AddressPools[0].Oid, "Remove")
+		if err = updateAddressPoolData(fabricID, respData.Zone.ODataID, respData.Zone.Links.AddressPools[0].Oid, "Remove"); err != nil {
+			errMsg := fmt.Errorf("Error updating addressPool data:%v", err)
+			return errMsg
+		}
 		delete(capdata.ZoneDataStore, uri)
 		delete(capdata.ZoneTODomainDN, uri)
 		return nil
@@ -425,7 +436,7 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 		return "", updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest, nil
 	}
 
-	addresspoolData, statusCode, resp := getAddressPoolData(zone.Links.AddressPools[0].Oid)
+	addresspoolData, statusCode, resp := getAddressPoolData(fabricID, zone.Links.AddressPools[0].Oid)
 	if statusCode != http.StatusOK {
 		return "", resp, statusCode, nil
 	}
@@ -546,7 +557,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 		return "", updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest
 	}
 
-	addresspoolData, statusCode, resp := getAddressPoolData(zone.Links.AddressPools[0].Oid)
+	addresspoolData, statusCode, resp := getAddressPoolData(fabricID, zone.Links.AddressPools[0].Oid)
 	if statusCode != http.StatusOK {
 		return "", resp, statusCode
 	}
@@ -710,7 +721,7 @@ func linkEpgtoDomain(appEPGDN, domain string) (interface{}, int) {
 	return nil, http.StatusCreated
 }
 
-func deleteZoneOfEndpoints(zoneData *model.Zone) (interface{}, int) {
+func deleteZoneOfEndpoints(fabricID string, zoneData *model.Zone) (interface{}, int) {
 	zoneofZoneURL := zoneData.Links.ContainedByZones[0].Oid
 	// get the zone of zone data
 	zoneofZoneData := capdata.ZoneDataStore[zoneofZoneURL].Zone
@@ -740,7 +751,11 @@ func deleteZoneOfEndpoints(zoneData *model.Zone) (interface{}, int) {
 		zoneofZoneData.Links.ContainsZonesCount = len(zoneofZoneData.Links.ContainsZones)
 		capdata.ZoneDataStore[zoneofZoneURL].Zone = zoneofZoneData
 	}
-	updateAddressPoolData(zoneData.ODataID, zoneData.Links.AddressPools[0].Oid, "Remove")
+	if err = updateAddressPoolData(fabricID, zoneData.ODataID, zoneData.Links.AddressPools[0].Oid, "Remove"); err != nil {
+		errMsg := fmt.Sprintf("failed to update AddressPool data for %s: %s", fabricID, err.Error())
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Fabric", fabricID})
+		return resp, statusCode
+	}
 	delete(capdata.ZoneDataStore, zoneData.ODataID)
 	return nil, http.StatusNoContent
 }

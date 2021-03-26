@@ -34,6 +34,8 @@ const (
 	TablePort = "ACI-Port"
 	// TableZone is the table for storing zone information
 	TableZone = "ACI-Zone"
+	// TableAddressPool  is the table for storing addresspool information
+	TableAddressPool = "ACI-AddressPool"
 )
 
 // SaveToDB is for adding port data to the DB

@@ -93,3 +93,19 @@ func (d MockConnector) Get(table, resourceID string) (string, error) {
 	}
 	return "", fmt.Errorf("not found")
 }
+
+func (d MockConnector) UpdateKeySet(key string, members ...interface{}) (err error) {
+	return nil
+}
+
+func (d MockConnector) GetKeySetMembers(key string) (list []string, err error) {
+	return []string{"validID"}, nil
+}
+
+func (d MockConnector) Delete(table, resourceID string) (err error) {
+	return nil
+}
+
+func (d MockConnector) DeleteKeySetMembers(key string, members ...interface{}) (err error) {
+	return nil
+}

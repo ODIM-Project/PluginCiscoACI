@@ -29,8 +29,7 @@ func GetZone(zoneID string) (*capdata.ZoneData, error) {
 	if err != nil {
 		return nil, fmt.Errorf("while trying to collect zone data, got: %w", err)
 	}
-	err = json.Unmarshal([]byte(data), &zone)
-	if err != nil {
+	if err = json.Unmarshal([]byte(data), &zone); err != nil {
 		return nil, fmt.Errorf("while trying to unmarshal zone data, got: %v", err)
 	}
 	return &zone, nil
