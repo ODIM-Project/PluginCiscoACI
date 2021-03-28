@@ -182,8 +182,6 @@ func intializePluginStatus() {
 
 // intializeACIData reads required fabric,switch and port data from aci and stored it in the data store
 func intializeACIData() {
-	capdata.ZoneDataStore = make(map[string]*capdata.ZoneData)
-	capdata.ZoneTODomainDN = make(map[string]*capdata.ACIDomainData)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())

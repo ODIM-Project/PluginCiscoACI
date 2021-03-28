@@ -179,9 +179,8 @@ func CreateEndpoint(ctx iris.Context) {
 func GetEndpointInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	endpointID := ctx.Params().Get("rid")
 
-	endpointData, err := capmodel.GetEndpoints(fabricID, endpointID)
+	endpointData, err := capmodel.GetEndpoints(fabricID, uri)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch endpoint data for uri %s: %s", uri, err.Error())
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Endpoint", fabricID})
@@ -195,9 +194,8 @@ func GetEndpointInfo(ctx iris.Context) {
 func DeleteEndpointInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	endpointID := ctx.Params().Get("rid")
 
-	endpointData, err := capmodel.GetEndpoints(fabricID, endpointID)
+	endpointData, err := capmodel.GetEndpoints(fabricID, uri)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch endpoint data for uri %s: %s", uri, err.Error())
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Endpoint", fabricID})
@@ -219,7 +217,7 @@ func DeleteEndpointInfo(ctx iris.Context) {
 		ctx.StatusCode(statusCode)
 		return
 	}
-	if err := capmodel.DeleteEndpoint(fabricID, endpointID); err != nil {
+	if err := capmodel.DeleteEndpoint(fabricID, uri); err != nil {
 		errMsg := fmt.Sprintf("failed to delete endpoint data for uri %s: %s", uri, err.Error())
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Endpoint", fabricID})
 		return

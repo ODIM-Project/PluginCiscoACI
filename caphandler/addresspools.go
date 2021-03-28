@@ -66,14 +66,14 @@ func GetAddressPoolCollection(ctx iris.Context) {
 func GetAddressPoolInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	addressPoolID := ctx.Params().Get("rid")
+
 	if _, err := capmodel.GetFabric(fabricID); err != nil {
 		errMsg := fmt.Sprintf("failed to fetch AddressPool data for uri %s: %s", uri, err.Error())
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
 		return
 	}
 	// Get the addresspool data from the memory
-	addressPool, err := capmodel.GetAddressPool(fabricID, addressPoolID)
+	addressPool, err := capmodel.GetAddressPool(fabricID, uri)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch AddressPool data for uri %s: %s", uri, err.Error())
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
@@ -201,14 +201,14 @@ func validateAddressPoolRequest(request model.AddressPool) (string, bool, error)
 func DeleteAddressPoolInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	addressPoolID := ctx.Params().Get("rid")
+
 	if _, err := capmodel.GetFabric(fabricID); err != nil {
 		errMsg := fmt.Sprintf("failed to fetch fabric data for uri %s: %s", uri, err.Error())
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
 		return
 	}
 
-	addresspoolData, err := capmodel.GetAddressPool(fabricID, addressPoolID)
+	addresspoolData, err := capmodel.GetAddressPool(fabricID, uri)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch AddressPool data for uri %s: %s", uri, err.Error())
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
@@ -223,7 +223,7 @@ func DeleteAddressPoolInfo(ctx iris.Context) {
 		return
 	}
 	// Todo:Add the validation  to verify the links
-	if err = capmodel.DeleteAddressPool(fabricID, addressPoolID); err != nil {
+	if err = capmodel.DeleteAddressPool(fabricID, uri); err != nil {
 		errMsg := fmt.Sprintf("failed to delete fabric data in DB for uri %s: %s", uri, err.Error())
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
 		return

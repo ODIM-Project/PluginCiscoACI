@@ -38,6 +38,8 @@ const (
 	TableAddressPool = "ACI-AddressPool"
 	// TableEndPoint is the table for storing fabric endpoint information
 	TableEndPoint = "ACI-EndPoint"
+	// TableZoneDomain is the table for storing ZoneToDomainDN information
+	TableZoneDomain = "ACI-ZoneDomain"
 )
 
 // SaveToDB is for adding port data to the DB

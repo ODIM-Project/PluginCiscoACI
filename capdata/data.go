@@ -25,15 +25,6 @@ type Fabric struct {
 	PodID      string
 }
 
-// ZoneData holds the zone data
-type ZoneData struct {
-	FabricID string
-	Zone     *model.Zone
-}
-
-// ZoneDataStore defines the zone data structure as defined by redfish model
-var ZoneDataStore map[string]*ZoneData
-
 // EndpointData hold the EndpointData data
 type EndpointData struct {
 	Endpoint           *model.Endpoint
@@ -56,6 +47,3 @@ type ACIDomainData struct {
 	DomainDN               string
 	DomaineEntityProfileDn string
 }
-
-// ZoneTODomainDN holds the value of DOMAIN which is created for ZoneOfZone
-var ZoneTODomainDN map[string]*ACIDomainData
