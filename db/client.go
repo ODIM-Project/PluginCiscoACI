@@ -16,6 +16,7 @@ package db
 
 import (
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -110,14 +111,14 @@ func (r redisExtCallsImp) getNewClient() *redis.Client {
 	if config.Data.DBConf.RedisHAEnabled {
 		return redis.NewFailoverClient(&redis.FailoverOptions{
 			MasterName:    config.Data.DBConf.MasterSet,
-			SentinelAddrs: []string{fmt.Sprintf("%s:%s", config.Data.DBConf.Host, config.Data.DBConf.SentinelPort)},
+			SentinelAddrs: []string{net.JoinHostPort(config.Data.DBConf.Host, config.Data.DBConf.SentinelPort)},
 			PoolSize:      config.Data.DBConf.PoolSize,
 			MinIdleConns:  config.Data.DBConf.MinIdleConns,
 		})
 	}
 	return redis.NewClient(&redis.Options{
 		Network:      config.Data.DBConf.Protocol,
-		Addr:         fmt.Sprintf("%s:%s", config.Data.DBConf.Host, config.Data.DBConf.Port),
+		Addr:         net.JoinHostPort(config.Data.DBConf.Host, config.Data.DBConf.Port),
 		PoolSize:     config.Data.DBConf.PoolSize,
 		MinIdleConns: config.Data.DBConf.MinIdleConns,
 	})

@@ -17,31 +17,12 @@ package capdata
 
 import (
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
-	"sync"
 )
-
-// FabricData ...
-type FabricData struct {
-	Data map[string]*Fabric
-	Lock sync.RWMutex
-}
 
 //Fabric ACI data of switch id and pod id
 type Fabric struct {
 	SwitchData []string
 	PodID      string
-}
-
-// FabricDataStore holds the value  aci fabric id and switches
-var FabricDataStore FabricData
-
-// ChassisData holds the switch chassis details
-var ChassisData map[string]*model.Chassis
-
-// SwitchData ...
-type SwitchData struct {
-	Data map[string]*model.Switch
-	Lock sync.RWMutex
 }
 
 // AddressPoolsData hold the AddressPool data
@@ -55,9 +36,6 @@ type ZoneData struct {
 	FabricID string
 	Zone     *model.Zone
 }
-
-// SwitchDataStore holds the value  aci switch id and switches info
-var SwitchDataStore SwitchData
 
 // SwitchToPortDataStore hold the value of the ports belonging to respective switches
 var SwitchToPortDataStore map[string][]string
