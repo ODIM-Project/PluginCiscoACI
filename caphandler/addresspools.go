@@ -40,7 +40,7 @@ func GetAddressPoolCollection(ctx iris.Context) {
 	addressPools, err := capmodel.GetAllAddressPools(fabricID)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch AddressPool data for uri %s: %s", uri, err.Error())
-		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+		createDbErrResp(ctx, err, errMsg, []interface{}{"AddressPool", uri})
 		return
 	}
 	for addressPoolOID := range addressPools {
@@ -76,7 +76,7 @@ func GetAddressPoolInfo(ctx iris.Context) {
 	addressPool, err := capmodel.GetAddressPool(fabricID, uri)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch AddressPool data for uri %s: %s", uri, err.Error())
-		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+		createDbErrResp(ctx, err, errMsg, []interface{}{"AddressPool", uri})
 		return
 	}
 
@@ -211,7 +211,7 @@ func DeleteAddressPoolInfo(ctx iris.Context) {
 	addresspoolData, err := capmodel.GetAddressPool(fabricID, uri)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch AddressPool data for uri %s: %s", uri, err.Error())
-		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+		createDbErrResp(ctx, err, errMsg, []interface{}{"AddressPool", fabricID})
 		return
 	}
 	if addresspoolData.Links != nil && len(addresspoolData.Links.Zones) > 0 {
