@@ -41,7 +41,7 @@ func GetEndpointCollection(ctx iris.Context) {
 	endpointData, err := capmodel.GetAllEndpoints(fabricID)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch endpoint data for uri %s: %s", uri, err.Error())
-		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Endpoint", uri})
 		return
 	}
 
