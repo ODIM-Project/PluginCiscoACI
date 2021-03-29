@@ -18,49 +18,50 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ODIM-Project/PluginCiscoACI/capdata"
+	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/PluginCiscoACI/db"
 )
 
 func TestGetZone(t *testing.T) {
 	db.Connector = MockConnector{}
 	type args struct {
-		zoneID string
+		fabricID string
+		zoneID   string
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    *capdata.ZoneData
+		want    model.Zone
 		wantErr bool
 	}{
 		{
-			name: "successful get on port",
+			name: "successful get on zone",
 			args: args{
-				zoneID: "validID",
+				fabricID: "validID",
+				zoneID:   "zoneID",
 			},
-			want: &capdata.ZoneData{
-				FabricID: "validID",
-			},
+			want:    model.Zone{ID: "zoneID"},
 			wantErr: false,
 		},
 		{
-			name: "failed get on port",
+			name: "failed get on zone",
 			args: args{
-				zoneID: "invalidID",
+				fabricID: "invalidID",
+				zoneID:   "invalidID",
 			},
-			want:    nil,
+			want:    model.Zone{},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetZone(tt.args.zoneID)
+			got, err := GetZone(tt.args.fabricID, tt.args.zoneID)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetZone() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetZone() = %v, want %v", got, tt.want)
+				t.Errorf("GetZone() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -68,30 +69,43 @@ func TestGetZone(t *testing.T) {
 
 func TestGetAllZones(t *testing.T) {
 	db.Connector = MockConnector{}
+	type args struct {
+		fabricID string
+	}
 	tests := []struct {
 		name    string
-		want    []capdata.ZoneData
+		args    args
+		want    map[string]model.Zone
 		wantErr bool
 	}{
 		{
 			name: "successful get on zone collection",
-			want: []capdata.ZoneData{
-				capdata.ZoneData{
-					FabricID: "validID",
-				},
+			args: args{
+				fabricID: "validID",
+			},
+			want: map[string]model.Zone{
+				"zoneID": model.Zone{ID: "zoneID"},
 			},
 			wantErr: false,
+		},
+		{
+			name: "failed get on zone collection",
+			args: args{
+				fabricID: "invalidID",
+			},
+			want:    nil,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetAllZones("somePattern")
+			got, err := GetAllZones(tt.args.fabricID)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetAllZones() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetAllZones() = %v, want %v", got, tt.want)
+				t.Errorf("GetAllZones() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

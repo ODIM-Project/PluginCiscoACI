@@ -55,3 +55,23 @@ func (d MockConnector) Get(table, resourceID string) (string, error) {
 	}
 	return "", fmt.Errorf("not found")
 }
+
+// UpdateKeySet is for mocking DB SADD operation
+func (d MockConnector) UpdateKeySet(key string, members ...interface{}) (err error) {
+	return nil
+}
+
+// GetKeySetMembers is for mocking DB SMEMBERS operation
+func (d MockConnector) GetKeySetMembers(key string) (list []string, err error) {
+	return []string{"validID"}, nil
+}
+
+// Delete is for mocking DB Delete operation
+func (d MockConnector) Delete(table, resourceID string) (err error) {
+	return nil
+}
+
+// DeleteKeySetMembers is for mocking DB SREM operation
+func (d MockConnector) DeleteKeySetMembers(key string, members ...interface{}) (err error) {
+	return nil
+}

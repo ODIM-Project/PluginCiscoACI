@@ -182,10 +182,6 @@ func intializePluginStatus() {
 
 // intializeACIData reads required fabric,switch and port data from aci and stored it in the data store
 func intializeACIData() {
-	capdata.ZoneDataStore = make(map[string]*capdata.ZoneData)
-	capdata.AddressPoolDataStore = make(map[string]*capdata.AddressPoolsData)
-	capdata.EndpointDataStore = make(map[string]*capdata.EndpointData)
-	capdata.ZoneTODomainDN = make(map[string]*capdata.ACIDomainData)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
@@ -195,16 +191,20 @@ func intializeACIData() {
 		fabricID := config.Data.RootServiceUUID + ":" + aciNodeData.FabricId
 		fabricExists := true
 		fabricData, err := capmodel.GetFabric(fabricID)
-		if errors.Is(err, db.ErrorKeyNotFound) {
-			fabricExists = false
-			data := &capdata.Fabric{
-				SwitchData: []string{
-					switchID,
-				},
-				PodID: aciNodeData.PodId,
-			}
-			if err := capmodel.SaveFabric(fabricID, data); err != nil {
-				log.Fatal("storing " + fabricID + " fabric failed with " + err.Error())
+		if err != nil {
+			if errors.Is(err, db.ErrorKeyNotFound) {
+				fabricExists = false
+				data := &capdata.Fabric{
+					SwitchData: []string{
+						switchID,
+					},
+					PodID: aciNodeData.PodId,
+				}
+				if err := capmodel.SaveFabric(fabricID, data); err != nil {
+					log.Fatal("storing " + fabricID + " fabric failed with " + err.Error())
+				}
+			} else {
+				log.Fatal("fetching " + fabricID + " fabric failed with " + err.Error())
 			}
 		}
 		if !checkSwitchIDExists(fabricData.SwitchData, aciNodeData.NodeId) {
@@ -238,6 +238,9 @@ func intializeACIData() {
 	caputilities.Status.Available = "yes"
 	// Send resource added event odim
 	allFabric, err := capmodel.GetAllFabric("")
+	if err != nil {
+		log.Fatal("while fetching all stored fabric data got: " + err.Error())
+	}
 	for fabricID := range allFabric {
 		var event = common.Event{
 			EventID:   uuid.NewV4().String(),
@@ -261,7 +264,6 @@ func intializeACIData() {
 		}
 		capmessagebus.Publish(eventData)
 	}
-
 	return
 }
 

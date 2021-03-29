@@ -37,20 +37,21 @@ import (
 func GetEndpointCollection(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	if _, err := capmodel.GetFabric(fabricID); err != nil {
+
+	endpointData, err := capmodel.GetAllEndpoints(fabricID)
+	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch endpoint data for uri %s: %s", uri, err.Error())
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Endpoint", uri})
 		return
 	}
-	var members = []*model.Link{}
 
-	for endpointID, endpointData := range capdata.EndpointDataStore {
-		if endpointData.FabricID == fabricID {
-			members = append(members, &model.Link{
-				Oid: endpointID,
-			})
-		}
+	var members = []*model.Link{}
+	for endpointID := range endpointData {
+		members = append(members, &model.Link{
+			Oid: endpointID,
+		})
 	}
+
 	endpointCollection := model.Collection{
 		ODataContext: "/ODIM/v1/$metadata#EndpointCollection.EndpointCollection",
 		ODataID:      uri,
@@ -100,7 +101,13 @@ func CreateEndpoint(ctx iris.Context) {
 		return
 	}
 	// get all existing endpoints under fabric check for the name
-	for _, endpointData := range capdata.EndpointDataStore {
+	data, err := capmodel.GetAllEndpoints(fabricID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch endpoint data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+		return
+	}
+	for _, endpointData := range data {
 		if endpoint.Name == endpointData.Endpoint.Name {
 			errMsg := "Endpoint name is already assigned to other endpoint:" + endpointData.Endpoint.Name
 			resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"Endpoint", endpointData.Endpoint.Name, endpoint.Name})
@@ -156,7 +163,11 @@ func CreateEndpoint(ctx iris.Context) {
 
 	log.Info("Dn of Policy group:" + policyGroupDN)
 	aciPolicyGroupData.PolicyGroupDN = fmt.Sprintf("topology/pod-%s/protpaths%s/pathep-[%s]", fabricData.PodID, switchURI, aciPolicyGroupData.PcVPCPolicyGroupName)
-	saveEndpointData(uri, fabricID, aciPolicyGroupData, &endpoint)
+	if err = saveEndpointData(uri, fabricID, aciPolicyGroupData, &endpoint); err != nil {
+		errMsg := fmt.Sprintf("failed to store endpoint data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+		return
+	}
 	common.SetResponseHeader(ctx, map[string]string{
 		"Location": endpoint.ODataID,
 	})
@@ -168,45 +179,29 @@ func CreateEndpoint(ctx iris.Context) {
 func GetEndpointInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	if _, err := capmodel.GetFabric(fabricID); err != nil {
-		errMsg := fmt.Sprintf("failed to fetch fabric data for uri %s: %s", uri, err.Error())
-		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
-		return
-	}
 
-	respData, ok := capdata.EndpointDataStore[uri]
-	if !ok {
-		errMsg := fmt.Sprintf("Endpoint data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Endpoint", fabricID})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	endpointData, err := capmodel.GetEndpoints(fabricID, uri)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch endpoint data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Endpoint", fabricID})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(respData.Endpoint)
-
+	ctx.JSON(endpointData.Endpoint)
 }
 
 //DeleteEndpointInfo : deletes  endpoints under given fabric
 func DeleteEndpointInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	if _, err := capmodel.GetFabric(fabricID); err != nil {
-		errMsg := fmt.Sprintf("failed to fetch fabric data for uri %s: %s", uri, err.Error())
-		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+
+	endpointData, err := capmodel.GetEndpoints(fabricID, uri)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch endpoint data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Endpoint", fabricID})
 		return
 	}
 
-	endpointData, ok := capdata.EndpointDataStore[uri]
-	if !ok {
-		errMsg := fmt.Sprintf("Endpoint data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Endpoint", fabricID})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
-		return
-	}
 	if endpointData.Endpoint.Links != nil && len(endpointData.Endpoint.Links.AddressPools) > 0 {
 		errMsg := fmt.Sprintf("Endpoint cannot be deleted as there are dependent upon AddressPool")
 		log.Error(errMsg)
@@ -222,45 +217,64 @@ func DeleteEndpointInfo(ctx iris.Context) {
 		ctx.StatusCode(statusCode)
 		return
 	}
-	delete(capdata.EndpointDataStore, uri)
+	if err := capmodel.DeleteEndpoint(fabricID, uri); err != nil {
+		errMsg := fmt.Sprintf("failed to delete endpoint data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Endpoint", fabricID})
+		return
+	}
 	ctx.StatusCode(http.StatusNoContent)
 }
 
-func saveEndpointData(uri, fabricID string, aciPolicyGroupData *capdata.ACIPolicyGroupData, endpoint *model.Endpoint) {
+func saveEndpointData(uri, fabricID string, aciPolicyGroupData *capdata.ACIPolicyGroupData, endpoint *model.Endpoint) error {
 	endpointID := uuid.NewV4().String()
 	endpoint.ID = endpointID
 	endpoint.ODataContext = "/ODIM/v1/$metadata#Endpoint.Endpoint"
 	endpoint.ODataType = "#Endpoint.v1_5_0.Endpoint"
 	endpoint.ODataID = fmt.Sprintf("%s/%s", uri, endpointID)
-	capdata.EndpointDataStore[endpoint.ODataID] = &capdata.EndpointData{
-		FabricID:           fabricID,
+	data := &capdata.EndpointData{
 		Endpoint:           endpoint,
 		ACIPolicyGroupData: aciPolicyGroupData,
 	}
-
+	if err := capmodel.SaveEndpoint(fabricID, endpoint.ODataID, data); err != nil {
+		return err
+	}
+	return nil
 }
 
 func checkEndpointPortMapping(portOID string) (int, interface{}) {
-	// get all existing endpoints check if port is assinged to other endpoint
-	for _, endpointData := range capdata.EndpointDataStore {
-		for i := 0; i < len(endpointData.Endpoint.Redundancy[0].RedundancySet); i++ {
-			if endpointData.Endpoint.Redundancy[0].RedundancySet[i].Oid == portOID {
-				errMsg := "Port already assigned to other endpoint:" + portOID
-				resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"Endpoint", endpointData.Endpoint.Redundancy[0].RedundancySet[i].Oid, portOID})
-				return http.StatusConflict, resp
+	fabricData, err := capmodel.GetAllFabric("")
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch fabric data: %s", err.Error())
+		return createDbErrResp(nil, err, errMsg, nil)
+	}
+
+	for fabricID := range fabricData {
+		// get all existing endpoints check if port is assinged to other endpoint
+		data, err := capmodel.GetAllEndpoints(fabricID)
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to fetch endpoint data belonging to fabric %s: %s", fabricID, err.Error())
+			return createDbErrResp(nil, err, errMsg, []interface{}{"Fabric", fabricID})
+		}
+
+		for _, endpointData := range data {
+			for i := 0; i < len(endpointData.Endpoint.Redundancy[0].RedundancySet); i++ {
+				if endpointData.Endpoint.Redundancy[0].RedundancySet[i].Oid == portOID {
+					errMsg := "Port already assigned to other endpoint:" + portOID
+					resp := updateErrorResponse(response.ResourceAlreadyExists, errMsg, []interface{}{"Endpoint", endpointData.Endpoint.Redundancy[0].RedundancySet[i].Oid, portOID})
+					return http.StatusConflict, resp
+				}
 			}
 		}
 	}
 	return http.StatusOK, nil
 }
 
-func getEndpointData(endpoinOID string) (*capdata.EndpointData, int, interface{}) {
-	respData, ok := capdata.EndpointDataStore[endpoinOID]
-	if !ok {
-		errMsg := fmt.Sprintf("Endpoint data for uri %s not found", endpoinOID)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Endpoint", endpoinOID})
-		return nil, http.StatusNotFound, resp
+func getEndpointData(fabricID, endpoinOID string) (capdata.EndpointData, int, interface{}) {
+	respData, err := capmodel.GetEndpoints(fabricID, endpoinOID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch endpoint data for %s:%s: %s", fabricID, endpoinOID, err.Error())
+		statuscode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Endpoint", endpoinOID})
+		return respData, statuscode, resp
 	}
 	return respData, http.StatusOK, nil
 }

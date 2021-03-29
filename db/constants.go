@@ -16,7 +16,7 @@ package db
 
 const (
 	// scanPaginationSize defines the size of DB keys to be scanned on single query
-	scanPaginationSize = 100
+	scanPaginationSize = 1000
 	// TableFabric is the table for storing switch and pod ids
 	TableFabric = "ACI-Fabric"
 	// TableSwitch is the table for storing switch information
