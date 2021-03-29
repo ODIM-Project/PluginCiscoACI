@@ -581,9 +581,13 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 	// Get the default zone data
 	defaultZoneURL := zoneofZoneData.Zone.Links.ContainedByZones[0].Oid
 	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL]
-	endpointData, statusCode, resp := getEndpointData(zone.Links.Endpoints[0].Oid)
-	if statusCode != http.StatusOK {
-		return "", resp, statusCode
+	endPointData := make(map[string]*capdata.EndpointData)
+	for i := 0; i < len(zone.Links.Endpoints); i++ {
+		data, statusCode, resp := getEndpointData(zone.Links.Endpoints[i].Oid)
+		if statusCode != http.StatusOK {
+			return "", resp, statusCode
+		}
+		endPointData[zone.Links.Endpoints[i].Oid] = data
 	}
 	// get domain from given addresspool native vlan from config
 	domainData, ok := getZoneTODomainDNData(zoneofZoneURL)
@@ -607,7 +611,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 	if statusCode != http.StatusCreated {
 		return "", resp, statusCode
 	}
-	resp, statusCode = applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name, domainData, endpointData.ACIPolicyGroupData, addresspoolData.Ethernet.IPv4.NativeVLAN)
+	resp, statusCode = applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name, domainData, endPointData, addresspoolData.Ethernet.IPv4.NativeVLAN)
 	return zoneofZoneURL, resp, statusCode
 }
 
@@ -665,7 +669,7 @@ func linkBDtoVRF(bdDN, vrfName string) (interface{}, int) {
 	return nil, http.StatusCreated
 }
 
-func applicationEPGOperation(tenantName, applicationProfileName, bdName string, domainData *capdata.ACIDomainData, aciPolicyGroupData *capdata.ACIPolicyGroupData, nativeVLAN int) (interface{}, int) {
+func applicationEPGOperation(tenantName, applicationProfileName, bdName string, domainData *capdata.ACIDomainData, endPointData map[string]*capdata.EndpointData, nativeVLAN int) (interface{}, int) {
 	//create EPG with name of bd adding -EPG suffix
 	epgName := bdName + "-EPG"
 	resp, appEPGDN, statusCode := createapplicationEPG(tenantName, applicationProfileName, epgName)
@@ -682,8 +686,14 @@ func applicationEPGOperation(tenantName, applicationProfileName, bdName string, 
 	if statusCode != http.StatusCreated {
 		return resp, statusCode
 	}
-	// Create static port
-	return createStaticPort(epgName, tenantName, applicationProfileName, aciPolicyGroupData, nativeVLAN, domainData)
+	// Create static port'
+	for _, data := range endPointData {
+		resp, statusCode = createStaticPort(epgName, tenantName, applicationProfileName, data.ACIPolicyGroupData, nativeVLAN, domainData)
+		if statusCode != http.StatusCreated {
+			return resp, statusCode
+		}
+	}
+	return nil, http.StatusCreated
 }
 
 func createapplicationEPG(tenantName, applicationProfileName, epgName string) (interface{}, string, int) {
@@ -731,6 +741,16 @@ func deleteZoneOfEndpoints(zoneData *model.Zone) (interface{}, int) {
 	defaultZoneURL := zoneofZoneData.Links.ContainedByZones[0].Oid
 	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL].Zone
 	aciClient := caputilities.GetConnection()
+	for i := 0; i < len(zoneData.Links.Endpoints); i++ {
+		endpointData, statusCode, resp := getEndpointData(zoneData.Links.Endpoints[i].Oid)
+		if statusCode != http.StatusOK {
+			return resp, statusCode
+		}
+		resp, statusCode = deleteRelationDomainEntityGroupInterfacePolicyGroup(endpointData.ACIPolicyGroupData.PCVPCPolicyGroupDN)
+		if statusCode != http.StatusOK {
+			return resp, statusCode
+		}
+	}
 	err := aciClient.DeleteApplicationEPG(zoneData.Name+"-EPG", zoneofZoneData.Name, defaultZoneData.Name)
 	if err != nil {
 		errMsg := "Error while deleting Zone: " + err.Error()
@@ -907,4 +927,160 @@ func saveZoneToDomainDNData(zoneID string, domainData *capdata.ACIDomainData) {
 func getZoneTODomainDNData(zoneID string) (*capdata.ACIDomainData, bool) {
 	data, ok := capdata.ZoneTODomainDN[zoneID]
 	return data, ok
+}
+// UpdateZoneData provides patch operation on Zone 
+func UpdateZoneData(ctx iris.Context) {
+	uri := ctx.Request().RequestURI
+	fabricID := ctx.Params().Get("id")
+	_, ok := capdata.FabricDataStore.Data[fabricID]
+	if !ok {
+		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
+
+	//TODO: Get list of zones which are pre-populated from onstart and compare the members for item not present in odim but present in ACI
+
+	zoneData, ok := capdata.ZoneDataStore[uri]
+	if !ok {
+		errMsg := fmt.Sprintf("Zone data for uri %s not found", uri)
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Zone", uri})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
+	if zoneData.Zone.ZoneType != "ZoneOfEndpoints" {
+		ctx.StatusCode(http.StatusMethodNotAllowed)
+		resp := updateErrorResponse(response.ActionNotSupported, "", []interface{}{ctx.Request().Method})
+		ctx.JSON(resp)
+		return
+	}
+	var zoneRequest model.Zone
+	err := ctx.ReadJSON(&zoneRequest)
+	if err != nil {
+		errorMessage := "error while trying to get JSON body from the  request: " + err.Error()
+		log.Error(errorMessage)
+		resp := updateErrorResponse(response.MalformedJSON, errorMessage, nil)
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(resp)
+		return
+	}
+
+	if zoneRequest.Links == nil {
+		errMsg := fmt.Sprintf("Zone cannot be patched as there are Links is in the missing")
+		log.Error(errMsg)
+		resp := updateErrorResponse(response.PropertyMissing, errMsg, []interface{}{"Links"})
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(resp)
+		return
+	}
+	// get the AddressPoolData for the zone
+	addresspoolData, statusCode, resp := getAddressPoolData(zoneData.Zone.Links.AddressPools[0].Oid)
+	if statusCode != http.StatusOK {
+		ctx.StatusCode(statusCode)
+		ctx.JSON(resp)
+		return
+	}
+	// get the domaindata for the ZoneOfZone
+	domainData, ok := getZoneTODomainDNData(zoneData.Zone.Links.ContainedByZones[0].Oid)
+	if !ok {
+		errMsg := fmt.Sprintf("Domain not found for  %s", zoneData.Zone.Links.ContainedByZones[0].Oid)
+		log.Error(errMsg)
+		resp = updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{zoneData.Zone.Links.ContainedByZones[0].Oid, "Domain"})
+		ctx.StatusCode(http.StatusNotFound)
+		ctx.JSON(resp)
+		return
+	}
+	// check all given endpoints
+	// save all existing endpoints in the map
+	endpointURIData := make(map[string]bool)
+	endPointData := make(map[string]*capdata.EndpointData)
+	for i := 0; i < len(zoneData.Zone.Links.Endpoints); i++ {
+		endpointURIData[zoneData.Zone.Links.Endpoints[i].Oid] = false
+		data, statusCode, resp := getEndpointData(zoneData.Zone.Links.Endpoints[i].Oid)
+		if statusCode != http.StatusOK {
+			ctx.StatusCode(statusCode)
+			ctx.JSON(resp)
+			return
+		}
+		endPointData[zoneData.Zone.Links.Endpoints[i].Oid] = data
+	}
+	endpointRequestData := make(map[string]*capdata.EndpointData)
+	for i := 0; i < len(zoneRequest.Links.Endpoints); i++ {
+		data, statusCode, resp := getEndpointData(zoneRequest.Links.Endpoints[i].Oid)
+		if statusCode != http.StatusOK {
+			ctx.StatusCode(statusCode)
+			ctx.JSON(resp)
+			return
+		}
+		endpointRequestData[zoneRequest.Links.Endpoints[i].Oid] = data
+	}
+	zoneofZoneURL := zoneData.Zone.Links.ContainedByZones[0].Oid
+	// get the zone of zone data
+	zoneofZoneData := capdata.ZoneDataStore[zoneofZoneURL]
+	// get default zone data
+	defaultZoneURL := zoneofZoneData.Zone.Links.ContainedByZones[0].Oid
+	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL]
+	for endpointOID, data := range endpointRequestData {
+		_, ok := endPointData[endpointOID]
+		if !ok {
+			resp, statusCode = createStaticPort(zoneData.Zone.Name+"-EPG", defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, data.ACIPolicyGroupData, addresspoolData.Ethernet.IPv4.NativeVLAN, domainData)
+			if statusCode == http.StatusCreated {
+				ctx.StatusCode(statusCode)
+				ctx.JSON(resp)
+				return
+			}
+		}
+		delete(endPointData, endpointOID)
+	}
+
+	for endpointOID, data := range endPointData {
+		resp, statusCode = deleteStaticPort(data.ACIPolicyGroupData.PCVPCPolicyGroupDN, zoneData.Zone.Name+"-EPG", defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name)
+		if statusCode == http.StatusOK {
+			ctx.StatusCode(statusCode)
+			ctx.JSON(resp)
+			return
+		}
+		resp, statusCode = deleteRelationDomainEntityGroupInterfacePolicyGroup(data.ACIPolicyGroupData.PCVPCPolicyGroupDN)
+		if statusCode == http.StatusOK {
+			ctx.StatusCode(statusCode)
+			ctx.JSON(resp)
+			return
+		}
+		delete(endPointData, endpointOID)
+	}
+	zoneData.Zone.Links.Endpoints = zoneRequest.Links.Endpoints
+	updatezoneData(uri, zoneData)
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(zoneData.Zone)
+}
+
+func deleteStaticPort(policyGroupDN, epgName, tenantName, applicationProfileName string) (interface{}, int) {
+	aciClient := caputilities.GetConnection()
+	err := aciClient.DeleteStaticPath(policyGroupDN, epgName, applicationProfileName, tenantName)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	return nil, http.StatusOK
+}
+
+func deleteRelationDomainEntityGroupInterfacePolicyGroup(policyGroupDN string) (interface{}, int) {
+	aciClient := caputilities.GetConnection()
+	err := aciClient.DeleteRelationinfraRsAttEntPFromPCVPCInterfacePolicyGroup(policyGroupDN)
+	if err != nil {
+		errMsg := "Error while creating  Zone of Zones: " + err.Error()
+		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
+		return resp, http.StatusBadRequest
+	}
+	return nil, http.StatusOK
+}
+
+func updatezoneData(zoneOID string, zoneData *capdata.ZoneData) {
+	capdata.ZoneDataStore[zoneOID] = zoneData
 }
