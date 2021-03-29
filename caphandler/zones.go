@@ -1033,7 +1033,7 @@ func UpdateZoneData(ctx iris.Context) {
 	}
 
 	for endpointOID, data := range endPointData {
-		resp, statusCode = deleteStaticPort(data.ACIPolicyGroupData.PCVPCPolicyGroupDN, zoneData.Zone.Name+"-EPG", defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name)
+		resp, statusCode = deleteStaticPort(data.ACIPolicyGroupData.PolicyGroupDN, zoneData.Zone.Name+"-EPG", defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name)
 		if statusCode != http.StatusOK {
 			ctx.StatusCode(statusCode)
 			ctx.JSON(resp)
