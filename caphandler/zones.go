@@ -60,7 +60,7 @@ func GetZones(ctx iris.Context) {
 	zoneData, err := capmodel.GetAllZones(fabricID)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", uri, err.Error())
-		createDbErrResp(ctx, err, errMsg, []interface{}{"FabricID", fabricID})
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
 		return
 
 	}
@@ -95,7 +95,7 @@ func GetZone(ctx iris.Context) {
 	zoneData, err := capmodel.GetZone(fabricID, uri)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", uri, err.Error())
-		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
@@ -143,7 +143,7 @@ func CreateZone(ctx iris.Context) {
 			data, err := capmodel.GetAllZones(fabricID)
 			if err != nil {
 				errMsg := fmt.Sprintf("failed to fetch all zones data of fabric %s: %s", fabricID, err.Error())
-				createDbErrResp(ctx, err, errMsg, []interface{}{"FabricID", fabricID})
+				createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
 				return
 			}
 			for _, zoneData := range data {
@@ -156,7 +156,7 @@ func CreateZone(ctx iris.Context) {
 			defaultZoneID = uuid.NewV4().String()
 			if zone, err = saveZoneData(defaultZoneID, uri, fabricID, zone); err != nil {
 				errMsg := fmt.Sprintf("failed to store default zone data for uri %s: %s", uri, err.Error())
-				createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+				createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
 				return
 			}
 		}
@@ -186,7 +186,7 @@ func CreateZone(ctx iris.Context) {
 			data, err := capmodel.GetAllZones(fabricID)
 			if err != nil {
 				errMsg := fmt.Sprintf("failed to fetch all zones data of fabric %s: %s", fabricID, err.Error())
-				createDbErrResp(ctx, err, errMsg, []interface{}{"FabricID", fabricID})
+				createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
 				return
 			}
 			for _, zoneData := range data {
@@ -199,23 +199,23 @@ func CreateZone(ctx iris.Context) {
 			defaultZoneID = uuid.NewV4().String()
 			if zone, err = saveZoneData(defaultZoneID, uri, fabricID, zone); err != nil {
 				errMsg := fmt.Sprintf("failed to store zone of zone data for uri %s: %s", uri, err.Error())
-				createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+				createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", defaultZoneID})
 				return
 			}
 			if err = saveZoneToDomainDNData(zone.ODataID, domainData); err != nil {
 				errMsg := fmt.Sprintf("failed to update zone domain data for uri %s: %s", uri, err.Error())
-				createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+				createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", zone.ODataID})
 				return
 			}
 		}
 		if err = updateZoneData(fabricID, defaultZoneLink, zone); err != nil {
 			errMsg := fmt.Sprintf("failed to update zone data for uri %s: %s", uri, err.Error())
-			createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+			createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", defaultZoneLink})
 			return
 		}
 		if err = updateAddressPoolData(fabricID, zone.ODataID, zone.Links.AddressPools[0].Oid, "Add"); err != nil {
 			errMsg := fmt.Sprintf("failed to update AddressPool data for uri %s: %s", uri, err.Error())
-			createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+			createDbErrResp(ctx, err, errMsg, []interface{}{"AddressPool", zone.Links.AddressPools[0].Oid})
 			return
 		}
 		common.SetResponseHeader(ctx, map[string]string{
@@ -234,17 +234,17 @@ func CreateZone(ctx iris.Context) {
 		zoneID := uuid.NewV4().String()
 		if zone, err = saveZoneData(zoneID, uri, fabricID, zone); err != nil {
 			errMsg := fmt.Sprintf("failed to store zone of endpoints data for uri %s: %s", uri, err.Error())
-			createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+			createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", zoneID})
 			return
 		}
 		if err = updateZoneData(fabricID, zoneofZoneOID, zone); err != nil {
 			errMsg := fmt.Sprintf("failed to update zone data for uri %s: %s", uri, err.Error())
-			createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+			createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", zoneofZoneOID})
 			return
 		}
 		if err = updateAddressPoolData(fabricID, zone.ODataID, zone.Links.AddressPools[0].Oid, "Add"); err != nil {
 			errMsg := fmt.Sprintf("failed to update AddressPool data for uri %s: %s", uri, err.Error())
-			createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+			createDbErrResp(ctx, err, errMsg, []interface{}{"AddressPool", zone.Links.AddressPools[0].Oid})
 			return
 		}
 		common.SetResponseHeader(ctx, map[string]string{
@@ -356,7 +356,7 @@ func DeleteZone(ctx iris.Context) {
 		}
 		if err = capmodel.DeleteZone(fabricID, uri); err != nil {
 			errMsg := fmt.Sprintf("failed to delete zone data for %s: %s", uri, err.Error())
-			createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+			createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", uri})
 			return
 		}
 		ctx.StatusCode(http.StatusNoContent)
@@ -373,7 +373,7 @@ func DeleteZone(ctx iris.Context) {
 		}
 		if err = capmodel.DeleteZone(fabricID, uri); err != nil {
 			errMsg := fmt.Sprintf("failed to delete zone data for %s: %s", uri, err.Error())
-			createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
+			createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", uri})
 			return
 		}
 		ctx.StatusCode(http.StatusNoContent)
@@ -645,7 +645,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 	defaultZoneData, err := capmodel.GetZone(fabricID, defaultZoneURL)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", uri, err.Error())
-		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"FabricID", fabricID})
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", defaultZoneURL})
 		return "", resp, statusCode
 	}
 	endpointData, statusCode, resp := getEndpointData(fabricID, zone.Links.Endpoints[0].Oid)
@@ -796,7 +796,7 @@ func deleteZoneOfEndpoints(fabricID string, zoneData *model.Zone) (interface{}, 
 	zoneofZoneData, err := capmodel.GetZone(fabricID, zoneofZoneURL)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", zoneofZoneURL, err.Error())
-		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"FabricID", fabricID})
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", zoneofZoneURL})
 		return resp, statusCode
 
 	}
@@ -805,7 +805,7 @@ func deleteZoneOfEndpoints(fabricID string, zoneData *model.Zone) (interface{}, 
 	defaultZoneData, err := capmodel.GetZone(fabricID, defaultZoneURL)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", defaultZoneURL, err.Error())
-		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"FabricID", fabricID})
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", defaultZoneURL})
 		return resp, statusCode
 	}
 	aciClient := caputilities.GetConnection()
@@ -830,18 +830,18 @@ func deleteZoneOfEndpoints(fabricID string, zoneData *model.Zone) (interface{}, 
 		zoneofZoneData.Links.ContainsZonesCount = len(zoneofZoneData.Links.ContainsZones)
 		if err = capmodel.UpdateZone(fabricID, zoneofZoneURL, &zoneofZoneData); err != nil {
 			errMsg := fmt.Sprintf("failed to update zone data for uri %s: %s", zoneofZoneURL, err.Error())
-			statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"FabricID", fabricID})
+			statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", zoneofZoneURL})
 			return resp, statusCode
 		}
 	}
 	if err = updateAddressPoolData(fabricID, zoneData.ODataID, zoneData.Links.AddressPools[0].Oid, "Remove"); err != nil {
 		errMsg := fmt.Sprintf("failed to update AddressPool data for %s: %s", fabricID, err.Error())
-		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Fabric", fabricID})
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"AddressPool", zoneData.Links.AddressPools[0].Oid})
 		return resp, statusCode
 	}
 	if err = capmodel.DeleteZone(fabricID, zoneData.ODataID); err != nil {
 		errMsg := fmt.Sprintf("failed to delete zone data for uri %s: %s", zoneData.ODataID, err.Error())
-		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"FabricID", fabricID})
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", zoneData.ODataID})
 		return resp, statusCode
 
 	}
