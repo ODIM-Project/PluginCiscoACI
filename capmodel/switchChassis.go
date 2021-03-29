@@ -15,6 +15,14 @@
 //Package capmodel ...
 package capmodel
 
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
+	"github.com/ODIM-Project/PluginCiscoACI/db"
+)
+
 //SwitchChassis ...
 type SwitchChassis struct {
 	TotalCount string                `json:"totalCount"`
@@ -29,4 +37,59 @@ type SwitchChassisIMData struct {
 // SwitchChassisData ...
 type SwitchChassisData struct {
 	Attributes map[string]interface{} `json:"attributes"`
+}
+
+// GetSwitch collects the switch data from the DB
+func GetSwitch(switchID string) (model.Switch, error) {
+	var switchData model.Switch
+	data, err := db.Connector.Get(TableSwitch, switchID)
+	if err != nil {
+		return switchData, err
+	}
+	err = json.Unmarshal([]byte(data), &switchData)
+	if err != nil {
+		return switchData, fmt.Errorf("while trying to unmarshal switch data, got: %v", err)
+	}
+	return switchData, nil
+}
+
+// SaveSwitch stores the switch data in the DB
+func SaveSwitch(switchID string, data *model.Switch) error {
+	return SaveToDB(TableSwitch, switchID, *data)
+}
+
+// GetSwitchChassis collects the switch chassis data from the DB
+func GetSwitchChassis(chassisID string) (model.Chassis, error) {
+	var chassis model.Chassis
+	data, err := db.Connector.Get(TableSwitchChassis, chassisID)
+	if err != nil {
+		return chassis, err
+	}
+	err = json.Unmarshal([]byte(data), &chassis)
+	if err != nil {
+		return chassis, fmt.Errorf("while trying to unmarshal chassis data, got: %v", err)
+	}
+	return chassis, nil
+}
+
+// GetAllSwitchChassis collects all the switch chassis data from the DB
+func GetAllSwitchChassis(pattern string) (map[string]model.Chassis, error) {
+	allChassisData := make(map[string]model.Chassis)
+	chassisIDs, err := db.Connector.GetAllMatchingKeys(TableSwitchChassis, pattern)
+	if err != nil {
+		return nil, fmt.Errorf("while trying to collect all switch chassis data, got: %w", err)
+	}
+	for _, chassisID := range chassisIDs {
+		chassis, err := GetSwitchChassis(chassisID)
+		if err != nil {
+			return nil, fmt.Errorf("while trying collect individual switch chassis data, got: %w", err)
+		}
+		allChassisData[chassisID] = chassis
+	}
+	return allChassisData, nil
+}
+
+// SaveSwitchChassis stores the switch chassis data in the DB
+func SaveSwitchChassis(chassisID string, data *model.Chassis) error {
+	return SaveToDB(TableSwitchChassis, chassisID, *data)
 }

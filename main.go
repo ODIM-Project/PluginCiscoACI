@@ -182,11 +182,9 @@ func intializePluginStatus() {
 
 // intializeACIData reads required fabric,switch and port data from aci and stored it in the data store
 func intializeACIData() {
-	capdata.SwitchDataStore.Data = make(map[string]*dmtfmodel.Switch, 0)
 	capdata.SwitchToPortDataStore = make(map[string][]string)
 	capdata.PortDataStore = make(map[string]*dmtfmodel.Port)
 	capdata.ZoneDataStore = make(map[string]*capdata.ZoneData)
-	capdata.ChassisData = make(map[string]*dmtfmodel.Chassis)
 	capdata.AddressPoolDataStore = make(map[string]*capdata.AddressPoolsData)
 	capdata.EndpointDataStore = make(map[string]*capdata.EndpointData)
 	capdata.ZoneTODomainDN = make(map[string]*capdata.ACIDomainData)
@@ -197,7 +195,10 @@ func intializeACIData() {
 	for _, aciNodeData := range aciNodesData {
 		switchID := uuid.NewV4().String() + ":" + aciNodeData.NodeId
 		fabricID := config.Data.RootServiceUUID + ":" + aciNodeData.FabricId
-		if data, err := capmodel.GetFabric(fabricID); errors.Is(err, db.ErrorKeyNotFound) {
+		fabricExists := true
+		fabricData, err := capmodel.GetFabric(fabricID)
+		if errors.Is(err, db.ErrorKeyNotFound) {
+			fabricExists = false
 			data := &capdata.Fabric{
 				SwitchData: []string{
 					switchID,
@@ -207,17 +208,23 @@ func intializeACIData() {
 			if err := capmodel.SaveFabric(fabricID, data); err != nil {
 				log.Fatal("storing " + fabricID + " fabric failed with " + err.Error())
 			}
-		} else {
-			if !checkSwitchIDExists(data.SwitchData, aciNodeData.NodeId) {
-				data.SwitchData = append(data.SwitchData, switchID)
-				data.PodID = aciNodeData.PodId
+		}
+		if !checkSwitchIDExists(fabricData.SwitchData, aciNodeData.NodeId) {
+			if fabricExists {
+				fabricData.SwitchData = append(fabricData.SwitchData, switchID)
+				fabricData.PodID = aciNodeData.PodId
+				if err := capmodel.UpdateFabric(fabricID, &fabricData); err != nil {
+					log.Fatal("updating " + fabricID + " fabric failed with " + err.Error())
+				}
+			}
+			switchData, chassisData := getSwitchData(fabricID, aciNodeData, switchID)
+			if err := capmodel.SaveSwitchChassis(chassisData.ID, chassisData); err != nil {
+				log.Fatal("storing " + chassisData.ID + " chassis failed with " + err.Error())
+			}
+			if err := capmodel.SaveSwitch(switchID, switchData); err != nil {
+				log.Fatal("storing " + switchID + " switch failed with " + err.Error())
 			}
 		}
-		switchData, chassisData := getSwitchData(fabricID, aciNodeData, switchID)
-		capdata.SwitchDataStore.Lock.Lock()
-		capdata.ChassisData[chassisData.ID] = chassisData
-		capdata.SwitchDataStore.Data[switchID] = switchData
-		capdata.SwitchDataStore.Lock.Unlock()
 		// adding logic to collect the ports data
 		portData, err := caputilities.GetPortData(aciNodeData.PodId, aciNodeData.NodeId)
 		if err != nil {
@@ -233,7 +240,7 @@ func intializeACIData() {
 	caputilities.Status.Available = "yes"
 	// Send resource added event odim
 	allFabric, err := capmodel.GetAllFabric("")
-	for fabricID, _ := range allFabric {
+	for fabricID := range allFabric {
 		var event = common.Event{
 			EventID:   uuid.NewV4().String(),
 			MessageID: constants.ResourceCreatedMessageID,

@@ -22,8 +22,6 @@ import (
 	"strings"
 
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
-	"github.com/ODIM-Project/ODIM/lib-utilities/response"
-	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 
@@ -77,13 +75,10 @@ func GetSwitchInfo(ctx iris.Context) {
 	}
 
 	// Get the switch data from the memory
-	switchResponse, ok := capdata.SwitchDataStore.Data[switchID]
-	if !ok {
-		errMsg := fmt.Sprintf("Switch data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Switch", uri})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	switchResponse, err := capmodel.GetSwitch(switchID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch switch data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Switch", uri})
 		return
 	}
 	switchResponse.ODataID = uri

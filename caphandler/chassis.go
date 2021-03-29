@@ -16,17 +16,27 @@
 package caphandler
 
 import (
-	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
-	"github.com/ODIM-Project/PluginCiscoACI/capdata"
-	iris "github.com/kataras/iris/v12"
+	"fmt"
 	"net/http"
+
+	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
+	"github.com/ODIM-Project/ODIM/lib-utilities/response"
+	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
+	"github.com/ODIM-Project/PluginCiscoACI/capresponse"
+
+	iris "github.com/kataras/iris/v12"
 )
 
 // GetChassisCollection collects all the chassis details which are managed by plugin
 func GetChassisCollection(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	var members []*model.Link
-	for _, chassis := range capdata.ChassisData {
+	chassisData, err := capmodel.GetAllSwitchChassis("")
+	if err != nil {
+		capresponse.SetErrorResponse(ctx, http.StatusInternalServerError, response.InternalError, err.Error(), nil)
+		return
+	}
+	for _, chassis := range chassisData {
 		members = append(members, &model.Link{
 			Oid: chassis.Oid,
 		})
@@ -47,13 +57,15 @@ func GetChassisCollection(ctx iris.Context) {
 
 // GetChassis collects retrives the specific  chassis details which is managed by plugin
 func GetChassis(ctx iris.Context) {
+	uri := ctx.Request().RequestURI
 	chassisID := ctx.Params().Get("id")
-	var respData *model.Chassis
-	for _, chassis := range capdata.ChassisData {
-		if chassis.ID == chassisID {
-			respData = chassis
-		}
+	data, err := capmodel.GetSwitchChassis(chassisID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch switch chassis data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Chassis", chassisID})
+		return
 	}
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(respData)
+	ctx.JSON(data)
+	return
 }
