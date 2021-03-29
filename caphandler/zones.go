@@ -563,24 +563,17 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 	if statusCode != http.StatusOK {
 		return "", resp, statusCode
 	}
-
+	// validate all given addresspools if it's present
 	if addresspoolData.Links != nil && len(addresspoolData.Links.Zones) > 0 {
 		errorMessage := fmt.Sprintf("Given AddressPool %s is assingned to other ZoneofEndpoints", zone.Links.AddressPools[0].Oid)
 		return "", updateErrorResponse(response.ResourceInUse, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest
 	}
-	// Get the endpoints from the db
-	// validate all given addresspools if it's present
-	if len(zone.Links.Endpoints) == 0 {
-		errorMessage := "Endpoints attribute is missing in the request"
-		return "", updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"Endpoints"}), http.StatusBadRequest
-	}
-	if len(zone.Links.Endpoints) > 1 {
-		errorMessage := "More than one Endpoints not allowed for the creation of ZoneOfEndpoints"
-		return "", updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"Endpoints", "Endpoints"}), http.StatusBadRequest
-	}
+
 	// Get the default zone data
 	defaultZoneURL := zoneofZoneData.Zone.Links.ContainedByZones[0].Oid
 	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL]
+	// Get the endpoints from the db
+
 	endPointData := make(map[string]*capdata.EndpointData)
 	for i := 0; i < len(zone.Links.Endpoints); i++ {
 		data, statusCode, resp := getEndpointData(zone.Links.Endpoints[i].Oid)
@@ -928,7 +921,8 @@ func getZoneTODomainDNData(zoneID string) (*capdata.ACIDomainData, bool) {
 	data, ok := capdata.ZoneTODomainDN[zoneID]
 	return data, ok
 }
-// UpdateZoneData provides patch operation on Zone 
+
+// UpdateZoneData provides patch operation on Zone
 func UpdateZoneData(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
