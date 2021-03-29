@@ -1023,7 +1023,7 @@ func UpdateZoneData(ctx iris.Context) {
 		_, ok := endPointData[endpointOID]
 		if !ok {
 			resp, statusCode = createStaticPort(zoneData.Zone.Name+"-EPG", defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, data.ACIPolicyGroupData, addresspoolData.Ethernet.IPv4.NativeVLAN, domainData)
-			if statusCode == http.StatusCreated {
+			if statusCode != http.StatusCreated {
 				ctx.StatusCode(statusCode)
 				ctx.JSON(resp)
 				return
