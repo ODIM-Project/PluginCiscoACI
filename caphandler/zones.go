@@ -387,7 +387,7 @@ func DeleteZone(ctx iris.Context) {
 
 func deleteZoneOfZone(fabricID, uri string, respData *model.Zone) error {
 	var parentZoneLink model.Link
-	var parentZone *model.Zone
+	var parentZone model.Zone
 	if respData.Links != nil {
 		if respData.Links.ContainedByZonesCount != 0 {
 			// Assuming contained by link is only one

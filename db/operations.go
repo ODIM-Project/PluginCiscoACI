@@ -36,10 +36,10 @@ type dbCalls interface {
 	Update(table, resourceID, data string) (err error)
 	GetAllMatchingKeys(table, pattern string) ([]string, error)
 	Get(table, resourceID string) (string, error)
-	UpdateKeySet(key string, members ...interface{}) (err error)
+	UpdateKeySet(key string, member string) (err error)
 	GetKeySetMembers(key string) (list []string, err error)
 	Delete(table, resourceID string) (err error)
-	DeleteKeySetMembers(key string, members ...interface{}) (err error)
+	DeleteKeySetMembers(key string, member string) (err error)
 }
 
 // Connector is the interface which connects the DB functions
@@ -144,22 +144,22 @@ func trimTableFromKeys(table string, fullKeys []string) []string {
 	return keys
 }
 
-// UpdateKeySet will add passed members to the particular key set.
-func (d connector) UpdateKeySet(key string, members ...interface{}) (err error) {
+// UpdateKeySet will add passed member to the particular key set.
+func (d connector) UpdateKeySet(key string, member string) (err error) {
 	c, err := getClient()
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrorServiceUnavailable, err)
 	}
-	if err = c.pool.SAdd(key, members).Err(); err != nil {
+	if err = c.pool.SAdd(key, member).Err(); err != nil {
 		return fmt.Errorf(
-			"Updating key set %s with members %v failed: %v",
-			key, members, err,
+			"Updating key set %s with member %v failed: %v",
+			key, member, err,
 		)
 	}
 	return nil
 }
 
-// GetKeySetMembers will get the list of members in the particular key set.
+// GetKeySetMembers will get the list of member in the particular key set.
 func (d connector) GetKeySetMembers(key string) (list []string, err error) {
 	c, err := getClient()
 	if err != nil {
@@ -167,7 +167,7 @@ func (d connector) GetKeySetMembers(key string) (list []string, err error) {
 	}
 	if list, err = c.pool.SMembers(key).Result(); err != nil {
 		return nil, fmt.Errorf(
-			"Getting list of members in the key set %s failed: %v",
+			"Getting list of member in the key set %s failed: %v",
 			key, err,
 		)
 	}
@@ -195,14 +195,14 @@ func (d connector) Delete(table, resourceID string) (err error) {
 	}
 }
 
-// DeleteKeySetMembers will delete the list of members in the particular key set.
-func (d connector) DeleteKeySetMembers(key string, members ...interface{}) (err error) {
+// DeleteKeySetMembers will delete the list of member in the particular key set.
+func (d connector) DeleteKeySetMembers(key string, member string) (err error) {
 	c, err := getClient()
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrorServiceUnavailable, err)
 	}
-	if err = c.pool.SRem(key, members).Err(); err != nil {
-		return fmt.Errorf("Deleting members from the key set %s failed: %v", key, err)
+	if err = c.pool.SRem(key, member).Err(); err != nil {
+		return fmt.Errorf("Deleting member from the key set %s failed: %v", key, err)
 	}
 	return nil
 }
