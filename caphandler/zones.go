@@ -17,17 +17,20 @@ package caphandler
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
 	"github.com/ODIM-Project/ODIM/lib-utilities/response"
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
+	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
+
 	aciModels "github.com/ciscoecosystem/aci-go-client/models"
 	iris "github.com/kataras/iris/v12"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
-	"net/http"
-	"strings"
 )
 
 // CreateApplicationProfile creates Application profiles using APIC
@@ -47,17 +50,13 @@ func CreateVRF(name string, tenant string, description string, fvCtxattr aciMode
 func GetZones(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	_, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
-		errMsg := fmt.Sprintf("Address data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"AddressPool", uri})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	if _, err := capmodel.GetFabric(fabricID); err != nil {
+		errMsg := fmt.Sprintf("failed to fetch address data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"AddressPool", uri})
 		return
 	}
-	var members = []*model.Link{}
 
+	var members = []*model.Link{}
 	for zoneID, zoneData := range capdata.ZoneDataStore {
 		if zoneData.FabricID == fabricID {
 			members = append(members, &model.Link{
@@ -82,13 +81,9 @@ func GetZones(ctx iris.Context) {
 func GetZone(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	_, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
-		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	if _, err := capmodel.GetFabric(fabricID); err != nil {
+		errMsg := fmt.Sprintf("failed to fetch fabric data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
 		return
 	}
 
@@ -109,13 +104,9 @@ func GetZone(ctx iris.Context) {
 func CreateZone(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	_, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
-		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	if _, err := capmodel.GetFabric(fabricID); err != nil {
+		errMsg := fmt.Sprintf("failed to fetch fabric data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
 		return
 	}
 
@@ -258,13 +249,9 @@ func CreateDefaultZone(zone model.Zone) (interface{}, int) {
 func DeleteZone(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	_, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
-		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	if _, err := capmodel.GetFabric(fabricID); err != nil {
+		errMsg := fmt.Sprintf("failed to fetch fabric data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
 		return
 	}
 
