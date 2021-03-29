@@ -24,7 +24,6 @@ import (
 
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	"github.com/ODIM-Project/ODIM/lib-utilities/response"
-	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
@@ -40,17 +39,14 @@ func GetPortCollection(ctx iris.Context) {
 	switchID := ctx.Params().Get("switchID")
 
 	// get all port which are store under that switch
-	portData, ok := capdata.SwitchToPortDataStore[switchID]
-	if !ok {
-		errMsg := fmt.Sprintf("Port data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Port", uri})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	portData, err := capmodel.GetSwitchPort(switchID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch port data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Port", uri})
 		return
 	}
-	var members = []*model.Link{}
 
+	var members = []*model.Link{}
 	for i := 0; i < len(portData); i++ {
 		members = append(members, &model.Link{
 			Oid: uri + "/" + portData[i],
@@ -81,10 +77,8 @@ func GetPortInfo(ctx iris.Context) {
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
 		return
 	}
-	portData, statusCode, resp := getPortData(uri)
-	if statusCode != http.StatusOK {
-		ctx.StatusCode(statusCode)
-		ctx.JSON(resp)
+	portData := getPortData(ctx, uri)
+	if portData == nil {
 		return
 	}
 	getPortAddtionalAttributes(fabricData.PodID, switchID, portData)
@@ -106,10 +100,8 @@ func PatchPort(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-	portData, statusCode, resp := getPortData(uri)
-	if statusCode != http.StatusOK {
-		ctx.StatusCode(statusCode)
-		ctx.JSON(resp)
+	portData := getPortData(ctx, uri)
+	if portData == nil {
 		return
 	}
 	checkFlag := false
@@ -245,14 +237,13 @@ func createDbErrResp(ctx iris.Context, err error, errMsg string, msgArgs []inter
 	return
 }
 
-func getPortData(portOID string) (*model.Port, int, interface{}) {
+func getPortData(ctx iris.Context, portOID string) *model.Port {
 	log.Info("Port uri" + portOID)
-	portData, ok := capdata.PortDataStore[portOID]
-	if !ok {
-		errMsg := fmt.Sprintf("Port data for uri %s not found", portOID)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{portOID, "Ports"})
-		return portData, http.StatusNotFound, resp
+	portData, err := capmodel.GetPort(portOID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch port data for uri %s: %s", portOID, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Ports", portOID})
+		return nil
 	}
-	return portData, http.StatusOK, nil
+	return portData
 }

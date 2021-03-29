@@ -37,17 +37,6 @@ type ZoneData struct {
 	Zone     *model.Zone
 }
 
-// SwitchToPortDataStore hold the value of the ports belonging to respective switches
-var SwitchToPortDataStore map[string][]string
-
-//PortDataStore hold the value of the ports info of the switch
-var PortDataStore map[string]*model.Port
-
-// ApplicationProfile defines policies, services, and relationships between endpoint groups (EPGs)
-type ApplicationProfile struct {
-	Name string
-}
-
 // ZoneDataStore defines the zone data structure as defined by redfish model
 var ZoneDataStore map[string]*ZoneData
 

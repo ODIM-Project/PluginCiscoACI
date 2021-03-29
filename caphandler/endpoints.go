@@ -125,13 +125,11 @@ func CreateEndpoint(ctx iris.Context) {
 		}
 		portList[endpoint.Redundancy[0].RedundancySet[i].Oid] = true
 
-		_, statusCode, resp := getPortData(portURI)
-		if statusCode != http.StatusOK {
-			ctx.StatusCode(statusCode)
-			ctx.JSON(resp)
+		portData := getPortData(ctx, portURI)
+		if portData == nil {
 			return
 		}
-		statusCode, resp = checkEndpointPortMapping(endpoint.Redundancy[0].RedundancySet[i].Oid)
+		statusCode, resp := checkEndpointPortMapping(endpoint.Redundancy[0].RedundancySet[i].Oid)
 		if statusCode != http.StatusOK {
 			ctx.StatusCode(statusCode)
 			ctx.JSON(resp)

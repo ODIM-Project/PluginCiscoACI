@@ -182,8 +182,6 @@ func intializePluginStatus() {
 
 // intializeACIData reads required fabric,switch and port data from aci and stored it in the data store
 func intializeACIData() {
-	capdata.SwitchToPortDataStore = make(map[string][]string)
-	capdata.PortDataStore = make(map[string]*dmtfmodel.Port)
 	capdata.ZoneDataStore = make(map[string]*capdata.ZoneData)
 	capdata.AddressPoolDataStore = make(map[string]*capdata.AddressPoolsData)
 	capdata.EndpointDataStore = make(map[string]*capdata.EndpointData)
@@ -292,9 +290,13 @@ func parsePortData(portResponseData *capmodel.PortCollectionResponse, switchID, 
 			log.Error("Unable to get mtu for the port" + portID)
 		}
 		portInfo.MaxFrameSize = mtu
-		capdata.PortDataStore[portInfo.ODataID] = &portInfo
+		if err = capmodel.SavePort(portInfo.ODataID, &portInfo); err != nil {
+			log.Fatal("storing " + portInfo.ODataID + " port failed with " + err.Error())
+		}
 	}
-	capdata.SwitchToPortDataStore[switchID] = portData
+	if err := capmodel.SaveSwitchPort(switchID, portData); err != nil {
+		log.Fatal("storing port data of switch " + switchID + " failed with " + err.Error())
+	}
 }
 
 func getSwitchData(fabricID string, fabricNodeData *models.FabricNodeMember, switchID string) (*dmtfmodel.Switch, *dmtfmodel.Chassis) {
