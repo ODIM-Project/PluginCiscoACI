@@ -46,8 +46,7 @@ func GetSwitch(switchID string) (model.Switch, error) {
 	if err != nil {
 		return switchData, err
 	}
-	err = json.Unmarshal([]byte(data), &switchData)
-	if err != nil {
+	if err = json.Unmarshal([]byte(data), &switchData); err != nil {
 		return switchData, fmt.Errorf("while trying to unmarshal switch data, got: %v", err)
 	}
 	return switchData, nil
@@ -65,8 +64,7 @@ func GetSwitchChassis(chassisID string) (model.Chassis, error) {
 	if err != nil {
 		return chassis, err
 	}
-	err = json.Unmarshal([]byte(data), &chassis)
-	if err != nil {
+	if err = json.Unmarshal([]byte(data), &chassis); err != nil {
 		return chassis, fmt.Errorf("while trying to unmarshal chassis data, got: %v", err)
 	}
 	return chassis, nil

@@ -216,25 +216,29 @@ func updateErrorResponse(statusMsg, errMsg string, msgArgs []interface{}) interf
 	return args.CreateGenericErrorResponse()
 }
 
-func createDbErrResp(ctx iris.Context, err error, errMsg string, msgArgs []interface{}) {
+func createDbErrResp(ctx iris.Context, err error, errMsg string, msgArgs []interface{}) (int, interface{}) {
 	var resp interface{}
+	var statusCode int
 	switch {
 	case errors.Is(err, db.ErrorKeyNotFound):
 		resp = updateErrorResponse(response.ResourceNotFound, errMsg, msgArgs)
-		ctx.StatusCode(http.StatusNotFound)
+		statusCode = http.StatusNotFound
 	case errors.Is(err, db.ErrorServiceUnavailable):
 		resp = updateErrorResponse(response.CouldNotEstablishConnection, errMsg, nil)
-		ctx.StatusCode(http.StatusServiceUnavailable)
+		statusCode = http.StatusServiceUnavailable
 	case errors.Is(err, db.ErrorKeyAlreadyExist):
 		resp = updateErrorResponse(response.ResourceAlreadyExists, errMsg, msgArgs)
-		ctx.StatusCode(http.StatusConflict)
+		statusCode = http.StatusConflict
 	default:
 		resp = updateErrorResponse(response.InternalError, errMsg, nil)
-		ctx.StatusCode(http.StatusInternalServerError)
+		statusCode = http.StatusInternalServerError
 	}
 	log.Error(errMsg)
-	ctx.JSON(resp)
-	return
+	if ctx != nil {
+		ctx.StatusCode(statusCode)
+		ctx.JSON(resp)
+	}
+	return statusCode, resp
 }
 
 func getPortData(ctx iris.Context, portOID string) *model.Port {

@@ -56,8 +56,7 @@ func GetPort(portID string) (*dmtf.Port, error) {
 	if err != nil {
 		return nil, fmt.Errorf("while trying to collect port data, got: %w", err)
 	}
-	err = json.Unmarshal([]byte(data), &port)
-	if err != nil {
+	if err = json.Unmarshal([]byte(data), &port); err != nil {
 		return nil, fmt.Errorf("while trying to unmarshal port data, got: %v", err)
 	}
 	return &port, nil
@@ -70,8 +69,7 @@ func GetSwitchPort(switchID string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("while trying to collect port data, got: %w", err)
 	}
-	err = json.Unmarshal([]byte(data), &port)
-	if err != nil {
+	if err = json.Unmarshal([]byte(data), &port); err != nil {
 		return nil, fmt.Errorf("while trying to unmarshal port data, got: %v", err)
 	}
 	return port, nil

@@ -25,27 +25,8 @@ type Fabric struct {
 	PodID      string
 }
 
-// AddressPoolsData hold the AddressPool data
-type AddressPoolsData struct {
-	FabricID    string
-	AddressPool *model.AddressPool
-}
-
-// ZoneData holds the zone data
-type ZoneData struct {
-	FabricID string
-	Zone     *model.Zone
-}
-
-// ZoneDataStore defines the zone data structure as defined by redfish model
-var ZoneDataStore map[string]*ZoneData
-
-// AddressPoolDataStore defines all addressPool data
-var AddressPoolDataStore map[string]*AddressPoolsData
-
 // EndpointData hold the EndpointData data
 type EndpointData struct {
-	FabricID           string
 	Endpoint           *model.Endpoint
 	ACIPolicyGroupData *ACIPolicyGroupData
 }
@@ -61,14 +42,8 @@ type ACIPolicyGroupData struct {
 	PCVPCPolicyGroupDN        string
 }
 
-// EndpointDataStore defines all Endpoint
-var EndpointDataStore map[string]*EndpointData
-
 // ACIDomainData hold dn of ACI DOMAIN and DomaineEntity
 type ACIDomainData struct {
 	DomainDN               string
 	DomaineEntityProfileDn string
 }
-
-// ZoneTODomainDN holds the value of DOMAIN which is created for ZoneOfZone
-var ZoneTODomainDN map[string]*ACIDomainData
