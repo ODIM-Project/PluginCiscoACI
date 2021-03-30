@@ -15,7 +15,14 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
 	dmtfmodel "github.com/ODIM-Project/ODIM/lib-dmtf/model"
 	dc "github.com/ODIM-Project/ODIM/lib-messagebus/datacommunicator"
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
@@ -28,15 +35,12 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	"github.com/ODIM-Project/PluginCiscoACI/constants"
+	"github.com/ODIM-Project/PluginCiscoACI/db"
+
 	"github.com/ciscoecosystem/aci-go-client/models"
 	iris "github.com/kataras/iris/v12"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var subscriptionInfo []capmodel.Device
@@ -178,47 +182,53 @@ func intializePluginStatus() {
 
 // intializeACIData reads required fabric,switch and port data from aci and stored it in the data store
 func intializeACIData() {
-	capdata.FabricDataStore.Data = make(map[string]*capdata.Fabric)
-	capdata.SwitchDataStore.Data = make(map[string]*dmtfmodel.Switch, 0)
-	capdata.SwitchToPortDataStore = make(map[string][]string)
-	capdata.PortDataStore = make(map[string]*dmtfmodel.Port)
-	capdata.ZoneDataStore = make(map[string]*capdata.ZoneData)
-	capdata.ChassisData = make(map[string]*dmtfmodel.Chassis)
-	capdata.AddressPoolDataStore = make(map[string]*capdata.AddressPoolsData)
-	capdata.EndpointDataStore = make(map[string]*capdata.EndpointData)
-	capdata.ZoneTODomainDN = make(map[string]*capdata.ACIDomainData)
 	aciNodesData, err := caputilities.GetFabricNodeData()
 	if err != nil {
 		log.Fatal("while intializing ACI Data  PluginCiscoACI got: " + err.Error())
 	}
 	for _, aciNodeData := range aciNodesData {
 		switchID := uuid.NewV4().String() + ":" + aciNodeData.NodeId
-		capdata.FabricDataStore.Lock.Lock()
 		fabricID := config.Data.RootServiceUUID + ":" + aciNodeData.FabricId
-		if data, ok := capdata.FabricDataStore.Data[fabricID]; ok {
-			data.SwitchData = append(data.SwitchData, switchID)
-			data.PodID = aciNodeData.PodId
-		} else {
-
-			capdata.FabricDataStore.Data[fabricID] = &capdata.Fabric{
-				SwitchData: []string{
-					switchID,
-				},
-				PodID: aciNodeData.PodId,
+		fabricExists := true
+		fabricData, err := capmodel.GetFabric(fabricID)
+		if err != nil {
+			if errors.Is(err, db.ErrorKeyNotFound) {
+				fabricExists = false
+				data := &capdata.Fabric{
+					SwitchData: []string{
+						switchID,
+					},
+					PodID: aciNodeData.PodId,
+				}
+				if err := capmodel.SaveFabric(fabricID, data); err != nil {
+					log.Fatal("storing " + fabricID + " fabric failed with " + err.Error())
+				}
+			} else {
+				log.Fatal("fetching " + fabricID + " fabric failed with " + err.Error())
 			}
 		}
-		capdata.FabricDataStore.Lock.Unlock()
-		switchData, chassisData := getSwitchData(fabricID, aciNodeData, switchID)
-		capdata.SwitchDataStore.Lock.Lock()
-		capdata.ChassisData[chassisData.ID] = chassisData
-		capdata.SwitchDataStore.Data[switchID] = switchData
-		capdata.SwitchDataStore.Lock.Unlock()
-		// adding logic to collect the ports data
-		portData, err := caputilities.GetPortData(aciNodeData.PodId, aciNodeData.NodeId)
-		if err != nil {
-			log.Fatal("while intializing ACI Port  Data  PluginCiscoACI got: " + err.Error())
+		if !checkSwitchIDExists(fabricData.SwitchData, aciNodeData.NodeId) {
+			if fabricExists {
+				fabricData.SwitchData = append(fabricData.SwitchData, switchID)
+				fabricData.PodID = aciNodeData.PodId
+				if err := capmodel.UpdateFabric(fabricID, &fabricData); err != nil {
+					log.Fatal("updating " + fabricID + " fabric failed with " + err.Error())
+				}
+			}
+			switchData, chassisData := getSwitchData(fabricID, aciNodeData, switchID)
+			if err := capmodel.SaveSwitchChassis(chassisData.ID, chassisData); err != nil {
+				log.Fatal("storing " + chassisData.ID + " chassis failed with " + err.Error())
+			}
+			if err := capmodel.SaveSwitch(switchID, switchData); err != nil {
+				log.Fatal("storing " + switchID + " switch failed with " + err.Error())
+			}
+			// adding logic to collect the ports data
+			portData, err := caputilities.GetPortData(aciNodeData.PodId, aciNodeData.NodeId)
+			if err != nil {
+				log.Fatal("while intializing ACI Port  Data  PluginCiscoACI got: " + err.Error())
+			}
+			parsePortData(portData, switchID, fabricID)
 		}
-		parsePortData(portData, switchID, fabricID)
 	}
 
 	// TODO:
@@ -227,8 +237,11 @@ func intializeACIData() {
 	//updating the plugin status
 	caputilities.Status.Available = "yes"
 	// Send resource added event odim
-	capdata.FabricDataStore.Lock.RLock()
-	for fabricID := range capdata.FabricDataStore.Data {
+	allFabric, err := capmodel.GetAllFabric("")
+	if err != nil {
+		log.Fatal("while fetching all stored fabric data got: " + err.Error())
+	}
+	for fabricID := range allFabric {
 		var event = common.Event{
 			EventID:   uuid.NewV4().String(),
 			MessageID: constants.ResourceCreatedMessageID,
@@ -251,8 +264,6 @@ func intializeACIData() {
 		}
 		capmessagebus.Publish(eventData)
 	}
-	capdata.FabricDataStore.Lock.RUnlock()
-
 	return
 }
 
@@ -281,9 +292,13 @@ func parsePortData(portResponseData *capmodel.PortCollectionResponse, switchID, 
 			log.Error("Unable to get mtu for the port" + portID)
 		}
 		portInfo.MaxFrameSize = mtu
-		capdata.PortDataStore[portInfo.ODataID] = &portInfo
+		if err = capmodel.SavePort(portInfo.ODataID, &portInfo); err != nil {
+			log.Fatal("storing " + portInfo.ODataID + " port failed with " + err.Error())
+		}
 	}
-	capdata.SwitchToPortDataStore[switchID] = portData
+	if err := capmodel.SaveSwitchPort(switchID, portData); err != nil {
+		log.Fatal("storing port data of switch " + switchID + " failed with " + err.Error())
+	}
 }
 
 func getSwitchData(fabricID string, fabricNodeData *models.FabricNodeMember, switchID string) (*dmtfmodel.Switch, *dmtfmodel.Chassis) {
@@ -368,4 +383,13 @@ func getSwitchData(fabricID string, fabricNodeData *models.FabricNodeMember, swi
 	}
 
 	return &switchData, &chassisData
+}
+
+func checkSwitchIDExists(switchIDs []string, nodeID string) (exists bool) {
+	for _, switchid := range switchIDs {
+		if strings.HasSuffix(switchid, ":"+nodeID) {
+			return true
+		}
+	}
+	return false
 }

@@ -12,71 +12,33 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-package capmodel
+package db
 
 import (
 	"fmt"
-	"testing"
-
-	"github.com/ODIM-Project/PluginCiscoACI/db"
 )
 
+// MockConnector is for mocking DB connector interface
 type MockConnector struct{}
 
-func TestSaveToDB(t *testing.T) {
-	db.Connector = MockConnector{}
-	type args struct {
-		table      string
-		resourceID string
-		data       interface{}
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "saving data successfully",
-			args: args{
-				table:      "someTable",
-				resourceID: "someResource",
-				data:       args{data: "someData"},
-			},
-			wantErr: false,
-		},
-		{
-			name: "invalid data",
-			args: args{
-				table:      "someTable",
-				resourceID: "resourceAlreadyPresent",
-				data:       func() {},
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := SaveToDB(tt.args.table, tt.args.resourceID, tt.args.data); (err != nil) != tt.wantErr {
-				t.Errorf("SaveToDB() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
+// Create is for mocking DB Create operation
 func (d MockConnector) Create(table, resourceID, data string) error {
 	return nil
 }
 
+// Update is for mocking DB Update operation
 func (d MockConnector) Update(table, resourceID, data string) error {
 	return nil
 }
 
+// GetAllMatchingKeys is for mocking GetAllMatchingKeys operation
 func (d MockConnector) GetAllMatchingKeys(table, pattern string) ([]string, error) {
 	return []string{"validID"}, nil
 }
 
+// Get is for mocking DB Get operation
 func (d MockConnector) Get(table, resourceID string) (string, error) {
-	if resourceID == "validID" || resourceID == "validID:zoneID" {
+	if resourceID == "validID" {
 		switch table {
 		case TableFabric:
 			return `{"SwitchData": ["test"], "PodID": "test"}`, nil
@@ -87,25 +49,29 @@ func (d MockConnector) Get(table, resourceID string) (string, error) {
 		case TablePort:
 			return `{"Id": "validID", "FabricID": "validID"}`, nil
 		case TableZone:
-			return `{"ID": "zoneID"}`, nil
+			return `{"Id": "validID", "FabricID": "validID"}`, nil
 		default:
 		}
 	}
 	return "", fmt.Errorf("not found")
 }
 
-func (d MockConnector) UpdateKeySet(key string, member string) (err error) {
+// UpdateKeySet is for mocking DB SADD operation
+func (d MockConnector) UpdateKeySet(key string, members ...interface{}) (err error) {
 	return nil
 }
 
+// GetKeySetMembers is for mocking DB SMEMBERS operation
 func (d MockConnector) GetKeySetMembers(key string) (list []string, err error) {
-	return []string{"zoneID"}, nil
+	return []string{"validID"}, nil
 }
 
+// Delete is for mocking DB Delete operation
 func (d MockConnector) Delete(table, resourceID string) (err error) {
 	return nil
 }
 
-func (d MockConnector) DeleteKeySetMembers(key string, member string) (err error) {
+// DeleteKeySetMembers is for mocking DB SREM operation
+func (d MockConnector) DeleteKeySetMembers(key string, members ...interface{}) (err error) {
 	return nil
 }

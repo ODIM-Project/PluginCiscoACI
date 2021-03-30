@@ -17,14 +17,15 @@ package caphandler
 
 import (
 	"fmt"
-	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
-	"github.com/ODIM-Project/ODIM/lib-utilities/response"
-	"github.com/ODIM-Project/PluginCiscoACI/capdata"
-	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
-	iris "github.com/kataras/iris/v12"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
+
+	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
+	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
+	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
+
+	iris "github.com/kataras/iris/v12"
+	log "github.com/sirupsen/logrus"
 )
 
 //GetFabricResource : Fetches details of the given resource from the device
@@ -36,13 +37,10 @@ func GetFabricResource(ctx iris.Context) {
 func GetFabricData(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	fabricData, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
-		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", uri})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	fabricData, err := capmodel.GetFabric(fabricID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch fabric data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", uri})
 		return
 	}
 	var fabricResponse = model.Fabric{
@@ -72,7 +70,6 @@ func GetFabricData(ctx iris.Context) {
 	}
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(fabricResponse)
-
 }
 
 func getFabricHealthData(podID string) string {

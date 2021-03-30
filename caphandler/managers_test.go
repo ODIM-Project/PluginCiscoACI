@@ -16,16 +16,69 @@
 package caphandler
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
+	"github.com/ODIM-Project/PluginCiscoACI/db"
+
 	iris "github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/httptest"
 )
 
+type mockConnector struct{}
+
+func (d mockConnector) Create(table, resourceID, data string) error {
+	return nil
+}
+
+func (d mockConnector) Update(table, resourceID, data string) error {
+	return nil
+}
+
+func (d mockConnector) GetAllMatchingKeys(table, pattern string) ([]string, error) {
+	return []string{"validID"}, nil
+}
+
+func (d mockConnector) Get(table, resourceID string) (string, error) {
+	if resourceID == "validID" {
+		switch table {
+		case capmodel.TableFabric:
+			return `{"SwitchData": ["test"], "PodID": "test"}`, nil
+		case capmodel.TableSwitch:
+			return `{"Id": "validID", "FabricID": "validID"}`, nil
+		case capmodel.TableSwitchPorts:
+			return `{"Id": "validID", "FabricID": "validID"}`, nil
+		case capmodel.TablePort:
+			return `{"Id": "validID", "FabricID": "validID"}`, nil
+		case capmodel.TableZone:
+			return `{"Id": "validID", "FabricID": "validID"}`, nil
+		default:
+		}
+	}
+	return "", fmt.Errorf("not found")
+}
+
+func (d mockConnector) UpdateKeySet(key string, member string) (err error) {
+	return nil
+}
+
+func (d mockConnector) GetKeySetMembers(key string) (list []string, err error) {
+	return []string{"validID"}, nil
+}
+
+func (d mockConnector) Delete(table, resourceID string) (err error) {
+	return nil
+}
+
+func (d mockConnector) DeleteKeySetMembers(key string, member string) (err error) {
+	return nil
+}
+
 func TestGetManagerCollection(t *testing.T) {
+	db.Connector = mockConnector{}
 	config.SetUpMockConfig(t)
 	mockApp := iris.New()
 	redfishRoutes := mockApp.Party("/ODIM/v1")

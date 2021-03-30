@@ -16,12 +16,15 @@
 package caphandler
 
 import (
-	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
-	"github.com/ODIM-Project/PluginCiscoACI/capdata"
-	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
-	pluginConfig "github.com/ODIM-Project/PluginCiscoACI/config"
-	iris "github.com/kataras/iris/v12"
 	"net/http"
+
+	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
+	"github.com/ODIM-Project/ODIM/lib-utilities/response"
+	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
+	"github.com/ODIM-Project/PluginCiscoACI/capresponse"
+	pluginConfig "github.com/ODIM-Project/PluginCiscoACI/config"
+
+	iris "github.com/kataras/iris/v12"
 )
 
 //GetManagersCollection Fetches details of the manager collection
@@ -53,7 +56,12 @@ func GetManagersInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	// Get all switch data uri
 	managedSwitches := []model.Link{}
-	for fabricID, fabricData := range capdata.FabricDataStore.Data {
+	allFabric, err := capmodel.GetAllFabric("")
+	if err != nil {
+		capresponse.SetErrorResponse(ctx, http.StatusInternalServerError, response.InternalError, err.Error(), nil)
+		return
+	}
+	for fabricID, fabricData := range allFabric {
 		for i := 0; i < len(fabricData.SwitchData); i++ {
 			managedSwitches = append(managedSwitches, model.Link{
 				Oid: "/ODIM/v1/Fabrics/" + fabricID + "/Switches/" + fabricData.SwitchData[i],

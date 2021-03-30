@@ -12,16 +12,11 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-package capmodel
-
-import (
-	"encoding/json"
-	"fmt"
-
-	"github.com/ODIM-Project/PluginCiscoACI/db"
-)
+package db
 
 const (
+	// scanPaginationSize defines the size of DB keys to be scanned on single query
+	scanPaginationSize = 1000
 	// TableFabric is the table for storing switch and pod ids
 	TableFabric = "ACI-Fabric"
 	// TableSwitch is the table for storing switch information
@@ -34,28 +29,4 @@ const (
 	TablePort = "ACI-Port"
 	// TableZone is the table for storing zone information
 	TableZone = "ACI-Zone"
-	// TableAddressPool is the table for storing addresspool information
-	TableAddressPool = "ACI-AddressPool"
-	// TableEndPoint is the table for storing fabric endpoint information
-	TableEndPoint = "ACI-EndPoint"
-	// TableZoneDomain is the table for storing ZoneToDomainDN information
-	TableZoneDomain = "ACI-ZoneDomain"
 )
-
-// SaveToDB is for adding port data to the DB
-func SaveToDB(table, resourceID string, data interface{}) error {
-	dataByte, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("while marshalling data, got: %v", err)
-	}
-	return db.Connector.Create(table, resourceID, string(dataByte))
-}
-
-// UpdateDbData is for updating data in the DB
-func UpdateDbData(table, resourceID string, data interface{}) error {
-	dataByte, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("while marshalling data, got: %v", err)
-	}
-	return db.Connector.Update(table, resourceID, string(dataByte))
-}
