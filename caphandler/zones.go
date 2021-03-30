@@ -568,7 +568,15 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 		errorMessage := fmt.Sprintf("Given AddressPool %s is assingned to other ZoneofEndpoints", zone.Links.AddressPools[0].Oid)
 		return "", updateErrorResponse(response.ResourceInUse, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest
 	}
-
+	// validate the given addresspool
+	if addresspoolData.Ethernet.IPv4.GatewayIPAddress == "" {
+		errorMessage := fmt.Sprintf("Given AddressPool %s doesn't contain the GatewayIPAddress ", zone.Links.AddressPools[0].Oid)
+		return "", updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"GatewayIPAddress"}), http.StatusBadRequest
+	}
+	if addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower != addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper {
+		errorMessage := fmt.Sprintf("Given AddressPool %s VLANIdentifierAddressRange Lower and Upper values are not matching ", zone.Links.AddressPools[0].Oid)
+		return "", updateErrorResponse(response.PropertyUnknown, errorMessage, []interface{}{"VLANIdentifierAddressRange"}), http.StatusBadRequest
+	}
 	// Get the default zone data
 	defaultZoneURL := zoneofZoneData.Zone.Links.ContainedByZones[0].Oid
 	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL]
@@ -604,7 +612,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 	if statusCode != http.StatusCreated {
 		return "", resp, statusCode
 	}
-	resp, statusCode = applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name, domainData, endPointData, addresspoolData.Ethernet.IPv4.NativeVLAN)
+	resp, statusCode = applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name, domainData, endPointData, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower)
 	return zoneofZoneURL, resp, statusCode
 }
 
@@ -1022,7 +1030,7 @@ func UpdateZoneData(ctx iris.Context) {
 	for endpointOID, data := range endpointRequestData {
 		_, ok := endPointData[endpointOID]
 		if !ok {
-			resp, statusCode = createStaticPort(zoneData.Zone.Name+"-EPG", defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, data.ACIPolicyGroupData, addresspoolData.Ethernet.IPv4.NativeVLAN, domainData)
+			resp, statusCode = createStaticPort(zoneData.Zone.Name+"-EPG", defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, data.ACIPolicyGroupData, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, domainData)
 			if statusCode != http.StatusCreated {
 				ctx.StatusCode(statusCode)
 				ctx.JSON(resp)
