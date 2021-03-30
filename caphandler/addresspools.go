@@ -135,6 +135,14 @@ func CreateAddressPool(ctx iris.Context) {
 			return
 
 		}
+		if addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower != addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper {
+			errorMessage := fmt.Sprintf("Requested VLANIdentifierAddressRange Lower %d is not equal to Upper %d", addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper)
+			log.Error(errorMessage)
+			resp := updateErrorResponse(response.PropertyUnknown, errorMessage, []interface{}{"VLANIdentifierAddressRange"})
+			ctx.StatusCode(http.StatusBadRequest)
+			ctx.JSON(resp)
+			return
+		}
 		for _, data := range capdata.AddressPoolDataStore {
 			if data.AddressPool.Ethernet.IPv4.GatewayIPAddress == addresspoolData.Ethernet.IPv4.GatewayIPAddress {
 				errorMessage := "Requested GatewayIPAddress is already present in the addresspool " + data.AddressPool.ODataID
@@ -147,7 +155,7 @@ func CreateAddressPool(ctx iris.Context) {
 		}
 	}
 	if addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower > addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper {
-		errorMessage := fmt.Sprintf("Requested VLANIdentifierAddressRange Lower %d is greater than Upper%d", addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper)
+		errorMessage := fmt.Sprintf("Requested VLANIdentifierAddressRange Lower %d is greater than Upper %d", addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper)
 		log.Error(errorMessage)
 		resp := updateErrorResponse(response.PropertyUnknown, errorMessage, []interface{}{"VLANIdentifierAddressRange"})
 		ctx.StatusCode(http.StatusBadRequest)
@@ -155,14 +163,7 @@ func CreateAddressPool(ctx iris.Context) {
 		return
 	}
 	// validate the  VLANIdentifierAddressRange lower value
-	resp, statusCode := validateVLANIdentifierAddressRange(addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, "Lower")
-	if statusCode != http.StatusOK {
-		ctx.StatusCode(statusCode)
-		ctx.JSON(resp)
-		return
-	}
-	// validate the  VLANIdentifierAddressRange upper value
-	resp, statusCode = validateVLANIdentifierAddressRange(addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper, "Upper")
+	resp, statusCode := validateVLANIdentifierAddressRange(addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper)
 	if statusCode != http.StatusOK {
 		ctx.StatusCode(statusCode)
 		ctx.JSON(resp)
@@ -263,15 +264,40 @@ func updateAddressPoolData(zoneOID, addresspoolOID, operation string) {
 	capdata.AddressPoolDataStore[addresspoolOID].AddressPool = addresspoolData
 }
 
-func validateVLANIdentifierAddressRange(value int, indentifierType string) (interface{}, int) {
-
-	if value < 2 ||
-		(value > 1001 && value < 1006) ||
-		value > 4094 {
-		errorMessage := fmt.Sprintf("Invalid value for VLANIdentifierAddressRange %s: it should in range of 2 to 1001 or 1006 to 4094 not %d", indentifierType, value)
+func validateVLANIdentifierAddressRange(lowerValue int, upperValue int) (interface{}, int) {
+	statusCode := http.StatusOK
+	errorArgs := []response.ErrArgs{}
+	if lowerValue < 2 ||
+		(lowerValue > 1001 && lowerValue < 1006) ||
+		lowerValue > 4094 {
+		errorMessage := fmt.Sprintf("Invalid value for VLANIdentifierAddressRange %s: it should in range of 2 to 1001 or 1006 to 4094 not %d", "Lower", lowerValue)
 		log.Errorf(errorMessage)
-		resp := updateErrorResponse(response.PropertyValueNotInList, errorMessage, []interface{}{fmt.Sprintf("%d", value), "VLANIdentifierAddressRange Lower"})
-		return resp, http.StatusBadRequest
+		errorArgs = append(errorArgs, response.ErrArgs{
+			StatusMessage: response.PropertyValueNotInList,
+			ErrorMessage:  errorMessage,
+			MessageArgs:   []interface{}{fmt.Sprintf("%d", lowerValue), "VLANIdentifierAddressRange Lower"},
+		})
+		statusCode = http.StatusBadRequest
 	}
-	return nil, http.StatusOK
+	if upperValue < 2 ||
+		(upperValue > 1001 && upperValue < 1006) ||
+		upperValue > 4094 {
+		errorMessage := fmt.Sprintf("Invalid value for VLANIdentifierAddressRange %s: it should in range of 2 to 1001 or 1006 to 4094 not %d", "Upper", upperValue)
+		log.Errorf(errorMessage)
+		errorArgs = append(errorArgs, response.ErrArgs{
+			StatusMessage: response.PropertyValueNotInList,
+			ErrorMessage:  errorMessage,
+			MessageArgs:   []interface{}{fmt.Sprintf("%d", upperValue), "VLANIdentifierAddressRange Upper"},
+		})
+		statusCode = http.StatusBadRequest
+	}
+	if statusCode != http.StatusOK {
+		args := response.Args{
+			Code:      response.GeneralError,
+			Message:   "",
+			ErrorArgs: errorArgs,
+		}
+		return args.CreateGenericErrorResponse(), statusCode
+	}
+	return nil, statusCode
 }
