@@ -51,18 +51,23 @@ func GetZones(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
 	if _, err := capmodel.GetFabric(fabricID); err != nil {
-		errMsg := fmt.Sprintf("failed to fetch address data for uri %s: %s", uri, err.Error())
+		errMsg := fmt.Sprintf("failed to fetch fabric data for uri %s: %s", uri, err.Error())
 		createDbErrResp(ctx, err, errMsg, []interface{}{"AddressPool", uri})
 		return
 	}
 
 	var members = []*model.Link{}
-	for zoneID, zoneData := range capdata.ZoneDataStore {
-		if zoneData.FabricID == fabricID {
-			members = append(members, &model.Link{
-				Oid: zoneID,
-			})
-		}
+	zoneData, err := capmodel.GetAllZones(fabricID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
+		return
+
+	}
+	for zoneID := range zoneData {
+		members = append(members, &model.Link{
+			Oid: zoneID,
+		})
 	}
 	zoneCollection := model.Collection{
 		ODataContext: "/ODIM/v1/$metadata#ZoneCollection.ZoneCollection",
@@ -87,17 +92,14 @@ func GetZone(ctx iris.Context) {
 		return
 	}
 
-	respData, ok := capdata.ZoneDataStore[uri]
-	if !ok {
-		errMsg := fmt.Sprintf("Zone data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Zone", fabricID})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	zoneData, err := capmodel.GetZone(fabricID, uri)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(respData.Zone)
+	ctx.JSON(zoneData)
 }
 
 // CreateZone default function called for creation of any type of zone
@@ -130,14 +132,33 @@ func CreateZone(ctx iris.Context) {
 		}
 		conflictFlag := false
 		var defaultZoneID string
-		for _, value := range capdata.ZoneDataStore {
-			if value.Zone.Name == zone.Name {
-				conflictFlag = true
+		fabricData, err := capmodel.GetAllFabric("")
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to fetch fabric data: %s", err.Error())
+			createDbErrResp(ctx, err, errMsg, nil)
+			return
+		}
+
+		for fabricID := range fabricData {
+			data, err := capmodel.GetAllZones(fabricID)
+			if err != nil {
+				errMsg := fmt.Sprintf("failed to fetch all zones data of fabric %s: %s", fabricID, err.Error())
+				createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
+				return
+			}
+			for _, zoneData := range data {
+				if zoneData.Name == zone.Name {
+					conflictFlag = true
+				}
 			}
 		}
 		if !conflictFlag {
 			defaultZoneID = uuid.NewV4().String()
-			zone = saveZoneData(defaultZoneID, uri, fabricID, zone)
+			if zone, err = saveZoneData(defaultZoneID, uri, fabricID, zone); err != nil {
+				errMsg := fmt.Sprintf("failed to store default zone data for uri %s: %s", uri, err.Error())
+				createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
+				return
+			}
 		}
 		common.SetResponseHeader(ctx, map[string]string{
 			"Location": zone.ODataID,
@@ -154,18 +175,49 @@ func CreateZone(ctx iris.Context) {
 		}
 		conflictFlag := false
 		var defaultZoneID string
-		for _, value := range capdata.ZoneDataStore {
-			if value.Zone.Name == zone.Name {
-				conflictFlag = true
+		fabricData, err := capmodel.GetAllFabric("")
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to fetch fabric data: %s", err.Error())
+			createDbErrResp(ctx, err, errMsg, nil)
+			return
+		}
+
+		for fabricID := range fabricData {
+			data, err := capmodel.GetAllZones(fabricID)
+			if err != nil {
+				errMsg := fmt.Sprintf("failed to fetch all zones data of fabric %s: %s", fabricID, err.Error())
+				createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
+				return
+			}
+			for _, zoneData := range data {
+				if zoneData.Name == zone.Name {
+					conflictFlag = true
+				}
 			}
 		}
 		if !conflictFlag {
 			defaultZoneID = uuid.NewV4().String()
-			zone = saveZoneData(defaultZoneID, uri, fabricID, zone)
-			saveZoneToDomainDNData(zone.ODataID, domainData)
+			if zone, err = saveZoneData(defaultZoneID, uri, fabricID, zone); err != nil {
+				errMsg := fmt.Sprintf("failed to store zone of zone data for uri %s: %s", uri, err.Error())
+				createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", defaultZoneID})
+				return
+			}
+			if err = saveZoneToDomainDNData(zone.ODataID, domainData); err != nil {
+				errMsg := fmt.Sprintf("failed to update zone domain data for uri %s: %s", uri, err.Error())
+				createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", zone.ODataID})
+				return
+			}
 		}
-		updateZoneData(defaultZoneLink, zone)
-		updateAddressPoolData(zone.ODataID, zone.Links.AddressPools[0].Oid, "Add")
+		if err = updateZoneData(fabricID, defaultZoneLink, zone); err != nil {
+			errMsg := fmt.Sprintf("failed to update zone data for uri %s: %s", uri, err.Error())
+			createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", defaultZoneLink})
+			return
+		}
+		if err = updateAddressPoolData(fabricID, zone.ODataID, zone.Links.AddressPools[0].Oid, "Add"); err != nil {
+			errMsg := fmt.Sprintf("failed to update AddressPool data for uri %s: %s", uri, err.Error())
+			createDbErrResp(ctx, err, errMsg, []interface{}{"AddressPool", zone.Links.AddressPools[0].Oid})
+			return
+		}
 		common.SetResponseHeader(ctx, map[string]string{
 			"Location": zone.ODataID,
 		})
@@ -180,9 +232,21 @@ func CreateZone(ctx iris.Context) {
 			return
 		}
 		zoneID := uuid.NewV4().String()
-		zone = saveZoneData(zoneID, uri, fabricID, zone)
-		updateZoneData(zoneofZoneOID, zone)
-		updateAddressPoolData(zone.ODataID, zone.Links.AddressPools[0].Oid, "Add")
+		if zone, err = saveZoneData(zoneID, uri, fabricID, zone); err != nil {
+			errMsg := fmt.Sprintf("failed to store zone of endpoints data for uri %s: %s", uri, err.Error())
+			createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", zoneID})
+			return
+		}
+		if err = updateZoneData(fabricID, zoneofZoneOID, zone); err != nil {
+			errMsg := fmt.Sprintf("failed to update zone data for uri %s: %s", uri, err.Error())
+			createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", zoneofZoneOID})
+			return
+		}
+		if err = updateAddressPoolData(fabricID, zone.ODataID, zone.Links.AddressPools[0].Oid, "Add"); err != nil {
+			errMsg := fmt.Sprintf("failed to update AddressPool data for uri %s: %s", uri, err.Error())
+			createDbErrResp(ctx, err, errMsg, []interface{}{"AddressPool", zone.Links.AddressPools[0].Oid})
+			return
+		}
 		common.SetResponseHeader(ctx, map[string]string{
 			"Location": zone.ODataID,
 		})
@@ -195,7 +259,7 @@ func CreateZone(ctx iris.Context) {
 	}
 }
 
-func saveZoneData(defaultZoneID string, uri string, fabricID string, zone model.Zone) model.Zone {
+func saveZoneData(defaultZoneID string, uri string, fabricID string, zone model.Zone) (model.Zone, error) {
 	zone.ID = defaultZoneID
 	zone.ODataContext = "/ODIM/v1/$metadata#Zone.Zone"
 	zone.ODataType = "#Zone.v1_4_0.Zone"
@@ -208,11 +272,10 @@ func saveZoneData(defaultZoneID string, uri string, fabricID string, zone model.
 			zone.Links.ContainedByZonesCount = len(zone.Links.ContainedByZones)
 		}
 	}
-	capdata.ZoneDataStore[zone.ODataID] = &capdata.ZoneData{
-		FabricID: fabricID,
-		Zone:     &zone,
+	if err := capmodel.SaveZone(fabricID, zone.ODataID, &zone); err != nil {
+		return zone, err
 	}
-	return zone
+	return zone, nil
 }
 
 // CreateDefaultZone creates a zone of type 'Default'
@@ -257,18 +320,14 @@ func DeleteZone(ctx iris.Context) {
 
 	//TODO: Get list of zones which are pre-populated from onstart and compare the members for item not present in odim but present in ACI
 
-	respData, ok := capdata.ZoneDataStore[uri]
-	log.Println(capdata.ZoneDataStore)
-	if !ok {
-		errMsg := fmt.Sprintf("Zone data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Zone", uri})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	zoneData, err := capmodel.GetZone(fabricID, uri)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", uri})
 		return
 	}
-	if respData.Zone.Links != nil {
-		if respData.Zone.Links.ContainsZonesCount != 0 {
+	if zoneData.Links != nil {
+		if zoneData.Links.ContainsZonesCount != 0 {
 			errMsg := fmt.Sprintf("Zone cannot be deleted as there are dependent resources still tied to it")
 			log.Error(errMsg)
 			resp := updateErrorResponse(response.ResourceCannotBeDeleted, errMsg, []interface{}{"Zone", uri})
@@ -277,8 +336,8 @@ func DeleteZone(ctx iris.Context) {
 			return
 		}
 	}
-	if respData.Zone.ZoneType == "ZoneOfZones" {
-		err := deleteZoneOfZone(respData, uri)
+	if zoneData.ZoneType == "ZoneOfZones" {
+		err := deleteZoneOfZone(fabricID, uri, &zoneData)
 		if err != nil {
 			if err.Error() == "Error deleting Application Profile" {
 				resp := updateErrorResponse(response.GeneralError, err.Error(), nil)
@@ -295,12 +354,16 @@ func DeleteZone(ctx iris.Context) {
 			ctx.JSON(resp)
 			return
 		}
-		delete(capdata.ZoneDataStore, uri)
+		if err = capmodel.DeleteZone(fabricID, uri); err != nil {
+			errMsg := fmt.Sprintf("failed to delete zone data for %s: %s", uri, err.Error())
+			createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", uri})
+			return
+		}
 		ctx.StatusCode(http.StatusNoContent)
 	}
-	if respData.Zone.ZoneType == "Default" {
+	if zoneData.ZoneType == "Default" {
 		aciClient := caputilities.GetConnection()
-		err := aciClient.DeleteTenant(respData.Zone.Name)
+		err := aciClient.DeleteTenant(zoneData.Name)
 		if err != nil {
 			errMsg := "Error while deleting Zone: " + err.Error()
 			resp := updateErrorResponse(response.GeneralError, errMsg, nil)
@@ -308,30 +371,31 @@ func DeleteZone(ctx iris.Context) {
 			ctx.JSON(resp)
 			return
 		}
-
-		delete(capdata.ZoneDataStore, uri)
+		if err = capmodel.DeleteZone(fabricID, uri); err != nil {
+			errMsg := fmt.Sprintf("failed to delete zone data for %s: %s", uri, err.Error())
+			createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", uri})
+			return
+		}
 		ctx.StatusCode(http.StatusNoContent)
 	}
-	if respData.Zone.ZoneType == "ZoneOfEndpoints" {
-		resp, statusCode := deleteZoneOfEndpoints(respData.Zone)
+	if zoneData.ZoneType == "ZoneOfEndpoints" {
+		resp, statusCode := deleteZoneOfEndpoints(fabricID, &zoneData)
 		ctx.StatusCode(statusCode)
 		ctx.JSON(resp)
 	}
 }
 
-func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
+func deleteZoneOfZone(fabricID, uri string, respData *model.Zone) error {
 	var parentZoneLink model.Link
-	var parentZone *model.Zone
-	if respData.Zone.Links != nil {
-		if respData.Zone.Links.ContainedByZonesCount != 0 {
+	var parentZone model.Zone
+	if respData.Links != nil {
+		if respData.Links.ContainedByZonesCount != 0 {
 			// Assuming contained by link is only one
-			parentZoneLink = respData.Zone.Links.ContainedByZones[0]
-			parentZoneData, ok := capdata.ZoneDataStore[parentZoneLink.Oid]
-			if !ok {
-				errMsg := fmt.Errorf("Zone data for uri %s not found " + uri)
-				return errMsg
+			parentZoneLink = respData.Links.ContainedByZones[0]
+			parentZone, err := capmodel.GetZone(fabricID, parentZoneLink.Oid)
+			if err != nil {
+				return fmt.Errorf("failed to fetch zone data for %s: %s", parentZoneLink.Oid, err.Error())
 			}
-			parentZone = parentZoneData.Zone
 			links := parentZone.Links.ContainsZones
 			var parentZoneIndex int
 			for index, value := range links {
@@ -342,48 +406,56 @@ func deleteZoneOfZone(respData *capdata.ZoneData, uri string) error {
 			}
 			parentZone.Links.ContainsZones = append(links[:parentZoneIndex], links[parentZoneIndex+1:]...)
 			parentZone.Links.ContainsZonesCount = len(parentZone.Links.ContainsZones)
-			parentZoneData.Zone = parentZone
-			capdata.ZoneDataStore[parentZoneLink.Oid] = parentZoneData
+			if err = capmodel.UpdateZone(fabricID, parentZoneLink.Oid, &parentZone); err != nil {
+				return fmt.Errorf("failed to update zone data for %s: %s", parentZoneLink.Oid, err.Error())
+			}
 		}
 		aciServiceManager := caputilities.GetConnection()
-		err := aciServiceManager.DeleteApplicationProfile(respData.Zone.Name, parentZone.Name)
+		err := aciServiceManager.DeleteApplicationProfile(respData.Name, parentZone.Name)
 		if err != nil {
 			errMsg := fmt.Errorf("Error deleting Application Profile")
 			return errMsg
 		}
-		vrfErr := aciServiceManager.DeleteVRF(respData.Zone.Name+"-VRF", parentZone.Name)
+		vrfErr := aciServiceManager.DeleteVRF(respData.Name+"-VRF", parentZone.Name)
 		if vrfErr != nil {
 			errMsg := fmt.Errorf("Error deleting VRF")
 			return errMsg
 		}
 		// delete contract
-		contractErr := aciServiceManager.DeleteContract(respData.Zone.Name+"-VRF-Con", parentZone.Name)
+		contractErr := aciServiceManager.DeleteContract(respData.Name+"-VRF-Con", parentZone.Name)
 		if contractErr != nil {
 			errMsg := fmt.Errorf("Error deleting Contract:%v", contractErr)
 			log.Error(errMsg.Error())
 			return errMsg
 		}
-		err = aciServiceManager.DeleteAttachableAccessEntityProfile(respData.Zone.Name + "-DOM-EntityProfile")
+		err = aciServiceManager.DeleteAttachableAccessEntityProfile(respData.Name + "-DOM-EntityProfile")
 		if err != nil {
 			errMsg := fmt.Errorf("Error deleting  domain profile:%v", contractErr)
 			log.Error(errMsg.Error())
 			return errMsg
 		}
-		err = aciServiceManager.DeletePhysicalDomain(respData.Zone.Name + "-DOM")
+		err = aciServiceManager.DeletePhysicalDomain(respData.Name + "-DOM")
 		if err != nil {
 			errMsg := fmt.Errorf("Error deleting Physical domain:%v", contractErr)
 			log.Error(errMsg.Error())
 			return errMsg
 		}
-		err = aciServiceManager.DeleteVLANPool("static", respData.Zone.Name+"-DOM-VLAN")
+		err = aciServiceManager.DeleteVLANPool("static", respData.Name+"-DOM-VLAN")
 		if err != nil {
 			errMsg := fmt.Errorf("Error deleting Physical domain:%v", contractErr)
 			log.Error(errMsg.Error())
 			return errMsg
 		}
-		updateAddressPoolData(respData.Zone.ODataID, respData.Zone.Links.AddressPools[0].Oid, "Remove")
-		delete(capdata.ZoneDataStore, uri)
-		delete(capdata.ZoneTODomainDN, uri)
+		if err = updateAddressPoolData(fabricID, respData.ODataID, respData.Links.AddressPools[0].Oid, "Remove"); err != nil {
+			errMsg := fmt.Errorf("Error updating addressPool data:%v", err)
+			return errMsg
+		}
+		if err = capmodel.DeleteZone(fabricID, uri); err != nil {
+			return fmt.Errorf("failed to delete zone %s: %s", uri, err.Error())
+		}
+		if err = capmodel.DeleteZoneDomain(uri); err != nil {
+			return fmt.Errorf("failed to delete zone domain %s: %s", uri, err.Error())
+		}
 		return nil
 	}
 	return nil
@@ -408,12 +480,11 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 	// Assuming there is only link under ContainedByZones
 	defaultZoneLinks := zone.Links.ContainedByZones
 	defaultZoneLink := defaultZoneLinks[0].Oid
-	respData, ok := capdata.ZoneDataStore[defaultZoneLink]
-	if !ok {
-		errMsg := fmt.Sprintf("Zone data for uri %s not found", defaultZoneLink)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Zone", defaultZoneLink})
-		return "", resp, http.StatusNotFound, nil
+	respData, err := capmodel.GetZone(fabricID, defaultZoneLink)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", defaultZoneLink, err.Error())
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", defaultZoneLink})
+		return "", resp, statusCode, nil
 	}
 	// validate all given addresspools if it's present
 	if len(zone.Links.AddressPools) == 0 {
@@ -425,7 +496,7 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 		return "", updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest, nil
 	}
 
-	addresspoolData, statusCode, resp := getAddressPoolData(zone.Links.AddressPools[0].Oid)
+	addresspoolData, statusCode, resp := getAddressPoolData(fabricID, zone.Links.AddressPools[0].Oid)
 	if statusCode != http.StatusOK {
 		return "", resp, statusCode, nil
 	}
@@ -434,7 +505,7 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 		return "", updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"VLANIdentifierAddressRange"}), http.StatusBadRequest, nil
 	}
 	aciClient := caputilities.GetConnection()
-	appProfileList, err := aciClient.ListApplicationProfile(respData.Zone.Name)
+	appProfileList, err := aciClient.ListApplicationProfile(respData.Name)
 	if err != nil && !strings.Contains(err.Error(), "Object may not exists") {
 		errMsg := fmt.Sprintf("Zone cannot be created, error while retriving existing Application profiles: " + err.Error())
 		resp := updateErrorResponse(response.PropertyMissing, errMsg, []interface{}{"ContainedByZones"})
@@ -447,7 +518,7 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 			return "", resp, http.StatusConflict, nil
 		}
 	}
-	vrfList, err := aciClient.ListVRF(respData.Zone.Name)
+	vrfList, err := aciClient.ListVRF(respData.Name)
 	if err != nil && !strings.Contains(err.Error(), "Object may not exists") {
 		errMsg := fmt.Sprintf("Zone cannot be created, error while retriving existing VRFs: " + err.Error())
 		log.Error(errMsg)
@@ -462,20 +533,20 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 		}
 	}
 
-	apResp, err := CreateApplicationProfile(zone.Name, respData.Zone.Name, respData.Zone.Description, apModel)
+	apResp, err := CreateApplicationProfile(zone.Name, respData.Name, respData.Description, apModel)
 	if err != nil {
 		errMsg := "Error while creating application profile: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return "", resp, http.StatusBadRequest, nil
 	}
-	_, vrfErr := CreateVRF(vrfModel.Name, respData.Zone.Name, respData.Zone.Description, vrfModel)
+	_, vrfErr := CreateVRF(vrfModel.Name, respData.Name, respData.Description, vrfModel)
 	if vrfErr != nil {
 		errMsg := "Error while creating application profile: " + vrfErr.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
 		return "", resp, http.StatusBadRequest, nil
 	}
 	// create contract with name vrf and suffix-Con
-	resp, statusCode = createContract(vrfModel.Name, respData.Zone.Name, zone.Name)
+	resp, statusCode = createContract(vrfModel.Name, respData.Name, zone.Name)
 	if statusCode != http.StatusCreated {
 		return "", resp, statusCode, nil
 	}
@@ -489,9 +560,11 @@ func CreateZoneOfZones(uri string, fabricID string, zone model.Zone) (string, in
 
 }
 
-func updateZoneData(defaultZoneLink string, zone model.Zone) {
-	defaultZoneStore := capdata.ZoneDataStore[defaultZoneLink]
-	defaultZoneData := defaultZoneStore.Zone
+func updateZoneData(fabricID, defaultZoneLink string, zone model.Zone) error {
+	defaultZoneData, err := capmodel.GetZone(fabricID, defaultZoneLink)
+	if err != nil {
+		return fmt.Errorf("failed to fetch zone data of %s: %s", defaultZoneLink, err.Error())
+	}
 	if defaultZoneData.Links == nil {
 		defaultZoneData.Links = &model.ZoneLinks{}
 	}
@@ -511,8 +584,10 @@ func updateZoneData(defaultZoneLink string, zone model.Zone) {
 		defaultZoneData.Links.ContainsZonesCount = len(defaultZoneData.Links.ContainsZones)
 	}
 
-	capdata.ZoneDataStore[defaultZoneLink].Zone = defaultZoneData
-	return
+	if err = capmodel.UpdateZone(fabricID, defaultZoneLink, &defaultZoneData); err != nil {
+		return fmt.Errorf("failed to update zone data of %s: %s", defaultZoneLink, err.Error())
+	}
+	return nil
 }
 
 func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, interface{}, int) {
@@ -530,11 +605,11 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 	}
 	zoneofZoneURL := zone.Links.ContainedByZones[0].Oid
 	// get the zone of zone data
-	zoneofZoneData, ok := capdata.ZoneDataStore[zoneofZoneURL]
-	if !ok {
-		errMsg := fmt.Sprintf("ZoneofZone data for uri %s not found", uri)
-		log.Error(errMsg)
-		return "", updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"ZoneofZone", zoneofZoneURL}), http.StatusNotFound
+	zoneofZoneData, err := capmodel.GetZone(fabricID, zoneofZoneURL)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", uri, err.Error())
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"ZoneofZone", zoneofZoneURL})
+		return "", resp, statusCode
 	}
 	// validate all given addresspools if it's present
 	if len(zone.Links.AddressPools) == 0 {
@@ -546,7 +621,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 		return "", updateErrorResponse(response.PropertyValueFormatError, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest
 	}
 
-	addresspoolData, statusCode, resp := getAddressPoolData(zone.Links.AddressPools[0].Oid)
+	addresspoolData, statusCode, resp := getAddressPoolData(fabricID, zone.Links.AddressPools[0].Oid)
 	if statusCode != http.StatusOK {
 		return "", resp, statusCode
 	}
@@ -555,6 +630,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 		errorMessage := fmt.Sprintf("Given AddressPool %s is assingned to other ZoneofEndpoints", zone.Links.AddressPools[0].Oid)
 		return "", updateErrorResponse(response.ResourceInUse, errorMessage, []interface{}{"AddressPools", "AddressPools"}), http.StatusBadRequest
 	}
+
 	// validate the given addresspool
 	if addresspoolData.Ethernet.IPv4.GatewayIPAddress == "" {
 		errorMessage := fmt.Sprintf("Given AddressPool %s doesn't contain the GatewayIPAddress ", zone.Links.AddressPools[0].Oid)
@@ -564,42 +640,47 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 		errorMessage := fmt.Sprintf("Given AddressPool %s VLANIdentifierAddressRange Lower and Upper values are not matching ", zone.Links.AddressPools[0].Oid)
 		return "", updateErrorResponse(response.PropertyUnknown, errorMessage, []interface{}{"VLANIdentifierAddressRange"}), http.StatusBadRequest
 	}
-	// Get the default zone data
-	defaultZoneURL := zoneofZoneData.Zone.Links.ContainedByZones[0].Oid
-	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL]
-	// Get the endpoints from the db
 
+	// Get the default zone data
+	defaultZoneURL := zoneofZoneData.Links.ContainedByZones[0].Oid
+	defaultZoneData, err := capmodel.GetZone(fabricID, defaultZoneURL)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", uri, err.Error())
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", defaultZoneURL})
+		return "", resp, statusCode
+	}
+	// Get the endpoints from the db
 	endPointData := make(map[string]*capdata.EndpointData)
 	for i := 0; i < len(zone.Links.Endpoints); i++ {
-		data, statusCode, resp := getEndpointData(zone.Links.Endpoints[i].Oid)
+		data, statusCode, resp := getEndpointData(fabricID, zone.Links.Endpoints[i].Oid)
 		if statusCode != http.StatusOK {
 			return "", resp, statusCode
 		}
-		endPointData[zone.Links.Endpoints[i].Oid] = data
+		endPointData[zone.Links.Endpoints[i].Oid] = &data
 	}
 	// get domain from given addresspool native vlan from config
-	domainData, ok := getZoneTODomainDNData(zoneofZoneURL)
-	if !ok {
+	domainData, err := getZoneTODomainDNData(zoneofZoneURL)
+	if err != nil {
 		errMsg := fmt.Sprintf("Domain not found for  %s", zoneofZoneURL)
 		log.Error(errMsg)
 		return "", updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{zoneofZoneURL, "Domain"}), http.StatusNotFound
 	}
-	bdResp, bdDN, statusCode := createBridgeDomain(defaultZoneData.Zone.Name, zone)
+	bdResp, bdDN, statusCode := createBridgeDomain(defaultZoneData.Name, zone)
 	if statusCode != http.StatusCreated {
 		return "", bdResp, statusCode
 	}
 
 	// create the subnet for BD for all given address pool
-	resp, statusCode = createSubnets(defaultZoneData.Zone.Name, zone.Name, addresspoolData)
+	resp, statusCode = createSubnets(defaultZoneData.Name, zone.Name, addresspoolData)
 	if statusCode != http.StatusCreated {
 		return "", resp, statusCode
 	}
 	// link bridgedomain to vrf
-	resp, statusCode = linkBDtoVRF(bdDN, zoneofZoneData.Zone.Name+"-VRF")
+	resp, statusCode = linkBDtoVRF(bdDN, zoneofZoneData.Name+"-VRF")
 	if statusCode != http.StatusCreated {
 		return "", resp, statusCode
 	}
-	resp, statusCode = applicationEPGOperation(defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, zone.Name, domainData, endPointData, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower)
+	resp, statusCode = applicationEPGOperation(defaultZoneData.Name, zoneofZoneData.Name, zone.Name, domainData, endPointData, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower)
 	return zoneofZoneURL, resp, statusCode
 }
 
@@ -657,7 +738,7 @@ func linkBDtoVRF(bdDN, vrfName string) (interface{}, int) {
 	return nil, http.StatusCreated
 }
 
-func applicationEPGOperation(tenantName, applicationProfileName, bdName string, domainData *capdata.ACIDomainData, endPointData map[string]*capdata.EndpointData, nativeVLAN int) (interface{}, int) {
+func applicationEPGOperation(tenantName, applicationProfileName, bdName string, domainData capdata.ACIDomainData, endPointData map[string]*capdata.EndpointData, nativeVLAN int) (interface{}, int) {
 	//create EPG with name of bd adding -EPG suffix
 	epgName := bdName + "-EPG"
 	resp, appEPGDN, statusCode := createapplicationEPG(tenantName, applicationProfileName, epgName)
@@ -674,9 +755,9 @@ func applicationEPGOperation(tenantName, applicationProfileName, bdName string, 
 	if statusCode != http.StatusCreated {
 		return resp, statusCode
 	}
-	// Create static port'
+	// Create static port
 	for _, data := range endPointData {
-		resp, statusCode = createStaticPort(epgName, tenantName, applicationProfileName, data.ACIPolicyGroupData, nativeVLAN, domainData)
+		resp, statusCode = createStaticPort(epgName, tenantName, applicationProfileName, data.ACIPolicyGroupData, nativeVLAN, &domainData)
 		if statusCode != http.StatusCreated {
 			return resp, statusCode
 		}
@@ -721,16 +802,27 @@ func linkEpgtoDomain(appEPGDN, domain string) (interface{}, int) {
 	return nil, http.StatusCreated
 }
 
-func deleteZoneOfEndpoints(zoneData *model.Zone) (interface{}, int) {
+func deleteZoneOfEndpoints(fabricID string, zoneData *model.Zone) (interface{}, int) {
 	zoneofZoneURL := zoneData.Links.ContainedByZones[0].Oid
 	// get the zone of zone data
-	zoneofZoneData := capdata.ZoneDataStore[zoneofZoneURL].Zone
+	zoneofZoneData, err := capmodel.GetZone(fabricID, zoneofZoneURL)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", zoneofZoneURL, err.Error())
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", zoneofZoneURL})
+		return resp, statusCode
+
+	}
 	// Get the default zone data
 	defaultZoneURL := zoneofZoneData.Links.ContainedByZones[0].Oid
-	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL].Zone
+	defaultZoneData, err := capmodel.GetZone(fabricID, defaultZoneURL)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", defaultZoneURL, err.Error())
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", defaultZoneURL})
+		return resp, statusCode
+	}
 	aciClient := caputilities.GetConnection()
 	for i := 0; i < len(zoneData.Links.Endpoints); i++ {
-		endpointData, statusCode, resp := getEndpointData(zoneData.Links.Endpoints[i].Oid)
+		endpointData, statusCode, resp := getEndpointData(fabricID, zoneData.Links.Endpoints[i].Oid)
 		if statusCode != http.StatusOK {
 			return resp, statusCode
 		}
@@ -739,8 +831,7 @@ func deleteZoneOfEndpoints(zoneData *model.Zone) (interface{}, int) {
 			return resp, statusCode
 		}
 	}
-	err := aciClient.DeleteApplicationEPG(zoneData.Name+"-EPG", zoneofZoneData.Name, defaultZoneData.Name)
-	if err != nil {
+	if err = aciClient.DeleteApplicationEPG(zoneData.Name+"-EPG", zoneofZoneData.Name, defaultZoneData.Name); err != nil {
 		errMsg := "Error while deleting Zone: " + err.Error()
 		return updateErrorResponse(response.GeneralError, errMsg, nil), http.StatusBadRequest
 	}
@@ -759,10 +850,23 @@ func deleteZoneOfEndpoints(zoneData *model.Zone) (interface{}, int) {
 			}
 		}
 		zoneofZoneData.Links.ContainsZonesCount = len(zoneofZoneData.Links.ContainsZones)
-		capdata.ZoneDataStore[zoneofZoneURL].Zone = zoneofZoneData
+		if err = capmodel.UpdateZone(fabricID, zoneofZoneURL, &zoneofZoneData); err != nil {
+			errMsg := fmt.Sprintf("failed to update zone data for uri %s: %s", zoneofZoneURL, err.Error())
+			statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", zoneofZoneURL})
+			return resp, statusCode
+		}
 	}
-	updateAddressPoolData(zoneData.ODataID, zoneData.Links.AddressPools[0].Oid, "Remove")
-	delete(capdata.ZoneDataStore, zoneData.ODataID)
+	if err = updateAddressPoolData(fabricID, zoneData.ODataID, zoneData.Links.AddressPools[0].Oid, "Remove"); err != nil {
+		errMsg := fmt.Sprintf("failed to update AddressPool data for %s: %s", fabricID, err.Error())
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"AddressPool", zoneData.Links.AddressPools[0].Oid})
+		return resp, statusCode
+	}
+	if err = capmodel.DeleteZone(fabricID, zoneData.ODataID); err != nil {
+		errMsg := fmt.Sprintf("failed to delete zone data for uri %s: %s", zoneData.ODataID, err.Error())
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", zoneData.ODataID})
+		return resp, statusCode
+
+	}
 	return nil, http.StatusNoContent
 }
 
@@ -908,49 +1012,40 @@ func createACIDomain(addressPoolData *model.AddressPool, zoneName string) (inter
 	}
 }
 
-func saveZoneToDomainDNData(zoneID string, domainData *capdata.ACIDomainData) {
-	capdata.ZoneTODomainDN[zoneID] = domainData
+func saveZoneToDomainDNData(zoneID string, domainData *capdata.ACIDomainData) error {
+	return capmodel.SaveZoneDomain(zoneID, domainData)
 }
 
-func getZoneTODomainDNData(zoneID string) (*capdata.ACIDomainData, bool) {
-	data, ok := capdata.ZoneTODomainDN[zoneID]
-	return data, ok
+func getZoneTODomainDNData(zoneID string) (capdata.ACIDomainData, error) {
+	return capmodel.GetZoneDomain(zoneID)
 }
 
 // UpdateZoneData provides patch operation on Zone
 func UpdateZoneData(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
-	_, ok := capdata.FabricDataStore.Data[fabricID]
-	if !ok {
-		errMsg := fmt.Sprintf("Fabric data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Fabric", fabricID})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	if _, err := capmodel.GetFabric(fabricID); err != nil {
+		errMsg := fmt.Sprintf("failed to fetch fabric data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Fabric", fabricID})
 		return
 	}
 
 	//TODO: Get list of zones which are pre-populated from onstart and compare the members for item not present in odim but present in ACI
 
-	zoneData, ok := capdata.ZoneDataStore[uri]
-	if !ok {
-		errMsg := fmt.Sprintf("Zone data for uri %s not found", uri)
-		log.Error(errMsg)
-		resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Zone", uri})
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(resp)
+	zoneData, err := capmodel.GetZone(fabricID, uri)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", uri})
 		return
 	}
-	if zoneData.Zone.ZoneType != "ZoneOfEndpoints" {
+	if zoneData.ZoneType != "ZoneOfEndpoints" {
 		ctx.StatusCode(http.StatusMethodNotAllowed)
 		resp := updateErrorResponse(response.ActionNotSupported, "", []interface{}{ctx.Request().Method})
 		ctx.JSON(resp)
 		return
 	}
 	var zoneRequest model.Zone
-	err := ctx.ReadJSON(&zoneRequest)
-	if err != nil {
+	if err = ctx.ReadJSON(&zoneRequest); err != nil {
 		errorMessage := "error while trying to get JSON body from the  request: " + err.Error()
 		log.Error(errorMessage)
 		resp := updateErrorResponse(response.MalformedJSON, errorMessage, nil)
@@ -968,18 +1063,18 @@ func UpdateZoneData(ctx iris.Context) {
 		return
 	}
 	// get the AddressPoolData for the zone
-	addresspoolData, statusCode, resp := getAddressPoolData(zoneData.Zone.Links.AddressPools[0].Oid)
+	addresspoolData, statusCode, resp := getAddressPoolData(fabricID, zoneData.Links.AddressPools[0].Oid)
 	if statusCode != http.StatusOK {
 		ctx.StatusCode(statusCode)
 		ctx.JSON(resp)
 		return
 	}
 	// get the domaindata for the ZoneOfZone
-	domainData, ok := getZoneTODomainDNData(zoneData.Zone.Links.ContainedByZones[0].Oid)
-	if !ok {
-		errMsg := fmt.Sprintf("Domain not found for  %s", zoneData.Zone.Links.ContainedByZones[0].Oid)
+	domainData, err := getZoneTODomainDNData(zoneData.Links.ContainedByZones[0].Oid)
+	if err != nil {
+		errMsg := fmt.Sprintf("Domain not found for  %s", zoneData.Links.ContainedByZones[0].Oid)
 		log.Error(errMsg)
-		resp = updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{zoneData.Zone.Links.ContainedByZones[0].Oid, "Domain"})
+		resp = updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{zoneData.Links.ContainedByZones[0].Oid, "Domain"})
 		ctx.StatusCode(http.StatusNotFound)
 		ctx.JSON(resp)
 		return
@@ -988,36 +1083,47 @@ func UpdateZoneData(ctx iris.Context) {
 	// save all existing endpoints in the map
 	endpointURIData := make(map[string]bool)
 	endPointData := make(map[string]*capdata.EndpointData)
-	for i := 0; i < len(zoneData.Zone.Links.Endpoints); i++ {
-		endpointURIData[zoneData.Zone.Links.Endpoints[i].Oid] = false
-		data, statusCode, resp := getEndpointData(zoneData.Zone.Links.Endpoints[i].Oid)
+	for i := 0; i < len(zoneData.Links.Endpoints); i++ {
+		endpointURIData[zoneData.Links.Endpoints[i].Oid] = false
+		data, statusCode, resp := getEndpointData(fabricID, zoneData.Links.Endpoints[i].Oid)
 		if statusCode != http.StatusOK {
 			ctx.StatusCode(statusCode)
 			ctx.JSON(resp)
 			return
 		}
-		endPointData[zoneData.Zone.Links.Endpoints[i].Oid] = data
+		endPointData[zoneData.Links.Endpoints[i].Oid] = &data
 	}
 	endpointRequestData := make(map[string]*capdata.EndpointData)
 	for i := 0; i < len(zoneRequest.Links.Endpoints); i++ {
-		data, statusCode, resp := getEndpointData(zoneRequest.Links.Endpoints[i].Oid)
+		data, statusCode, resp := getEndpointData(fabricID, zoneRequest.Links.Endpoints[i].Oid)
 		if statusCode != http.StatusOK {
 			ctx.StatusCode(statusCode)
 			ctx.JSON(resp)
 			return
 		}
-		endpointRequestData[zoneRequest.Links.Endpoints[i].Oid] = data
+		endpointRequestData[zoneRequest.Links.Endpoints[i].Oid] = &data
 	}
-	zoneofZoneURL := zoneData.Zone.Links.ContainedByZones[0].Oid
+	zoneofZoneURL := zoneData.Links.ContainedByZones[0].Oid
 	// get the zone of zone data
-	zoneofZoneData := capdata.ZoneDataStore[zoneofZoneURL]
-	// get default zone data
-	defaultZoneURL := zoneofZoneData.Zone.Links.ContainedByZones[0].Oid
-	defaultZoneData := capdata.ZoneDataStore[defaultZoneURL]
+	zoneofZoneData, err := capmodel.GetZone(fabricID, zoneofZoneURL)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", zoneofZoneURL, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", zoneofZoneURL})
+		return
+	}
+	// Get the default zone data
+	defaultZoneURL := zoneofZoneData.Links.ContainedByZones[0].Oid
+	defaultZoneData, err := capmodel.GetZone(fabricID, defaultZoneURL)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", defaultZoneURL, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", defaultZoneURL})
+		return
+	}
+
 	for endpointOID, data := range endpointRequestData {
 		_, ok := endPointData[endpointOID]
 		if !ok {
-			resp, statusCode = createStaticPort(zoneData.Zone.Name+"-EPG", defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name, data.ACIPolicyGroupData, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, domainData)
+			resp, statusCode = createStaticPort(zoneData.Name+"-EPG", defaultZoneData.Name, zoneofZoneData.Name, data.ACIPolicyGroupData, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, &domainData)
 			if statusCode != http.StatusCreated {
 				ctx.StatusCode(statusCode)
 				ctx.JSON(resp)
@@ -1028,7 +1134,7 @@ func UpdateZoneData(ctx iris.Context) {
 	}
 
 	for endpointOID, data := range endPointData {
-		resp, statusCode = deleteStaticPort(data.ACIPolicyGroupData.PolicyGroupDN, zoneData.Zone.Name+"-EPG", defaultZoneData.Zone.Name, zoneofZoneData.Zone.Name)
+		resp, statusCode = deleteStaticPort(data.ACIPolicyGroupData.PolicyGroupDN, zoneData.Name+"-EPG", defaultZoneData.Name, zoneofZoneData.Name)
 		if statusCode != http.StatusOK {
 			ctx.StatusCode(statusCode)
 			ctx.JSON(resp)
@@ -1042,10 +1148,14 @@ func UpdateZoneData(ctx iris.Context) {
 		}
 		delete(endPointData, endpointOID)
 	}
-	zoneData.Zone.Links.Endpoints = zoneRequest.Links.Endpoints
-	updatezoneData(uri, zoneData)
+	zoneData.Links.Endpoints = zoneRequest.Links.Endpoints
+	if err = updatezoneData(fabricID, uri, &zoneData); err != nil {
+		errMsg := fmt.Sprintf("failed to update zone data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", uri})
+		return
+	}
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(zoneData.Zone)
+	ctx.JSON(zoneData)
 }
 
 func deleteStaticPort(policyGroupDN, epgName, tenantName, applicationProfileName string) (interface{}, int) {
@@ -1070,6 +1180,6 @@ func deleteRelationDomainEntityGroupInterfacePolicyGroup(policyGroupDN string) (
 	return nil, http.StatusOK
 }
 
-func updatezoneData(zoneOID string, zoneData *capdata.ZoneData) {
-	capdata.ZoneDataStore[zoneOID] = zoneData
+func updatezoneData(fabricID, zoneOID string, zoneData *model.Zone) error {
+	return capmodel.UpdateZone(fabricID, zoneOID, zoneData)
 }

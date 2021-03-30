@@ -29,8 +29,7 @@ func GetFabric(fabricID string) (capdata.Fabric, error) {
 	if err != nil {
 		return fabric, err
 	}
-	err = json.Unmarshal([]byte(data), &fabric)
-	if err != nil {
+	if err = json.Unmarshal([]byte(data), &fabric); err != nil {
 		return fabric, fmt.Errorf("while trying to unmarshal fabric data, got: %v", err)
 	}
 	return fabric, nil
