@@ -222,13 +222,13 @@ func intializeACIData() {
 			if err := capmodel.SaveSwitch(switchID, switchData); err != nil {
 				log.Fatal("storing " + switchID + " switch failed with " + err.Error())
 			}
+			// adding logic to collect the ports data
+			portData, err := caputilities.GetPortData(aciNodeData.PodId, aciNodeData.NodeId)
+			if err != nil {
+				log.Fatal("while intializing ACI Port  Data  PluginCiscoACI got: " + err.Error())
+			}
+			parsePortData(portData, switchID, fabricID)
 		}
-		// adding logic to collect the ports data
-		portData, err := caputilities.GetPortData(aciNodeData.PodId, aciNodeData.NodeId)
-		if err != nil {
-			log.Fatal("while intializing ACI Port  Data  PluginCiscoACI got: " + err.Error())
-		}
-		parsePortData(portData, switchID, fabricID)
 	}
 
 	// TODO:
