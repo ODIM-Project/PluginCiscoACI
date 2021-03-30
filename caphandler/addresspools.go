@@ -104,7 +104,7 @@ func CreateAddressPool(ctx iris.Context) {
 		return
 	}
 	// Todo :Add required validation for the request params
-	missingAttribute, vlanIdentifierAddressRangeFlag, err := validateAddressPoolRequest(addresspoolData)
+	missingAttribute, err := validateAddressPoolRequest(addresspoolData)
 	if err != nil {
 		log.Error(err.Error())
 		resp := updateErrorResponse(response.PropertyMissing, err.Error(), []interface{}{missingAttribute})
@@ -112,8 +112,7 @@ func CreateAddressPool(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
-	if !vlanIdentifierAddressRangeFlag {
-		// validate cidr given in request
+	if addresspoolData.Ethernet.IPv4.GatewayIPAddress != "" {
 		if _, _, err := net.ParseCIDR(addresspoolData.Ethernet.IPv4.GatewayIPAddress); err != nil {
 			errorMessage := "Invalid value for GatewayIPAddress:" + err.Error()
 			log.Errorf(errorMessage)
@@ -123,12 +122,10 @@ func CreateAddressPool(ctx iris.Context) {
 			return
 
 		}
-		if addresspoolData.Ethernet.IPv4.NativeVLAN < 2 ||
-			(addresspoolData.Ethernet.IPv4.NativeVLAN > 1001 && addresspoolData.Ethernet.IPv4.NativeVLAN < 1006) ||
-			addresspoolData.Ethernet.IPv4.NativeVLAN > 4094 {
-			errorMessage := "Invalid value for NativeVLAN: it should in range of 2 to 1001 or 1006 to 4094"
-			log.Errorf(errorMessage)
-			resp := updateErrorResponse(response.PropertyValueNotInList, errorMessage, []interface{}{fmt.Sprintf("%d", addresspoolData.Ethernet.IPv4.NativeVLAN), "NativeVLAN"})
+		if addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower != addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper {
+			errorMessage := fmt.Sprintf("Requested VLANIdentifierAddressRange Lower %d is not equal to Upper %d", addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper)
+			log.Error(errorMessage)
+			resp := updateErrorResponse(response.PropertyUnknown, errorMessage, []interface{}{"VLANIdentifierAddressRange"})
 			ctx.StatusCode(http.StatusBadRequest)
 			ctx.JSON(resp)
 			return
@@ -149,16 +146,23 @@ func CreateAddressPool(ctx iris.Context) {
 				return
 			}
 		}
-	} else {
-		if addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower == addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper {
-			errorMessage := fmt.Sprintf("Requested VLANIdentifierAddressRange Lower %d and Upper %dare same", addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper)
-			log.Error(errorMessage)
-			resp := updateErrorResponse(response.PropertyUnknown, errorMessage, []interface{}{"VLANIdentifierAddressRange"})
-			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(resp)
-			return
-		}
 	}
+	if addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower > addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper {
+		errorMessage := fmt.Sprintf("Requested VLANIdentifierAddressRange Lower %d is greater than Upper %d", addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper)
+		log.Error(errorMessage)
+		resp := updateErrorResponse(response.PropertyUnknown, errorMessage, []interface{}{"VLANIdentifierAddressRange"})
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(resp)
+		return
+	}
+	// validate the  VLANIdentifierAddressRange lower value
+	resp, statusCode := validateVLANIdentifierAddressRange(addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper)
+	if statusCode != http.StatusOK {
+		ctx.StatusCode(statusCode)
+		ctx.JSON(resp)
+		return
+	}
+
 	addressPoolID := uuid.NewV4().String()
 	addresspoolData.ODataContext = "/ODIM/v1/$metadata#AddressPool.AddressPool"
 	addresspoolData.ODataType = "#AddressPool.v1_1_0.AddressPool"
@@ -179,22 +183,14 @@ func CreateAddressPool(ctx iris.Context) {
 	ctx.JSON(addresspoolData)
 }
 
-func validateAddressPoolRequest(request model.AddressPool) (string, bool, error) {
+func validateAddressPoolRequest(request model.AddressPool) (string, error) {
 	if request.Ethernet == nil {
-		return "Ethernet", false, fmt.Errorf("Ethernet data in request is missing")
+		return "Ethernet", fmt.Errorf("Ethernet data in request is missing")
 	}
 	if request.Ethernet.IPv4.VLANIdentifierAddressRange == nil {
-		if request.Ethernet.IPv4 == nil {
-			return "IPv4", false, fmt.Errorf("Ethernet IPV4 data  in request is missing")
-
-		}
-		if request.Ethernet.IPv4.GatewayIPAddress == "" {
-			return "GatewayIPAddress", false, fmt.Errorf("IPV4 GatewayIPAddress data  in request is missing")
-		}
-		return "", false, nil
+		return "VLANIdentifierAddressRange", fmt.Errorf("IPV4 VLANIdentifierAddressRange data  in request is missing")
 	}
-
-	return "", true, nil
+	return "", nil
 }
 
 // DeleteAddressPoolInfo stores the given addresspool against given fabric
@@ -215,7 +211,7 @@ func DeleteAddressPoolInfo(ctx iris.Context) {
 		return
 	}
 	if addresspoolData.Links != nil && len(addresspoolData.Links.Zones) > 0 {
-		errMsg := fmt.Sprintf("AddressPool cannot be deleted as there are depZ Zone  still tied to it")
+		errMsg := fmt.Sprintf("AddressPool cannot be deleted as there are dependent Zone  still tied to it")
 		log.Error(errMsg)
 		resp := updateErrorResponse(response.ResourceCannotBeDeleted, errMsg, []interface{}{uri, "AddressPool"})
 		ctx.StatusCode(http.StatusNotAcceptable)
@@ -266,4 +262,42 @@ func updateAddressPoolData(fabricID, zoneOID, addresspoolOID, operation string) 
 		return err
 	}
 	return nil
+}
+
+func validateVLANIdentifierAddressRange(lowerValue int, upperValue int) (interface{}, int) {
+	statusCode := http.StatusOK
+	errorArgs := []response.ErrArgs{}
+	if lowerValue < 2 ||
+		(lowerValue > 1001 && lowerValue < 1006) ||
+		lowerValue > 4094 {
+		errorMessage := fmt.Sprintf("Invalid value for VLANIdentifierAddressRange %s: it should in range of 2 to 1001 or 1006 to 4094 not %d", "Lower", lowerValue)
+		log.Errorf(errorMessage)
+		errorArgs = append(errorArgs, response.ErrArgs{
+			StatusMessage: response.PropertyValueNotInList,
+			ErrorMessage:  errorMessage,
+			MessageArgs:   []interface{}{fmt.Sprintf("%d", lowerValue), "VLANIdentifierAddressRange Lower"},
+		})
+		statusCode = http.StatusBadRequest
+	}
+	if upperValue < 2 ||
+		(upperValue > 1001 && upperValue < 1006) ||
+		upperValue > 4094 {
+		errorMessage := fmt.Sprintf("Invalid value for VLANIdentifierAddressRange %s: it should in range of 2 to 1001 or 1006 to 4094 not %d", "Upper", upperValue)
+		log.Errorf(errorMessage)
+		errorArgs = append(errorArgs, response.ErrArgs{
+			StatusMessage: response.PropertyValueNotInList,
+			ErrorMessage:  errorMessage,
+			MessageArgs:   []interface{}{fmt.Sprintf("%d", upperValue), "VLANIdentifierAddressRange Upper"},
+		})
+		statusCode = http.StatusBadRequest
+	}
+	if statusCode != http.StatusOK {
+		args := response.Args{
+			Code:      response.GeneralError,
+			Message:   "",
+			ErrorArgs: errorArgs,
+		}
+		return args.CreateGenericErrorResponse(), statusCode
+	}
+	return nil, statusCode
 }
