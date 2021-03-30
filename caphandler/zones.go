@@ -649,6 +649,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", defaultZoneURL})
 		return "", resp, statusCode
 	}
+	// Get the endpoints from the db
 	endPointData := make(map[string]*capdata.EndpointData)
 	for i := 0; i < len(zone.Links.Endpoints); i++ {
 		data, statusCode, resp := getEndpointData(fabricID, zone.Links.Endpoints[i].Oid)
