@@ -244,6 +244,7 @@ func getAddressPoolData(fabricID, addresspoolOID string) (*model.AddressPool, in
 func updateAddressPoolData(fabricID, zoneOID, addresspoolOID, operation string) error {
 	addresspoolData, err := capmodel.GetAddressPool(fabricID, addresspoolOID)
 	if err != nil {
+		return err
 	}
 	if addresspoolData.Links == nil {
 		addresspoolData.Links = &model.AddressPoolLinks{}
