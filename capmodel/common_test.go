@@ -15,16 +15,13 @@
 package capmodel
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/ODIM-Project/PluginCiscoACI/db"
 )
 
-type MockConnector struct{}
-
 func TestSaveToDB(t *testing.T) {
-	db.Connector = MockConnector{}
+	db.Connector = db.MockConnector{}
 	type args struct {
 		table      string
 		resourceID string
@@ -61,51 +58,4 @@ func TestSaveToDB(t *testing.T) {
 			}
 		})
 	}
-}
-
-func (d MockConnector) Create(table, resourceID, data string) error {
-	return nil
-}
-
-func (d MockConnector) Update(table, resourceID, data string) error {
-	return nil
-}
-
-func (d MockConnector) GetAllMatchingKeys(table, pattern string) ([]string, error) {
-	return []string{"validID"}, nil
-}
-
-func (d MockConnector) Get(table, resourceID string) (string, error) {
-	if resourceID == "validID" || resourceID == "validID:zoneID" {
-		switch table {
-		case TableFabric:
-			return `{"SwitchData": ["test"], "PodID": "test"}`, nil
-		case TableSwitch:
-			return `{"Id": "validID", "FabricID": "validID"}`, nil
-		case TableSwitchPorts:
-			return `{"Id": "validID", "FabricID": "validID"}`, nil
-		case TablePort:
-			return `{"Id": "validID", "FabricID": "validID"}`, nil
-		case TableZone:
-			return `{"ID": "zoneID"}`, nil
-		default:
-		}
-	}
-	return "", fmt.Errorf("not found")
-}
-
-func (d MockConnector) UpdateKeySet(key string, member string) (err error) {
-	return nil
-}
-
-func (d MockConnector) GetKeySetMembers(key string) (list []string, err error) {
-	return []string{"zoneID"}, nil
-}
-
-func (d MockConnector) Delete(table, resourceID string) (err error) {
-	return nil
-}
-
-func (d MockConnector) DeleteKeySetMembers(key string, member string) (err error) {
-	return nil
 }

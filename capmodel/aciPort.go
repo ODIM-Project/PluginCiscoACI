@@ -52,7 +52,7 @@ type PortInfoIMData struct {
 // GetPort collects the port data from the DB
 func GetPort(portID string) (*dmtf.Port, error) {
 	var port dmtf.Port
-	data, err := db.Connector.Get(TablePort, portID)
+	data, err := db.Connector.Get(db.TablePort, portID)
 	if err != nil {
 		return nil, fmt.Errorf("while trying to collect port data, got: %w", err)
 	}
@@ -65,7 +65,7 @@ func GetPort(portID string) (*dmtf.Port, error) {
 // GetSwitchPort collects the switch-port data from the DB
 func GetSwitchPort(switchID string) ([]string, error) {
 	var port []string
-	data, err := db.Connector.Get(TableSwitchPorts, switchID)
+	data, err := db.Connector.Get(db.TableSwitchPorts, switchID)
 	if err != nil {
 		return nil, fmt.Errorf("while trying to collect port data, got: %w", err)
 	}
@@ -77,10 +77,10 @@ func GetSwitchPort(switchID string) ([]string, error) {
 
 // SavePort stores the port data in the DB
 func SavePort(portID string, data *dmtf.Port) error {
-	return SaveToDB(TablePort, portID, *data)
+	return SaveToDB(db.TablePort, portID, *data)
 }
 
 // SaveSwitchPort stores the switch-port data in the DB
 func SaveSwitchPort(switchID string, data []string) error {
-	return SaveToDB(TableSwitchPorts, switchID, data)
+	return SaveToDB(db.TableSwitchPorts, switchID, data)
 }

@@ -23,7 +23,7 @@ import (
 )
 
 func TestGetPort(t *testing.T) {
-	db.Connector = MockConnector{}
+	db.Connector = db.MockConnector{}
 	type args struct {
 		portID string
 	}

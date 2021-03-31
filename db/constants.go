@@ -29,4 +29,10 @@ const (
 	TablePort = "ACI-Port"
 	// TableZone is the table for storing zone information
 	TableZone = "ACI-Zone"
+	// TableAddressPool is the table for storing addresspool information
+	TableAddressPool = "ACI-AddressPool"
+	// TableEndPoint is the table for storing fabric endpoint information
+	TableEndPoint = "ACI-EndPoint"
+	// TableZoneDomain is the table for storing ZoneToDomainDN information
+	TableZoneDomain = "ACI-ZoneDomain"
 )

@@ -21,28 +21,7 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/db"
 )
 
-const (
-	// TableFabric is the table for storing switch and pod ids
-	TableFabric = "ACI-Fabric"
-	// TableSwitch is the table for storing switch information
-	TableSwitch = "ACI-Switch"
-	// TableSwitchChassis is the table for storing switch chassis information
-	TableSwitchChassis = "ACI-SwitchChassis"
-	// TableSwitchPorts is the table for storing ports of each switch
-	TableSwitchPorts = "ACI-SwitchPorts"
-	// TablePort is the table for storing port information
-	TablePort = "ACI-Port"
-	// TableZone is the table for storing zone information
-	TableZone = "ACI-Zone"
-	// TableAddressPool is the table for storing addresspool information
-	TableAddressPool = "ACI-AddressPool"
-	// TableEndPoint is the table for storing fabric endpoint information
-	TableEndPoint = "ACI-EndPoint"
-	// TableZoneDomain is the table for storing ZoneToDomainDN information
-	TableZoneDomain = "ACI-ZoneDomain"
-)
-
-// SaveToDB is for adding port data to the DB
+// SaveToDB is for adding data to the DB
 func SaveToDB(table, resourceID string, data interface{}) error {
 	dataByte, err := json.Marshal(data)
 	if err != nil {

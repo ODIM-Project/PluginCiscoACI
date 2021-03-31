@@ -23,7 +23,7 @@ import (
 )
 
 func TestGetZone(t *testing.T) {
-	db.Connector = MockConnector{}
+	db.Connector = db.MockConnector{}
 	type args struct {
 		fabricID string
 		zoneID   string
@@ -68,7 +68,7 @@ func TestGetZone(t *testing.T) {
 }
 
 func TestGetAllZones(t *testing.T) {
-	db.Connector = MockConnector{}
+	db.Connector = db.MockConnector{}
 	type args struct {
 		fabricID string
 	}
