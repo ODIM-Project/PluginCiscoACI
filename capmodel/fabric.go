@@ -25,7 +25,7 @@ import (
 // GetFabric collects the fabric data from the DB
 func GetFabric(fabricID string) (capdata.Fabric, error) {
 	var fabric capdata.Fabric
-	data, err := db.Connector.Get(TableFabric, fabricID)
+	data, err := db.Connector.Get(db.TableFabric, fabricID)
 	if err != nil {
 		return fabric, err
 	}
@@ -38,7 +38,7 @@ func GetFabric(fabricID string) (capdata.Fabric, error) {
 // GetAllFabric collects the fabric data from the DB
 func GetAllFabric(pattern string) (map[string]capdata.Fabric, error) {
 	allFabricData := make(map[string]capdata.Fabric)
-	fabricIDs, err := db.Connector.GetAllMatchingKeys(TableFabric, pattern)
+	fabricIDs, err := db.Connector.GetAllMatchingKeys(db.TableFabric, pattern)
 	if err != nil {
 		return nil, fmt.Errorf("while trying to collect all fabric data, got: %w", err)
 	}
@@ -54,10 +54,10 @@ func GetAllFabric(pattern string) (map[string]capdata.Fabric, error) {
 
 // SaveFabric stores the fabric data in the DB
 func SaveFabric(fabricID string, data *capdata.Fabric) error {
-	return SaveToDB(TableFabric, fabricID, *data)
+	return SaveToDB(db.TableFabric, fabricID, *data)
 }
 
 // UpdateFabric updates the fabric data stored in the DB
 func UpdateFabric(fabricID string, data *capdata.Fabric) error {
-	return UpdateDbData(TableFabric, fabricID, *data)
+	return UpdateDbData(db.TableFabric, fabricID, *data)
 }

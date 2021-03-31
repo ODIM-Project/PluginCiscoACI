@@ -38,7 +38,7 @@ func (d MockConnector) GetAllMatchingKeys(table, pattern string) ([]string, erro
 
 // Get is for mocking DB Get operation
 func (d MockConnector) Get(table, resourceID string) (string, error) {
-	if resourceID == "validID" {
+	if resourceID == "validID" || resourceID == "validID:zoneID" {
 		switch table {
 		case TableFabric:
 			return `{"SwitchData": ["test"], "PodID": "test"}`, nil
@@ -49,7 +49,7 @@ func (d MockConnector) Get(table, resourceID string) (string, error) {
 		case TablePort:
 			return `{"Id": "validID", "FabricID": "validID"}`, nil
 		case TableZone:
-			return `{"Id": "validID", "FabricID": "validID"}`, nil
+			return `{"ID": "zoneID"}`, nil
 		default:
 		}
 	}
@@ -57,13 +57,13 @@ func (d MockConnector) Get(table, resourceID string) (string, error) {
 }
 
 // UpdateKeySet is for mocking DB SADD operation
-func (d MockConnector) UpdateKeySet(key string, members ...interface{}) (err error) {
+func (d MockConnector) UpdateKeySet(key string, member string) (err error) {
 	return nil
 }
 
 // GetKeySetMembers is for mocking DB SMEMBERS operation
 func (d MockConnector) GetKeySetMembers(key string) (list []string, err error) {
-	return []string{"validID"}, nil
+	return []string{"zoneID"}, nil
 }
 
 // Delete is for mocking DB Delete operation
@@ -72,6 +72,6 @@ func (d MockConnector) Delete(table, resourceID string) (err error) {
 }
 
 // DeleteKeySetMembers is for mocking DB SREM operation
-func (d MockConnector) DeleteKeySetMembers(key string, members ...interface{}) (err error) {
+func (d MockConnector) DeleteKeySetMembers(key string, member string) (err error) {
 	return nil
 }

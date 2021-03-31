@@ -26,7 +26,7 @@ import (
 func GetEndpoints(fabricID, oid string) (capdata.EndpointData, error) {
 	var endpoint capdata.EndpointData
 	key := fmt.Sprintf("%s:%s", fabricID, oid)
-	data, err := db.Connector.Get(TableEndPoint, key)
+	data, err := db.Connector.Get(db.TableEndPoint, key)
 	if err != nil {
 		return endpoint, err
 	}
@@ -39,7 +39,7 @@ func GetEndpoints(fabricID, oid string) (capdata.EndpointData, error) {
 // GetAllEndpoints collects all the endpoint data belonging to a fabric from the DB
 func GetAllEndpoints(fabricID string) (map[string]capdata.EndpointData, error) {
 	allEndpointData := make(map[string]capdata.EndpointData)
-	keySet := fmt.Sprintf("%s:%s", TableEndPoint, fabricID)
+	keySet := fmt.Sprintf("%s:%s", db.TableEndPoint, fabricID)
 	endpointOids, err := db.Connector.GetKeySetMembers(keySet)
 	if err != nil {
 		return nil, fmt.Errorf("while trying to collect all endpoint data, got: %v", err)
@@ -57,10 +57,10 @@ func GetAllEndpoints(fabricID string) (map[string]capdata.EndpointData, error) {
 // SaveEndpoint stores the endpoint data in the DB
 func SaveEndpoint(fabricID, oid string, data *capdata.EndpointData) error {
 	key := fmt.Sprintf("%s:%s", fabricID, oid)
-	if err := SaveToDB(TableEndPoint, key, *data); err != nil {
+	if err := SaveToDB(db.TableEndPoint, key, *data); err != nil {
 		return fmt.Errorf("while trying to store endpoint data, got: %v", err)
 	}
-	keySet := fmt.Sprintf("%s:%s", TableEndPoint, fabricID)
+	keySet := fmt.Sprintf("%s:%s", db.TableEndPoint, fabricID)
 	if err := db.Connector.UpdateKeySet(keySet, oid); err != nil {
 		return fmt.Errorf("while trying to update endpoint key set members, got: %v", err)
 	}
@@ -70,16 +70,16 @@ func SaveEndpoint(fabricID, oid string, data *capdata.EndpointData) error {
 // UpdateEndpoint updates the endpoint data stored in the DB
 func UpdateEndpoint(fabricID, oid string, data *capdata.EndpointData) error {
 	key := fmt.Sprintf("%s:%s", fabricID, oid)
-	return UpdateDbData(TableEndPoint, key, *data)
+	return UpdateDbData(db.TableEndPoint, key, *data)
 }
 
 // DeleteEndpoint deletes the endpoint data stored in the DB
 func DeleteEndpoint(fabricID, oid string) error {
 	key := fmt.Sprintf("%s:%s", fabricID, oid)
-	if err := db.Connector.Delete(TableEndPoint, key); err != nil {
+	if err := db.Connector.Delete(db.TableEndPoint, key); err != nil {
 		return fmt.Errorf("while trying to remove endpoint data, got: %v", err)
 	}
-	keySet := fmt.Sprintf("%s:%s", TableEndPoint, fabricID)
+	keySet := fmt.Sprintf("%s:%s", db.TableEndPoint, fabricID)
 	if err := db.Connector.DeleteKeySetMembers(keySet, oid); err != nil {
 		return fmt.Errorf("while trying to remove member from endpoint key set, got: %v", err)
 	}

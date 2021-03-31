@@ -27,7 +27,7 @@ import (
 func GetZone(fabricID, zoneURI string) (model.Zone, error) {
 	var zone model.Zone
 	key := fmt.Sprintf("%s:%s", fabricID, zoneURI)
-	data, err := db.Connector.Get(TableZone, key)
+	data, err := db.Connector.Get(db.TableZone, key)
 	if err != nil {
 		return zone, fmt.Errorf("while trying to collect zone data, got: %w", err)
 	}
@@ -40,7 +40,7 @@ func GetZone(fabricID, zoneURI string) (model.Zone, error) {
 // GetZoneDomain collects the ZoneToDomainDN data from the DB
 func GetZoneDomain(zoneURI string) (capdata.ACIDomainData, error) {
 	var domainData capdata.ACIDomainData
-	data, err := db.Connector.Get(TableZoneDomain, zoneURI)
+	data, err := db.Connector.Get(db.TableZoneDomain, zoneURI)
 	if err != nil {
 		return domainData, fmt.Errorf("while trying to collect zone domain data, got: %w", err)
 	}
@@ -53,7 +53,7 @@ func GetZoneDomain(zoneURI string) (capdata.ACIDomainData, error) {
 // GetAllZones collects the zone data from the DB
 func GetAllZones(fabricID string) (map[string]model.Zone, error) {
 	allZones := make(map[string]model.Zone)
-	keySet := fmt.Sprintf("%s:%s", TableZone, fabricID)
+	keySet := fmt.Sprintf("%s:%s", db.TableZone, fabricID)
 	zoneURIs, err := db.Connector.GetKeySetMembers(keySet)
 	if err != nil {
 		return nil, fmt.Errorf("while trying to collect all zone keys, got: %w", err)
@@ -71,10 +71,10 @@ func GetAllZones(fabricID string) (map[string]model.Zone, error) {
 // SaveZone stores the zone data in the DB
 func SaveZone(fabricID, zoneURI string, data *model.Zone) error {
 	key := fmt.Sprintf("%s:%s", fabricID, zoneURI)
-	if err := SaveToDB(TableZone, key, *data); err != nil {
+	if err := SaveToDB(db.TableZone, key, *data); err != nil {
 		return fmt.Errorf("while trying to store zone data, got: %v", err)
 	}
-	keySet := fmt.Sprintf("%s:%s", TableZone, fabricID)
+	keySet := fmt.Sprintf("%s:%s", db.TableZone, fabricID)
 	if err := db.Connector.UpdateKeySet(keySet, zoneURI); err != nil {
 		return fmt.Errorf("while trying to update zone key set members, got: %v", err)
 	}
@@ -83,7 +83,7 @@ func SaveZone(fabricID, zoneURI string, data *model.Zone) error {
 
 // SaveZoneDomain stores the ZoneToDomainDN data in the DB
 func SaveZoneDomain(zoneURI string, data *capdata.ACIDomainData) error {
-	if err := SaveToDB(TableZoneDomain, zoneURI, *data); err != nil {
+	if err := SaveToDB(db.TableZoneDomain, zoneURI, *data); err != nil {
 		return fmt.Errorf("while trying to store zone domain data, got: %v", err)
 	}
 	return nil
@@ -92,16 +92,16 @@ func SaveZoneDomain(zoneURI string, data *capdata.ACIDomainData) error {
 // UpdateZone updates the zone data stored in the DB
 func UpdateZone(fabricID, zoneURI string, data *model.Zone) error {
 	key := fmt.Sprintf("%s:%s", fabricID, zoneURI)
-	return UpdateDbData(TableZone, key, *data)
+	return UpdateDbData(db.TableZone, key, *data)
 }
 
 // DeleteZone deletes the zone data stored in the DB
 func DeleteZone(fabricID, zoneURI string) error {
 	key := fmt.Sprintf("%s:%s", fabricID, zoneURI)
-	if err := db.Connector.Delete(TableZone, key); err != nil {
+	if err := db.Connector.Delete(db.TableZone, key); err != nil {
 		return fmt.Errorf("while trying to remove zone data, got: %v", err)
 	}
-	keySet := fmt.Sprintf("%s:%s", TableZone, fabricID)
+	keySet := fmt.Sprintf("%s:%s", db.TableZone, fabricID)
 	if err := db.Connector.DeleteKeySetMembers(keySet, zoneURI); err != nil {
 		return fmt.Errorf("while trying to remove member from zone key set, got: %v", err)
 	}
@@ -110,7 +110,7 @@ func DeleteZone(fabricID, zoneURI string) error {
 
 // DeleteZoneDomain deletes the ZoneToDomainDN data stored in the DB
 func DeleteZoneDomain(zoneURI string) error {
-	if err := db.Connector.Delete(TableZoneDomain, zoneURI); err != nil {
+	if err := db.Connector.Delete(db.TableZoneDomain, zoneURI); err != nil {
 		return fmt.Errorf("while trying to remove zone domain data, got: %v", err)
 	}
 	return nil

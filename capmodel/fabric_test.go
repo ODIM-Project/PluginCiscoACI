@@ -23,7 +23,7 @@ import (
 )
 
 func TestGetFabric(t *testing.T) {
-	db.Connector = MockConnector{}
+	db.Connector = db.MockConnector{}
 	type args struct {
 		fabricID string
 	}
@@ -68,7 +68,7 @@ func TestGetFabric(t *testing.T) {
 }
 
 func TestGetAllFabric(t *testing.T) {
-	db.Connector = MockConnector{}
+	db.Connector = db.MockConnector{}
 	tests := []struct {
 		name    string
 		want    map[string]capdata.Fabric

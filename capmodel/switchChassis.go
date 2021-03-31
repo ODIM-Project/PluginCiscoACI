@@ -42,7 +42,7 @@ type SwitchChassisData struct {
 // GetSwitch collects the switch data from the DB
 func GetSwitch(switchID string) (model.Switch, error) {
 	var switchData model.Switch
-	data, err := db.Connector.Get(TableSwitch, switchID)
+	data, err := db.Connector.Get(db.TableSwitch, switchID)
 	if err != nil {
 		return switchData, err
 	}
@@ -54,13 +54,13 @@ func GetSwitch(switchID string) (model.Switch, error) {
 
 // SaveSwitch stores the switch data in the DB
 func SaveSwitch(switchID string, data *model.Switch) error {
-	return SaveToDB(TableSwitch, switchID, *data)
+	return SaveToDB(db.TableSwitch, switchID, *data)
 }
 
 // GetSwitchChassis collects the switch chassis data from the DB
 func GetSwitchChassis(chassisID string) (model.Chassis, error) {
 	var chassis model.Chassis
-	data, err := db.Connector.Get(TableSwitchChassis, chassisID)
+	data, err := db.Connector.Get(db.TableSwitchChassis, chassisID)
 	if err != nil {
 		return chassis, err
 	}
@@ -73,7 +73,7 @@ func GetSwitchChassis(chassisID string) (model.Chassis, error) {
 // GetAllSwitchChassis collects all the switch chassis data from the DB
 func GetAllSwitchChassis(pattern string) (map[string]model.Chassis, error) {
 	allChassisData := make(map[string]model.Chassis)
-	chassisIDs, err := db.Connector.GetAllMatchingKeys(TableSwitchChassis, pattern)
+	chassisIDs, err := db.Connector.GetAllMatchingKeys(db.TableSwitchChassis, pattern)
 	if err != nil {
 		return nil, fmt.Errorf("while trying to collect all switch chassis data, got: %w", err)
 	}
@@ -89,5 +89,5 @@ func GetAllSwitchChassis(pattern string) (map[string]model.Chassis, error) {
 
 // SaveSwitchChassis stores the switch chassis data in the DB
 func SaveSwitchChassis(chassisID string, data *model.Chassis) error {
-	return SaveToDB(TableSwitchChassis, chassisID, *data)
+	return SaveToDB(db.TableSwitchChassis, chassisID, *data)
 }
