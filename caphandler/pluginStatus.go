@@ -16,10 +16,17 @@
 package caphandler
 
 import (
+	"encoding/json"
+	"github.com/ODIM-Project/ODIM/lib-utilities/common"
+	"github.com/ODIM-Project/PluginCiscoACI/capmessagebus"
+	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/capresponse"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
+	"github.com/ODIM-Project/PluginCiscoACI/config"
 	pluginConfig "github.com/ODIM-Project/PluginCiscoACI/config"
+	"github.com/ODIM-Project/PluginCiscoACI/constants"
 	iris "github.com/kataras/iris/v12"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
@@ -62,6 +69,10 @@ func GetPluginStatus(ctx iris.Context) {
 
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(resp)
+	if capmodel.PluginIntialStatus == false {
+		go publishResourceAddedEvent()
+		capmodel.PluginIntialStatus = true
+	}
 
 }
 
@@ -69,4 +80,36 @@ func GetPluginStatus(ctx iris.Context) {
 func GetPluginStartup(ctx iris.Context) {
 	// TODO: implementation pending
 	ctx.StatusCode(http.StatusNotImplemented)
+}
+
+func publishResourceAddedEvent() {
+	time.Sleep(5 * time.Second)
+	// Send resource added event odim
+	allFabric, err := capmodel.GetAllFabric("")
+	if err != nil {
+		log.Fatal("while fetching all stored fabric data got: " + err.Error())
+	}
+	for fabricID := range allFabric {
+		var event = common.Event{
+			EventID:   uuid.NewV4().String(),
+			MessageID: constants.ResourceCreatedMessageID,
+			EventType: "ResourceAdded",
+			OriginOfCondition: &common.Link{
+				Oid: "/ODIM/v1/Fabrics/" + fabricID,
+			},
+		}
+		var events = []common.Event{event}
+		var messageData = common.MessageData{
+			Name:      "Fabric added event",
+			Context:   "/redfish/v1/$metadata#Event.Event",
+			OdataType: constants.EventODataType,
+			Events:    events,
+		}
+		data, _ := json.Marshal(messageData)
+		eventData := common.Events{
+			IP:      config.Data.LoadBalancerConf.Host,
+			Request: data,
+		}
+		capmessagebus.Publish(eventData)
+	}
 }
