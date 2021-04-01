@@ -70,7 +70,7 @@ func GetPluginStatus(ctx iris.Context) {
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(resp)
 	if capmodel.PluginIntialStatus == false {
-		go publishResourceAddedEvent()
+		go publishFabricAddedEvent()
 		capmodel.PluginIntialStatus = true
 	}
 
@@ -82,7 +82,7 @@ func GetPluginStartup(ctx iris.Context) {
 	ctx.StatusCode(http.StatusNotImplemented)
 }
 
-func publishResourceAddedEvent() {
+func publishFabricAddedEvent() {
 	time.Sleep(5 * time.Second)
 	// Send resource added event odim
 	allFabric, err := capmodel.GetAllFabric("")
