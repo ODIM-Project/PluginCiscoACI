@@ -14,7 +14,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -34,7 +33,6 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
-	"github.com/ODIM-Project/PluginCiscoACI/constants"
 	"github.com/ODIM-Project/PluginCiscoACI/db"
 
 	"github.com/ciscoecosystem/aci-go-client/models"
@@ -238,34 +236,7 @@ func intializeACIData() {
 
 	//updating the plugin status
 	caputilities.Status.Available = "yes"
-	// Send resource added event odim
-	allFabric, err := capmodel.GetAllFabric("")
-	if err != nil {
-		log.Fatal("while fetching all stored fabric data got: " + err.Error())
-	}
-	for fabricID := range allFabric {
-		var event = common.Event{
-			EventID:   uuid.NewV4().String(),
-			MessageID: constants.ResourceCreatedMessageID,
-			EventType: "ResourceAdded",
-			OriginOfCondition: &common.Link{
-				Oid: "/ODIM/v1/Fabrics/" + fabricID,
-			},
-		}
-		var events = []common.Event{event}
-		var messageData = common.MessageData{
-			Name:      "Fabric added event",
-			Context:   "/redfish/v1/$metadata#Event.Event",
-			OdataType: constants.EventODataType,
-			Events:    events,
-		}
-		data, _ := json.Marshal(messageData)
-		eventData := common.Events{
-			IP:      config.Data.LoadBalancerConf.Host,
-			Request: data,
-		}
-		capmessagebus.Publish(eventData)
-	}
+
 	return
 }
 

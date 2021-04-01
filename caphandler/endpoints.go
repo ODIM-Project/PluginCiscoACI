@@ -217,6 +217,38 @@ func DeleteEndpointInfo(ctx iris.Context) {
 		ctx.StatusCode(statusCode)
 		return
 	}
+	// check if endpoint is associated with any ZoneOfEndpoints
+	// get all zones
+	zoneCollectionData, err := capmodel.GetAllZones(fabricID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
+		return
+
+	}
+	for zoneURI, zoneData := range zoneCollectionData {
+		if zoneData.ZoneType == "ZoneOfEndpoints" {
+			updateRequired := false
+			endpointsList := zoneData.Links.Endpoints
+			for i := 0; i < len(endpointsList); i++ {
+				if endpointsList[i].Oid == uri {
+					endpointsList = append(endpointsList[:i], endpointsList[i+1:]...)
+					updateRequired = true
+					break
+				}
+			}
+			if updateRequired {
+				zoneData.Links.Endpoints = endpointsList
+				if err = capmodel.UpdateZone(fabricID, zoneURI, &zoneData); err != nil {
+					errMsg := fmt.Sprintf("failed to update zone data for %s: %s", zoneURI, err.Error())
+					createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
+					return
+				}
+			}
+
+		}
+	}
+
 	if err := capmodel.DeleteEndpoint(fabricID, uri); err != nil {
 		errMsg := fmt.Sprintf("failed to delete endpoint data for uri %s: %s", uri, err.Error())
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Endpoint", fabricID})

@@ -21,6 +21,9 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/db"
 )
 
+// PluginIntialStatus hold value to check if it's intial status request to plugin
+var PluginIntialStatus = false
+
 // SaveToDB is for adding data to the DB
 func SaveToDB(table, resourceID string, data interface{}) error {
 	dataByte, err := json.Marshal(data)
