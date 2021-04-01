@@ -118,7 +118,7 @@ func routers() *iris.Application {
 	pluginRoutes.Post("/Startup", capmiddleware.BasicAuth, caphandler.GetPluginStartup)
 	chassisRoutes := pluginRoutes.Party("/Chassis", capmiddleware.BasicAuth)
 	chassisRoutes.Get("/", caphandler.GetChassisCollection)
-	chassisRoutes.Get("/{id}", capmiddleware.BasicAuth, caphandler.GetChassis)
+	chassisRoutes.Get("/{id}", caphandler.GetChassis)
 	chassisRoutes.Any("/{id}", caphandler.ChassisMethodNotAllowed)
 	fabricRoutes := pluginRoutes.Party("/Fabrics", capmiddleware.BasicAuth)
 	fabricRoutes.Get("/", caphandler.GetFabricResource)
