@@ -69,3 +69,20 @@ func GetChassis(ctx iris.Context) {
 	ctx.JSON(data)
 	return
 }
+
+// ChassisMethodNotAllowed holds builds reponse for the unallowed http operation on Chassis URLs and returns 405 error.
+func ChassisMethodNotAllowed(ctx iris.Context) {
+	ctx.ResponseWriter().Header().Set("Allow", "GET")
+	ctx.StatusCode(http.StatusMethodNotAllowed)
+	errArgs := &response.Args{
+		Code: response.GeneralError,
+		ErrorArgs: []response.ErrArgs{
+			response.ErrArgs{
+				StatusMessage: response.ActionNotSupported,
+				MessageArgs:   []interface{}{ctx.Request().Method},
+			},
+		},
+	}
+	ctx.JSON(errArgs.CreateGenericErrorResponse())
+	return
+}
