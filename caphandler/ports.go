@@ -145,6 +145,11 @@ func PatchPort(ctx iris.Context) {
 			portData.Links.ConnectedPorts = nil
 		}
 	}
+	if err := capmodel.UpdatePort(uri, portData); err != nil {
+		errMsg := fmt.Sprintf("failed to update port data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Ports", uri})
+		return
+	}
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(portData)
 }
