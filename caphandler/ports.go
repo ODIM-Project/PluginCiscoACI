@@ -128,9 +128,9 @@ func PatchPort(ctx iris.Context) {
 					return
 				}
 				if !checkFlag {
-					errMsg := fmt.Sprintf("Ethernet data for uri %s not found", uri)
+					errMsg := fmt.Sprintf("Ethernet data for uri %s not found", reqURL)
 					log.Error(errMsg)
-					resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Ethernet", uri})
+					resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Ethernet", reqURL})
 					ctx.StatusCode(http.StatusNotFound)
 					ctx.JSON(resp)
 					return
