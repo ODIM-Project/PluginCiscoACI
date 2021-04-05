@@ -389,10 +389,11 @@ func deleteZoneOfZone(fabricID, uri string, respData *model.Zone) error {
 	var parentZoneLink model.Link
 	var parentZone model.Zone
 	if respData.Links != nil {
+		var err error
 		if respData.Links.ContainedByZonesCount != 0 {
 			// Assuming contained by link is only one
 			parentZoneLink = respData.Links.ContainedByZones[0]
-			parentZone, err := capmodel.GetZone(fabricID, parentZoneLink.Oid)
+			parentZone, err = capmodel.GetZone(fabricID, parentZoneLink.Oid)
 			if err != nil {
 				return fmt.Errorf("failed to fetch zone data for %s: %s", parentZoneLink.Oid, err.Error())
 			}
@@ -411,7 +412,7 @@ func deleteZoneOfZone(fabricID, uri string, respData *model.Zone) error {
 			}
 		}
 		aciServiceManager := caputilities.GetConnection()
-		err := aciServiceManager.DeleteApplicationProfile(respData.Name, parentZone.Name)
+		err = aciServiceManager.DeleteApplicationProfile(respData.Name, parentZone.Name)
 		if err != nil {
 			errMsg := fmt.Errorf("Error deleting Application Profile")
 			return errMsg
