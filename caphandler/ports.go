@@ -128,9 +128,9 @@ func PatchPort(ctx iris.Context) {
 					return
 				}
 				if !checkFlag {
-					errMsg := fmt.Sprintf("Ethernet data for uri %s not found", uri)
+					errMsg := fmt.Sprintf("Ethernet data for uri %s not found", reqURL)
 					log.Error(errMsg)
-					resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Ethernet", uri})
+					resp := updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{"Ethernet", reqURL})
 					ctx.StatusCode(http.StatusNotFound)
 					ctx.JSON(resp)
 					return
@@ -144,6 +144,11 @@ func PatchPort(ctx iris.Context) {
 		} else {
 			portData.Links.ConnectedPorts = nil
 		}
+	}
+	if err := capmodel.UpdatePort(uri, portData); err != nil {
+		errMsg := fmt.Sprintf("failed to update port data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Ports", uri})
+		return
 	}
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(portData)

@@ -84,3 +84,8 @@ func SavePort(portID string, data *dmtf.Port) error {
 func SaveSwitchPort(switchID string, data []string) error {
 	return SaveToDB(db.TableSwitchPorts, switchID, data)
 }
+
+// UpdatePort updates the port data stored in the DB
+func UpdatePort(portID string, data *dmtf.Port) error {
+	return UpdateDbData(db.TablePort, portID, *data)
+}
