@@ -115,16 +115,15 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     /kube_deploy_nodes.yaml --add plugin --plugin aciplugin
     ```
 
-12. un the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
+12. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
 
     `$ kubectl get pods -n odim`
-
-Example output showing the Cisco ACI plugin pod details:
-
-```
-NAME 						READY 			STATUS 			RESTARTS 			AGE
-aciplugin-5fc4b6788-2xx97   1/1 			Running 		0 			 		4d22h
-```
+    
+    Example output showing the Cisco ACI plugin pod details:
+    
+    | NAME                      | READY | STATUS  | RESTARTS | AGE   |
+    | ------------------------- | ----- | ------- | -------- | ----- |
+    | aciplugin-5fc4b6788-2xx97 | 1/1   | Running | 0        | 4d22h |
 
 13. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
 
