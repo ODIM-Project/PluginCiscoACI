@@ -230,7 +230,7 @@ curl -i POST \
 
       -   Links to all the added plugin managers.
 
-   2. To identify the plugin Id of the added plugin, perform HTTP `GET` on each manager link in the response. 
+   2. To identify the plugin id of the added plugin, perform HTTP `GET` on each manager link in the response. 
 
       The JSON response body for a plugin manager has `Name` as the plugin name.
       Example:
@@ -321,7 +321,7 @@ curl -i POST \
 
    | Placeholder                      | Description                                                  |
    | -------------------------------- | ------------------------------------------------------------ |
-   | <plugin_name>                    | Name of the plugin. Example: "grfplugin"<br>                 |
+   | <plugin_name>                    | Name of the plugin. Example: "aciplugin"<br>                 |
    | <k8s_self_node_IP>               | The physical IP address of the cluster node.                 |
    | <k8s_node2_IP><k8s_node3_IP><br> | The physical IP addresses of the other cluster nodes.        |
    | <plugin_node_port>               | The port specified for the eventListenerNodePort configuration parameter in the `<plugin_name>-config.yaml` file. |
@@ -355,10 +355,8 @@ The following table lists all the configuration parameters required to deploy a 
 | RootServiceUUID       | RootServiceUUID to be used by the plugin service. To generate an UUID, run the following command:<br> ```$ uuidgen```<br> Copy the output and paste it as the value for rootServiceUUID. |
 | username              | Username of the plugin.                                      |
 | password              | The encrypted password of the plugin.                        |
-| odimUsername          | The username of the default administrator account of Resource Aggregator for ODIM . <br />**NOTE**: This parameter is applicable only to URP. |
-| odimPassword          | The encrypted password of the default administrator account of Resource Aggregator for ODIM.<br />**NOTE**: This parameter is applicable only to URP.<br> To generate the encrypted password, run the command specified in "Command to generate an encrypted password". |
 | lbHost                | If there is only one cluster node, the lbHost is the IP address of the cluster node. If there is more than one cluster node \( haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived. |
-| lbPort                | If it is a one-cluster configuration, the lbPort must be same as eventListenerNodePort. <br>If there is more than one cluster node \( haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file. |
-| logPath               | The path where the plugin logs are stored. The default path is `/var/log/<plugin_name>_logs`<br />**Example**: /var/log/grfplugin\_logs |
+| lbPort                | If it is a one-cluster configuration, the lbPort must be same as eventListenerNodePort. <br>If there is more than one cluster node \(haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file. |
+| logPath               | The path where the plugin logs are stored. The default path is `/var/log/<plugin_name>_logs`<br />**Example**: `/var/log/grfplugin\_logs` |
 
  
