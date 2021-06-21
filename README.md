@@ -356,7 +356,7 @@ The following table lists all the configuration parameters required to deploy a 
 | username              | Username of the plugin.                                      |
 | password              | The encrypted password of the plugin.                        |
 | lbHost                | If there is only one cluster node, the lbHost is the IP address of the cluster node. If there is more than one cluster node \( haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived. |
-| lbPort                | If it is a one-cluster configuration, the lbPort must be same as eventListenerNodePort. <br>If there is more than one cluster node \(haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file. |
+| lbPort                | If it is a one-cluster configuration, the lbPort must be same as eventListenerNodePort.<br>If there is more than one cluster node \(haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file. |
 | logPath               | The path where the plugin logs are stored. The default path is `/var/log/<plugin_name>_logs`<br />**Example**: `/var/log/grfplugin\_logs` |
 
  
