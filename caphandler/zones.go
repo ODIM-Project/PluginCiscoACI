@@ -390,6 +390,14 @@ func deleteZoneOfZone(fabricID, uri string, respData *model.Zone) error {
 	var parentZone model.Zone
 	if respData.Links != nil {
 		var err error
+		if respData.Links.ContainedByZonesCount != 0 {
+			// Assuming contained by link is only one
+			parentZoneLink = respData.Links.ContainedByZones[0]
+			parentZone, err = capmodel.GetZone(fabricID, parentZoneLink.Oid)
+			if err != nil {
+				return fmt.Errorf("failed to fetch zone data for %s: %s", parentZoneLink.Oid, err.Error())
+			}
+		}
 		aciServiceManager := caputilities.GetConnection()
 		err = aciServiceManager.DeleteApplicationProfile(respData.Name, parentZone.Name)
 		if err != nil {
@@ -436,25 +444,17 @@ func deleteZoneOfZone(fabricID, uri string, respData *model.Zone) error {
 		if err = capmodel.DeleteZoneDomain(uri); err != nil {
 			return fmt.Errorf("failed to delete zone domain %s: %s", uri, err.Error())
 		}
-		if respData.Links.ContainedByZonesCount != 0 {
-			// Assuming contained by link is only one
-			parentZoneLink = respData.Links.ContainedByZones[0]
-			parentZone, err = capmodel.GetZone(fabricID, parentZoneLink.Oid)
-			if err != nil {
-				return fmt.Errorf("failed to fetch zone data for %s: %s", parentZoneLink.Oid, err.Error())
+		for i := 0; i < len(parentZone.Links.ContainsZones); i++ {
+			if parentZone.Links.ContainsZones[i].Oid == respData.ODataID {
+				parentZone.Links.ContainsZones[i] = parentZone.Links.ContainsZones[len(parentZone.Links.ContainsZones)-1] // Copy last element to index i.
+				parentZone.Links.ContainsZones[len(parentZone.Links.ContainsZones)-1] = model.Link{}                      // Erase last element (write zero value).
+				parentZone.Links.ContainsZones = parentZone.Links.ContainsZones[:len(parentZone.Links.ContainsZones)-1]
 			}
-			for i := 0; i < len(parentZone.Links.ContainsZones); i++ {
-				if parentZone.Links.ContainsZones[i].Oid == respData.ODataID {
-					parentZone.Links.ContainsZones[i] = parentZone.Links.ContainsZones[len(parentZone.Links.ContainsZones)-1] // Copy last element to index i.
-					parentZone.Links.ContainsZones[len(parentZone.Links.ContainsZones)-1] = model.Link{}                      // Erase last element (write zero value).
-					parentZone.Links.ContainsZones = parentZone.Links.ContainsZones[:len(parentZone.Links.ContainsZones)-1]
-				}
-			}
-			parentZone.Links.ContainsZonesCount = len(parentZone.Links.ContainsZones)
+		}
+		parentZone.Links.ContainsZonesCount = len(parentZone.Links.ContainsZones)
 
-			if err = capmodel.UpdateZone(fabricID, parentZoneLink.Oid, &parentZone); err != nil {
-				return fmt.Errorf("failed to update zone data for %s: %s", parentZoneLink.Oid, err.Error())
-			}
+		if err = capmodel.UpdateZone(fabricID, parentZoneLink.Oid, &parentZone); err != nil {
+			return fmt.Errorf("failed to update zone data for %s: %s", parentZoneLink.Oid, err.Error())
 		}
 
 		return nil
