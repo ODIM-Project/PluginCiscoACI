@@ -1287,11 +1287,11 @@ curl -i -X DELETE \
    }
    ```
 
-   In this content, replace the following placeholders \(highlighted in bold\) with the actual values:
+   In this content, replace the following placeholders with the actual values:
 
-   | Placeholder   | Description                                  |
-   | ------------- | -------------------------------------------- |
-| <plugin_name> | Name of the plugin. Example: "aciplugin"<br> |
+   | Placeholder   | Description                              |
+   | ------------- | ---------------------------------------- |
+   | <plugin_name> | Name of the plugin. Example: "aciplugin" |
    
 4. Restart Nginx systemd service only on the leader node \(cluster node where Keepalived priority is set to a higher number\): 
 
