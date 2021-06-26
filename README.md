@@ -51,8 +51,8 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    $ cp ~/ODIM/odim-controller/helmcharts/aciplugin/aciplugin-config.yaml ~/plugins/aciplugin
    ```
 
-5. Open the Dell plugin configuration YAML file.
 5. Open the Cisco ACI plugin configuration YAML file.
+
    ```
    $ vi ~/plugins/aciplugin/aciplugin-config.yaml
    ```
@@ -89,7 +89,6 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     odimUserName: admin
     odimPassword: Od!m12$4
    ```
-
 8. Update the following mandatory parameters in the plugin configuration file:
 
    - **hostname**: Hostname of the cluster node where the Cisco ACI plugin will be installed.
@@ -115,12 +114,11 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
       The Helm package for the Cisco ACI plugin is created in the tgz format.
 
-8. Save the Dell plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
+
    ```
    $ sudo docker save aciplugin:1.0 -o ~/plugins/aciplugin/aciplugin.tar
    ```
-
 9. If it is a three-node cluster configuration, log in to each cluster node and [configure proxy server for the plugin](#configuring-proxy-server-for-a-plugin-version). 
 
    Skip this step if it is a one-node cluster configuration.
@@ -255,7 +253,7 @@ The plugin you want to add is successfully deployed.
    2. To identify the plugin Id of the added plugin, perform HTTP `GET` on each manager link in the response. 
       The JSON response body for a plugin manager has `Name` as the plugin name.
       Example:
-      The JSON response body for the URP plugin manager has `Name` as `CiscoACI`.
+      The JSON response body for the Cisco ACI plugin manager has `Name` as `CiscoACI`.
 
       **Sample response**
 
@@ -1251,7 +1249,7 @@ curl -i -X DELETE \
    Example:
 
    ```
-   $ vi grfplugin_nginx_server.conf
+   $ vi aciplugin_nginx_server.conf
    ```
 
 3. Copy the following content into the `<plugin-name>_nginx_server.conf` file on each cluster node: 
