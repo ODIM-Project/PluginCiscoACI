@@ -3,10 +3,19 @@
 
 # Table of contents
 
-- [Deploying the Cisco ACI plugin](#deploying-the-cisco-aci-plugin)
-- [Adding a plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework)
-- [Configuring proxy server for a plugin version](#configuring-proxy-server-for-a-plugin-version)
-- [Plugin configuration parameters](#plugin-configuration-parameters)
+- [Overview of Cisco ACI](#overview-of-cisco-aci)
+	- [Deploying the Cisco ACI plugin](#deploying-the-cisco-aci-plugin)
+	- [Adding a plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework)
+	- [Cisco ACI fabric APIs](#Cisco-ACI-fabric-APIs)
+	- [Configuring proxy server for a plugin version](#configuring-proxy-server-for-a-plugin-version)
+	- [Plugin configuration parameters](#plugin-configuration-parameters)
+
+# Overview of Cisco ACI
+
+Cisco ACI (Application Centric Infrastructure) is an open ecosystem model that uses a holistic, systems-based approach to integrate hardware and software, and the physical and virtual elements, to enable unique business value for modern data centers.
+
+Resource Aggregator for ODIM supports Cisco ACI plugin that can abstract, translate, and expose southbound resource information to the resource aggregator through
+RESTful APIs.
 
 ## Deploying the Cisco ACI plugin
 
@@ -42,7 +51,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    $ cp ~/ODIM/odim-controller/helmcharts/aciplugin/aciplugin-config.yaml ~/plugins/aciplugin
    ```
 
-5. Open the Dell plugin configuration YAML file.
+5. Open the Cisco ACI plugin configuration YAML file.
 
    ```
    $ vi ~/plugins/aciplugin/aciplugin-config.yaml
@@ -54,16 +63,22 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    odimra:
     namespace: odim
     groupID: 2021
+    haDeploymentEnabled: false
    aciplugin:
-    hostname: knode1
-    eventListenerNodePort: 30084
-    aciPluginRootServiceUUID: 7a38b735-8b9f-48a0-b3e7-e5a180567d37
+    eventListenerNodePort: 30086
+    aciPluginRootServiceUUID: a127eedc-c29b-416c-8c82-413153a3c351
     username: admin
-    password: sTfTyTZFvNj5zU5Tt0TfyDYU-ye3_ZqTMnMIj-LAeXaa8vCnBqq8Ga7zV6ZdfqQCdSAzmaO5AJxccD99UHLVlQ==
+    password: sTfTyTZFvNj5zU5Tt0TfyDYU-ye3_ZqTMnMIj-
+    LAeXaa8vCnBqq8Ga7zV6ZdfqQCdSAzmaO5AJxccD99UHLVlQ==
     lbHost: 10.24.1.232
-    lbPort: 30084
+    lbPort: 30086
     logPath: /var/log/aciplugin_logs
-   
+    apicHost: 10.42.0.50
+    apicUserName: admin
+    apicPassword: Apic123
+    odimURL: https://api:45000
+    odimUserName: admin
+    odimPassword: Od!m12$4
    ```
 
 8. Update the following mandatory parameters in the plugin configuration file:
@@ -91,7 +106,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
       The Helm package for the Cisco ACI plugin is created in the tgz format.
 
-8. Save the Dell plugin Docker image on the deployment node at `~/plugins/aciplugin`.
+8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
    ```
    $ sudo docker save aciplugin:1.0 -o ~/plugins/aciplugin/aciplugin.tar
@@ -263,6 +278,205 @@ curl -i POST \
       -    `Health` is `Ok` 
 
       For more information, refer to "Managers" in [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).
+
+## Cisco ACI fabric APIs
+
+Resource Aggregator for ODIM exposes Redfish APIs to view and manage simple fabrics. A fabric is a network topology consisting of entities such as interconnecting switches, zones, endpoints, and address pools. The Redfish `Fabrics` APIs allow you to create and remove these entities in a fabric.
+
+When creating fabric entities, ensure to create them in the following order:
+
+1.  Zone-specific address pools
+
+2.  Address pools for zone of zones
+
+3.  Zone of zones
+
+4.  Endpoints
+
+5.  Zone of endpoints
+
+
+When deleting fabric entities, ensure to delete them in the following order:
+
+1.  Zone of endpoints
+
+2.  Endpoints
+
+3.  Zone of zones
+
+4.  Address pools for zone of zones
+
+5.  Zone-specific address pools
+
+
+<blockquote>
+IMPORTANT:
+
+
+Before using the `Fabrics` APIs, ensure that the fabric manager is installed, its plugin is deployed, and added into the Resource Aggregator for ODIM framework.
+
+| API URI                                                      | Operation Applicable | Required privileges            |
+| ------------------------------------------------------------ | -------------------- | ------------------------------ |
+| /redfish/v1/Fabrics/\{fabricId\}/AddressPools                | GET, POST            | `Login`, `ConfigureComponents` |
+| /redfish/v1/Fabrics/\{fabricId\}/AddressPools/\{addresspoolid\} | GET, DELETE          | `Login`, `ConfigureComponents` |
+| /redfish/v1/Fabrics/\{fabricId\}/Zones                       | GET, POST            | `Login`, `ConfigureComponents` |
+| /redfish/v1/Fabrics/\{fabricId\}/Zones/\{zoneId\}            | GET, PATCH, DELETE   | `Login`, `ConfigureComponents` |
+| /redfish/v1/Fabrics/\{fabricId\}/Endpoints                   | GET, POST            | `Login`, `ConfigureComponents` |
+| /redfish/v1/Fabrics/\{fabricId\}/Endpoints/\{endpointId\}    | GET, DELETE          | `Login`, `ConfigureComponents` |
+| /redfish/v1/Fabrics/\{fabricId\} /Switches/\{switchId\}/Ports/\{portid\}<br> | GET                  | `Login`                        |
+
+| **Method**         | `POST`                                                       |
+| ------------------ | ------------------------------------------------------------ |
+| **URI**            | `/redfish/v1/Fabrics/{fabricID}/AddressPools`                |
+| **Description**    | This operation creates an address pool for a zone of zones in a specific fabric. |
+| **Returns**        | - Link to the created address pool in the `Location` header.<br />- JSON schema representing the created address pool. |
+| **Response code**  | On success, `201 Created`                                    |
+| **Authentication** | Yes                                                          |
+
+
+>**curl command**
+
+
+```
+curl -i POST \
+   -H "X-Auth-Token:{X-Auth-Token}" \
+    -d \
+'{
+  "Name": "HPE-AddressPool-ZoneofZone",
+"Description": "VLANRange for creating domain",
+"Ethernet": {
+"IPv4": {
+"VLANIdentifierAddressRange": {
+"Lower": 100,
+"Upper": 200
+							  }
+   		}
+			}
+}'
+ 'https://{odimra_host}:{port}/redfish/v1/Fabrics/{fabricID}/AddressPools'
+
+```
+
+>**Sample request body**
+
+```
+{
+  "Name": "HPE-AddressPool-ZoneofZone",
+  "Description": "VLANRange for creating domain",
+  "Ethernet": {
+  "IPv4": {
+  "VLANIdentifierAddressRange": {
+  "Lower": 100,
+  "Upper": 200
+ 							    }
+ 		  }
+ 		 	  }
+ }
+```
+
+**Request parameters**
+
+| Parameter                    | Type                     | Description                                                  |
+| ---------------------------- | ------------------------ | ------------------------------------------------------------ |
+| Name                         | String                   | Name for the address pool.                                   |
+| Description                  | String \(optional\)<br>  | Description for the address pool.                            |
+| IPv4\{                       | \(required\)<br>         |                                                              |
+| VlanIdentifierAddressRange\{ | \(required\)<br>         | A single VLAN \(virtual LAN\) used for creating the IP interface for the user Virtual Routing and Forwarding \(VRF\).<br> |
+| Lower                        | Integer \(required\)<br> | VLAN lower address                                           |
+| Upper\}                      | Integer \(required\)<br> | VLAN upper address                                           |
+| IbgpAddressRange\{           | \(required\)<br>         | IPv4 address used as the Router Id for the VRF per switch.<br> |
+| Lower                        | String \(required\)<br>  | IPv4 lower address                                           |
+| Upper\}                      | String \(required\)<br>  | IPv4 upper address                                           |
+| EbgpAddressRange\{           | \(optional\)<br>         | External neighbor IPv4 addresses.                            |
+| Lower                        | String \(required\)<br>  | IPv4 lower address                                           |
+| Upper\} \}                   | String \(required\)<br>  | IPv4 upper address                                           |
+| Ebgp\{                       | \(optional\)<br>         |                                                              |
+| AsNumberRange\{              | \(optional\)<br>         | External neighbor ASN.<br>**NOTE:**<br> `EbgpAddressRange` and `AsNumberRange` values should be a matching sequence and should be of same length. |
+| Lower                        | Integer \(optional\)<br> |                                                              |
+| Upper\} \}                   | Integer \(optional\)<br> |                                                              |
+| BgpEvpn\{                    | \(required\)<br>         |                                                              |
+| RouteDistinguisherList       | Array \(required\)<br>   | Single route distinguisher value for the VRF.<br>            |
+| RouteTargetList              | Array \(optional\)<br>   | Route targets. By default, the route targets will be configured as both import and export.<br> |
+| GatewayIPAddressList\}       | Array \(required\)<br>   | IP pool to assign IPv4 address to the IP interface used by the VRF per switch.<br> |
+
+>**Sample response header** 
+
+```
+HTTP/1.1 201 Created
+Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
+Cache-Control:no-cache
+Connection:keep-alive
+Content-Type:application/json; charset=utf-8
+Location:/redfish/v1/Fabrics/995c85a6-3de7-477f-af6f-b52de671abd5/AddressPools/84766158-cbac-4f69-8ed5-fa5f2b331b9d
+Odata-Version:4.0
+X-Frame-Options:sameorigin
+Date:Thu, 14 May 2020 16:18:58 GMT
+Transfer-Encoding:chunked
+
+```
+
+>**Sample response body**
+
+```
+{
+   "@odata.id":"/redfish/v1/Fabrics/995c85a6-3de7-477f-af6f-b52de671abd5/AddressPools/84766158-cbac-4f69-8ed5-fa5f2b331b9d",
+   "@odata.type":"#AddressPool.vxx.AddressPool",
+   "BgpEvpn":{
+      "AnycastGatewayIPAddress":"",
+      "AnycastGatewayMACAddress":"",
+      "GatewayIPAddressList":[
+         "192.168.18.122/31",
+         "192.168.18.123/31"
+      ],
+      "RouteDistinguisherList":[
+         "65002:102"
+      ],
+      "RouteTargetList":[
+         "65002:102",
+         "65002:102"
+      ]
+   },
+   "Description":"",
+   "Ebgp":{
+      "AsNumberRange":{
+         "Lower":65120,
+         "Upper":65125
+      }
+   },
+   "IPv4":{
+      "EbgpAddressRange":{
+         "Lower":"172.12.1.10",
+         "Upper":"172.12.1.15"
+      },
+      "FabricLinkAddressRange":{
+         "Lower":"",
+         "Upper":""
+      },
+      "IbgpAddressRange":{
+         "Lower":"192.12.1.10",
+         "Upper":"192.12.1.15"
+      },
+      "LoopbackAddressRange":{
+         "Lower":"",
+         "Upper":""
+      },
+      "NativeVlan":0,
+      "VlanIdentifierAddressRange":{
+         "Lower":3002,
+         "Upper":3002
+      }
+   },
+   "Id":"84766158-cbac-4f69-8ed5-fa5f2b331b9d",
+   "Links":{
+      "Zones":[
+
+      ]
+   },
+   "Name":"AddressPool for ZoneOfZones - Vlan3002"
+}
+```
+
+
 
 ## Configuring proxy server for a plugin version
 
