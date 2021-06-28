@@ -17,7 +17,7 @@ Cisco ACI (Application Centric Infrastructure) is an open ecosystem model that u
 Resource Aggregator for ODIM supports Cisco ACI plugin that can abstract, translate, and expose southbound resource information to the resource aggregator through
 RESTful APIs.
 
-## 7Deploying the Cisco ACI plugin
+## Deploying the Cisco ACI plugin
 
 **Prerequisites**
 
