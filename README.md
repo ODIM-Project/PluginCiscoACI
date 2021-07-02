@@ -92,9 +92,9 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    
      Copy the output and paste it as the value for rootServiceUUID.
    
-   - **lbHost**: Default value is aciplugin
+   - **lbHost**: Default value is aciplugin for one node cluster configuration.  For three node cluster configuration,  \(haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived.
    
-   - **lbPort**: Default port is 30086. It is the same as eventListenerNodePort.
+   - **lbPort**: Default port is 30086. It is the same as eventListenerNodePort for one node cluster configuration. For three node cluster configuration, \(haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file.
    
    - **apicHost**: The IP address of the machine where Cisco APIC UI is launched.
    
@@ -102,7 +102,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    
    - **apicPassword**: The Cisco APIC password.
    
-   - **odimURL**: The URL of the Resource Aggregator for ODIM API service.
+   - **odimURL**: The URL of the ODIMRA API service. URL is https://api:45000.
    
    - **odimUserName**: The username of the default administrator account of Resource Aggregator for ODIM.
    
@@ -265,7 +265,7 @@ The plugin you want to add is successfully deployed.
           }
        }
     }' \
-     'https://{odim_host}:30080/redfish/v1/AggregationService/AggregationSources' -kNOTE: To generate a base64 encoded string of `{odim_username:odim_password}`, run the following command:
+     'https://{odim_host}:30080/redfish/v1/AggregationService/AggregationSources' -k
    ```
    
    <blockquote>
@@ -626,7 +626,7 @@ curl -i POST \
 | Parameter   | Type                  | Description                                                  |
 | ----------- | --------------------- | ------------------------------------------------------------ |
 | Name        | String (optional)     | Name for the zone.<br />**NOTE**: Ensure that there are no spaces. |
-| Description | String (optional)     | The description for the zone.                                |
+| Description | String (optional)     | The description for the zone.<br />**NOTE**: Ensure that there are no spaces. |
 | ZoneType    | String<br/>(required) | The type of the zone to be created. Options include:<br/>• ZoneOfZones<br/>• ZoneOfEndpoints<br/>• Default<br/>The type of the zone for a default zone is Default.<br/> |
 
 >**Sample response header** 
