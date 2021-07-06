@@ -82,7 +82,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     odimPassword: Od!m12$4
    ```
    
-8. Update the following mandatory parameters in the plugin configuration file:
+8. Update the following parameters in the plugin configuration file:
 
    - **eventListenerNodePort**: The port used for listening to the ACI plugin events. Default port is 30086.
    
@@ -121,7 +121,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
      base64 -A
      ```
    
-   Other parameters can either be empty or have default values. Optionally, you can update them with values based on your requirements. For more information on each parameter, see [Plugin configuration parameters](#plugin-configuration-parameters).
+   Other parameters can have default values. Optionally, you can update them with values based on your requirements. For more information on each parameter, see [Plugin configuration parameters](#plugin-configuration-parameters).
    
 9. Generate the Helm package for the Cisco ACI plugin on the deployment node:
 
@@ -1389,3 +1389,4 @@ The following table lists all the default ports used by the resource aggregator,
 | Kafka node port            | 30092 for a one-node cluster configuration.<br />30092, 30093, and 30094 for a three-node cluster configuration.<br> |
 | GRF plugin port            | 45001                                                        |
 | URP port                   | 45007                                                        |
+| ACI port                   | 45020                                                        |
