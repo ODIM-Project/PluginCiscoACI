@@ -6,10 +6,22 @@
 - [Overview of Cisco ACI](#overview-of-cisco-aci)
   - [Deploying the Cisco ACI plugin](#deploying-the-cisco-aci-plugin)
   - [Adding a plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework)
-  - [Cisco ACI fabric APIs](#Cisco-ACI-fabric-APIs)
   - [Configuring proxy server for a plugin version](#configuring-proxy-server-for-a-plugin-version)
   - [Plugin configuration parameters](#plugin-configuration-parameters)
   - [Resource Aggregator for ODIM default ports](#resource-aggregator-for-odim-default-ports)
+- [Cisco ACI fabric APIs](#Cisco-ACI-fabric-APIs)
+  - [Creating an addresspool for a zone of zones](#creating-an-addresspool-for-a-zone-of-zones)
+  - [Creating an addresspool for a zone of endpoints](#creating-an-addresspool-for-a-zone-of-endpoints)
+  - [Creating a default zone](#creating-a-default-zone)
+  - [Creating a zone of zones](#creating-a-zone-of-zones)
+  - [Updating the connected ports](#updating-the-connected-ports)
+  - [Creating a redundant endpoint](#creating-a-redundant-endpoint)
+  - [Creating a zone of endpoints](#creating-a-zone-of-endpoints)
+  - [Updating a zone of endpoints](#updating-a-zone-of-endpoints)
+  - [Deleting an ACI fabric entity](#deleting-an-ACI-fabric-entity)
+- [Mapping of Redfish logical entities to Cisco ACI entities](#Mapping-of-Redfish-logical-entities-to-Cisco-ACI-entities)
+
+
 
 # Overview of Cisco ACI
 
@@ -346,7 +358,109 @@ The plugin you want to add is successfully deployed.
 
       For more information, refer to "Managers" in [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).
 
-## Cisco ACI fabric APIs
+## Configuring proxy server for a plugin version
+
+1. Log in to each cluster node and navigate to the following path: 
+
+   ```
+   $ cd /opt/nginx/servers
+   ```
+
+2. Create a plugin configuration file called `<plugin-name>_nginx_server.conf`: 
+
+   ```
+   $ vi <plugin-name>_nginx_server.conf
+   ```
+
+   Example:
+
+   ```
+   $ vi aciplugin_nginx_server.conf
+   ```
+
+3. Copy the following content into the `<plugin-name>_nginx_server.conf` file on each cluster node: 
+
+   ```
+   upstream <plugin_name>  {
+     server <k8s_self_node_IP>:<plugin_node_port> max_fails=2 fail_timeout=10s;
+     server <k8s_node2_IP>:<plugin_node_port> max_fails=2 fail_timeout=10s backup;
+     server <k8s_node3_IP>:<plugin_node_port> max_fails=2 fail_timeout=10s backup;
+   }
+    
+   server {
+           listen <k8s_self_node_IP>:<nginx_plugin_port> ssl;
+           listen <VIP>:<nginx_plugin_port> ssl;
+           server_name odim_proxy;
+           ssl_session_timeout  5m;
+           ssl_prefer_server_ciphers on;
+           ssl_protocols TLSv1.2;
+           ssl_certificate  /opt/nginx/certs/server.crt;
+           ssl_certificate_key /opt/nginx/certs/server.key;
+           ssl_trusted_certificate /opt/nginx/certs/rootCA.crt;
+    
+           location / {
+                   proxy_pass https://<plugin_name>;
+                   proxy_http_version 1.1;
+                   proxy_set_header X-Forwarded-For $remote_addr;
+                   proxy_pass_header Server;
+                   proxy_ssl_protocols TLSv1.2;
+                   proxy_ssl_certificate /opt/nginx/certs/server.crt;
+                   proxy_ssl_certificate_key /opt/nginx/certs/server.key;
+                   proxy_ssl_trusted_certificate /opt/nginx/certs/rootCA.crt;
+           }
+   }
+   ```
+
+   In this content, replace the following placeholders with the actual values:
+
+   | Placeholder   | Description                              |
+   | ------------- | ---------------------------------------- |
+   | <plugin_name> | Name of the plugin. Example: "aciplugin" |
+
+4. Restart Nginx systemd service only on the leader node \(cluster node where Keepalived priority is set to a higher number\): 
+
+   ```
+   $ sudo systemctl restart nginx
+   ```
+
+   <blockquote>
+   NOTE:If you restart Nginx on a follower node \(cluster node having lower Keepalived priority number\), the service fails to start with the following error:</blockquote>
+   
+   ```
+   nginx: [emerg] bind() to <VIP>:<nginx_port> failed (99: Cannot assign requested address)
+   ```
+
+
+
+## Plugin configuration parameters
+
+The following table lists all the configuration parameters required to deploy a plugin service:
+
+| Parameter           | Description                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| odimra              | List of configurations required for deploying the services of Resource Aggregator for ODIM and third-party services.<br> **NOTE**: Ensure the values of the parameters listed under odimra are the same as the ones specified in the `kube_deploy_nodes.yaml` file. |
+| namespace           | Namespace to be used for creating the service pods of Resource Aggregator for ODIM. Default value is "odim". You can optionally change it to a different value. |
+| groupID             | Group ID to be used for creating the odimra group. Default value is 2021. You can optionally change it to a different value.<br>**NOTE**: Ensure that the group id is not already in use on any of the nodes. |
+| haDeploymentEnabled | When set to true, it deploys third-party services as a three-instance cluster. By default, it is set to true. Before setting it to false, ensure there are at least three nodes in the Kubernetes cluster. |
+| username            | Username of the plugin.                                      |
+| password            | The encrypted password of the plugin.                        |
+| logPath             | The path where the plugin logs are stored. Default path is `/var/log/<plugin_name>_logs`<br/>**Example**: `/var/log/aciplugin_logs`<br/> |
+
+## Resource Aggregator for ODIM default ports
+
+The following table lists all the default ports used by the resource aggregator, plugins, and third-party services.
+
+| Port name                  | Ports                                                        |
+| -------------------------- | ------------------------------------------------------------ |
+| Container ports            | 45000, 45101-45201, 9092, 9082, 6380, 6379, 8500, 8300, 8302, 8301, 8600, 2181<br> |
+| API node port              | 30080                                                        |
+| Plugin event listener port | 30083                                                        |
+| Kafka node port            | 30092 for a one-node cluster configuration.<br />30092, 30093, and 30094 for a three-node cluster configuration.<br> |
+| GRF plugin port            | 45001                                                        |
+| URP port                   | 45007                                                        |
+| ACI port                   | 45020                                                        |
+
+# Cisco ACI fabric APIs
 
 Resource Aggregator for ODIM exposes Redfish APIs to view and manage simple fabrics. A fabric is a network topology consisting of entities such as interconnecting switches, zones, endpoints, and address pools. The Redfish `Fabrics` APIs allow you to create and remove these entities in a fabric.
 
@@ -357,19 +471,6 @@ When creating fabric entities, ensure to create them in the following order:
 3.  Zone of zones
 4.  Endpoints
 5.  Zone of endpoints
-
-
-When deleting fabric entities, ensure to delete them in the following order:
-
-1.  Zone of endpoints
-
-2.  Endpoints
-
-3.  Zone of zones
-
-4.  Default zone
-
-5.  Address pools
 
 <blockquote>
     IMPORTANT:Before using the `Fabrics` APIs, ensure that the fabric manager is installed, its plugin is deployed, and added into the Resource Aggregator for ODIM framework. </blockquote>
@@ -382,7 +483,7 @@ When deleting fabric entities, ensure to delete them in the following order:
 | /redfish/v1/Fabrics/\{fabricId\}/Zones/\{zoneId\}            | GET, PATCH, DELETE   | `Login`, `ConfigureComponents` |
 | /redfish/v1/Fabrics/\{fabricId\}/Endpoints                   | GET, POST            | `Login`, `ConfigureComponents` |
 | /redfish/v1/Fabrics/\{fabricId\}/Endpoints/\{endpointId\}    | GET, DELETE          | `Login`, `ConfigureComponents` |
-| /redfish/v1/Fabrics/\{fabricId\} /Switches/\{switchId\}/Ports/\{portid\}<br> | GET                  | `Login`                        |
+| /redfish/v1/Fabrics/\{fabricId\}/Switches/\{switchId\}/Ports/\{portid\}<br> | GET                  | `Login`                        |
 
 ## Creating an addresspool for a zone of zones
 
@@ -1267,8 +1368,6 @@ c219ad891842"
 
 ## Deleting an ACI fabric entity
 
-## 
-
 | **Method**         | `DELETE`                                                     |
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/AddressPools/{addresspoolid}`<br/>`/redfish/v1/Fabrics/{fabricID}/Zones/{zoneid}`<br/>`/redfish/v1/Fabrics/{fabricID}/Endpoints/{endpointid}` |
@@ -1291,102 +1390,24 @@ curl -i -X DELETE \
 'https://{odim_host}:{port}/redfish/v1/Fabrics/{fabricID}/Endpoints/{endpointid}'
 ```
 
-## Configuring proxy server for a plugin version
+# Mapping of Redfish logical entities to Cisco ACI entities
 
-1. Log in to each cluster node and navigate to the following path: 
+| Redfish Logical Entity                                       | Equivalent Cisco ACI entity                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Default zone                                                 | Tenant                                                       |
+| *ZoneOfZone*                                                 | Application profile and VRF                                  |
+| *VLANIdentifierAddressRange of ZoneOfZoneAddressPool*        | VLAN range of a domain.                                      |
+| Redundant ports of an endpoint                               | VPC Policy Group                                             |
+| *ZoneOfEndpoints*                                            | BridgeDomain and Application EPGs (Endpoint Group)           |
+| *GatewayIPAddress of ZoneOfEndpoints'* addresspool           | Subnet in BridgeDomain                                       |
+| *VLANIdentifierAddressRange of ZoneOfEndpoints'* addresspool | VLAN in StaticPort of Application EPGs                       |
+| Health and status of Redfish fabrics, switches, and ports    | Health and status of ACI fabrics, switches, and ports. See the following table. |
 
-   ```
-   $ cd /opt/nginx/servers
-   ```
+**Mapping of Redfish fabric health to ACI fabric health range**
 
-2. Create a plugin configuration file called `<plugin-name>_nginx_server.conf`: 
+| Redfish representation | Equivalent ACI range |
+| ---------------------- | -------------------- |
+| OK                     | 91 to 100            |
+| Warning                | 31 to 90             |
+| Critical               | Lesser than 31       |
 
-   ```
-   $ vi <plugin-name>_nginx_server.conf
-   ```
-
-   Example:
-
-   ```
-   $ vi aciplugin_nginx_server.conf
-   ```
-
-3. Copy the following content into the `<plugin-name>_nginx_server.conf` file on each cluster node: 
-
-   ```
-   upstream <plugin_name>  {
-     server <k8s_self_node_IP>:<plugin_node_port> max_fails=2 fail_timeout=10s;
-     server <k8s_node2_IP>:<plugin_node_port> max_fails=2 fail_timeout=10s backup;
-     server <k8s_node3_IP>:<plugin_node_port> max_fails=2 fail_timeout=10s backup;
-   }
-    
-   server {
-           listen <k8s_self_node_IP>:<nginx_plugin_port> ssl;
-           listen <VIP>:<nginx_plugin_port> ssl;
-           server_name odim_proxy;
-           ssl_session_timeout  5m;
-           ssl_prefer_server_ciphers on;
-           ssl_protocols TLSv1.2;
-           ssl_certificate  /opt/nginx/certs/server.crt;
-           ssl_certificate_key /opt/nginx/certs/server.key;
-           ssl_trusted_certificate /opt/nginx/certs/rootCA.crt;
-    
-           location / {
-                   proxy_pass https://<plugin_name>;
-                   proxy_http_version 1.1;
-                   proxy_set_header X-Forwarded-For $remote_addr;
-                   proxy_pass_header Server;
-                   proxy_ssl_protocols TLSv1.2;
-                   proxy_ssl_certificate /opt/nginx/certs/server.crt;
-                   proxy_ssl_certificate_key /opt/nginx/certs/server.key;
-                   proxy_ssl_trusted_certificate /opt/nginx/certs/rootCA.crt;
-           }
-   }
-   ```
-
-   In this content, replace the following placeholders with the actual values:
-
-   | Placeholder   | Description                              |
-   | ------------- | ---------------------------------------- |
-   | <plugin_name> | Name of the plugin. Example: "aciplugin" |
-   
-4. Restart Nginx systemd service only on the leader node \(cluster node where Keepalived priority is set to a higher number\): 
-
-   ```
-   $ sudo systemctl restart nginx
-   ```
-
-   <blockquote>
-   NOTE:If you restart Nginx on a follower node \(cluster node having lower Keepalived priority number\), the service fails to start with the following error:</blockquote>
-   
-   ```
-   nginx: [emerg] bind() to <VIP>:<nginx_port> failed (99: Cannot assign requested address)
-   ```
-
-## Plugin configuration parameters
-
-The following table lists all the configuration parameters required to deploy a plugin service:
-
-| Parameter           | Description                                                  |
-| ------------------- | ------------------------------------------------------------ |
-| odimra              | List of configurations required for deploying the services of Resource Aggregator for ODIM and third-party services.<br> **NOTE**: Ensure the values of the parameters listed under odimra are the same as the ones specified in the `kube_deploy_nodes.yaml` file. |
-| namespace           | Namespace to be used for creating the service pods of Resource Aggregator for ODIM. Default value is "odim". You can optionally change it to a different value. |
-| groupID             | Group ID to be used for creating the odimra group. Default value is 2021. You can optionally change it to a different value.<br>**NOTE**: Ensure that the group id is not already in use on any of the nodes. |
-| haDeploymentEnabled | When set to true, it deploys third-party services as a three-instance cluster. By default, it is set to true. Before setting it to false, ensure there are at least three nodes in the Kubernetes cluster. |
-| username            | Username of the plugin.                                      |
-| password            | The encrypted password of the plugin.                        |
-| logPath             | The path where the plugin logs are stored. Default path is `/var/log/<plugin_name>_logs`<br/>**Example**: `/var/log/aciplugin_logs`<br/> |
-
-## Resource Aggregator for ODIM default ports
-
-The following table lists all the default ports used by the resource aggregator, plugins, and third-party services.
-
-| Port name                  | Ports                                                        |
-| -------------------------- | ------------------------------------------------------------ |
-| Container ports            | 45000, 45101-45201, 9092, 9082, 6380, 6379, 8500, 8300, 8302, 8301, 8600, 2181<br> |
-| API node port              | 30080                                                        |
-| Plugin event listener port | 30083                                                        |
-| Kafka node port            | 30092 for a one-node cluster configuration.<br />30092, 30093, and 30094 for a three-node cluster configuration.<br> |
-| GRF plugin port            | 45001                                                        |
-| URP port                   | 45007                                                        |
-| ACI port                   | 45020                                                        |
