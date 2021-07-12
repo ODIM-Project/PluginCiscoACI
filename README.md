@@ -442,8 +442,8 @@ The following table lists all the configuration parameters required to deploy a 
 | namespace           | Namespace to be used for creating the service pods of Resource Aggregator for ODIM. Default value is "odim". You can optionally change it to a different value. |
 | groupID             | Group ID to be used for creating the odimra group. Default value is 2021. You can optionally change it to a different value.<br>**NOTE**: Ensure that the group id is not already in use on any of the nodes. |
 | haDeploymentEnabled | When set to true, it deploys third-party services as a three-instance cluster. By default, it is set to true. Before setting it to false, ensure there are at least three nodes in the Kubernetes cluster. |
-| username            | Username of the plugin.                                      |
-| password            | The encrypted password of the plugin.                        |
+| username            | Username of the plugin                                       |
+| password            | The encrypted password of the plugin                         |
 | logPath             | The path where the plugin logs are stored. Default path is `/var/log/<plugin_name>_logs`<br/>**Example**: `/var/log/aciplugin_logs`<br/> |
 
 ## Resource Aggregator for ODIM default ports
@@ -491,7 +491,7 @@ When creating fabric entities, ensure to create them in the following order:
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/AddressPools`                |
 | **Description**    | This operation creates an address pool for a zone of zones in a specific fabric. |
-| **Returns**        | - Link to the created address pool in the `Location` header.<br />- JSON schema representing the created address pool. |
+| **Returns**        | - Link to the created address pool in the `Location` header<br />- JSON schema representing the created address pool |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
 
@@ -540,11 +540,11 @@ curl -i POST \
 
 | Parameter                   | Type                      | Description                                                  |
 | --------------------------- | ------------------------- | ------------------------------------------------------------ |
-| Name                        | String (optional)         | Name for the address pool.                                   |
-| Description                 | String (optional)         | Description for the address pool.                            |
+| Name                        | String (optional)         | Name for the address pool                                    |
+| Description                 | String (optional)         | Description for the address pool                             |
 | Ethernet{                   |                           |                                                              |
 | IPv4\{                      | \(required\)<br>          |                                                              |
-| VlanIdentifierAddressRange{ | (required)                | A single VLAN (virtual LAN) used for creating the IP interface for the user Virtual Routing and Forwarding (VRF). |
+| VlanIdentifierAddressRange{ | (required)                | A single VLAN (virtual LAN) used for creating the IP interface for the user Virtual Routing and Forwarding (VRF) |
 | Lower                       | Integer \(required\)<br>  | VLAN lower address                                           |
 | Upper\}<br />}}             | Integer \(required\)<br/> | VLAN upper address<br />                                     |
 
@@ -591,7 +591,7 @@ Transfer-Encoding:chunked
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/AddressPools`                |
 | **Description**    | This operation creates an address pool that can be used by a zone of endpoints. |
-| **Returns**        | - Link to the created address pool in the `Location` header.<br />- JSON schema representing the created address pool. |
+| **Returns**        | - Link to the created address pool in the `Location` header<br />- JSON schema representing the created address pool |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
 
@@ -640,13 +640,13 @@ curl -i POST \
 
 | Parameter                   | Type                     | Description                                                  |
 | --------------------------- | ------------------------ | ------------------------------------------------------------ |
-| Name                        | String (optional)        | Name for the address pool.                                   |
+| Name                        | String (optional)        | Name for the address pool                                    |
 | Ethernet{                   |                          |                                                              |
 | IPv4\{                      | \(required\)<br>         |                                                              |
-| GatewayIPAddressList\{      | Array \(required\)<br>   | IP pool to assign IPv4 address to the IP interface for VLAN per switch. |
-| VlanIdentifierAddressRange{ | (required)               | A single VLAN (virtual LAN) used for creating the IP interface for the user Virtual Routing and Forwarding (VRF). |
+| GatewayIPAddressList\{      | Array \(required\)<br>   | IP pool to assign IPv4 address to the IP interface for VLAN per switch |
+| VlanIdentifierAddressRange{ | (required)               | A single VLAN (virtual LAN) used for creating the IP interface for the user Virtual Routing and Forwarding (VRF) |
 | Lower                       | Integer \(required\)<br> | VLAN lower address                                           |
-| Upper\}<br />}}             |                          | VLAN upper address<br />Lower and Upper must have the same values for the addresspool created for ZoneOfEndpoints. |
+| Upper\}<br />}}             |                          | VLAN upper address.<br />Lower and Upper must have the same values for the addresspool created for ZoneOfEndpoints. |
 
 >**Sample response header** 
 
@@ -691,7 +691,7 @@ Transfer-Encoding:chunked
 | ------------------ | ----------------------------------------------------------- |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/Zones`                      |
 | **Description**    | This operation creates a default zone in a specific fabric. |
-| **Returns**        | JSON schema representing the created zone.                  |
+| **Returns**        | JSON schema representing the created zone                   |
 | **Response code**  | On success, `201 Created`                                   |
 | **Authentication** | Yes                                                         |
 
@@ -770,7 +770,7 @@ Transfer-Encoding: chunked
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/Zones`                       |
 | **Description**    | This operation creates an empty container zone for all the other zones in a specific fabric. You can assign address pools, endpoints, other zones, or switches to this zone. |
-| **Returns**        | JSON schema representing the created zone.                   |
+| **Returns**        | JSON schema representing the created zone                    |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
 
@@ -836,8 +836,8 @@ curl -i POST \
 | Description      | String (optional)     | Description for the zone.<br />**NOTE**: Ensure that there are no spaces. |
 | ZoneType         | String<br/>(required) | The type of the zone to be created. Options include:<br/>• ZoneOfZones<br/>• ZoneOfEndpoints<br/>• Default<br/>The type of the zone for a default zone is ZoneOfZones.<br/> |
 | Links{           | (required)            |                                                              |
-| ContainedByZones | Array<br/>(required)  | Represents an array of default zones for the zone being created. |
-| AddressPools     | Array<br/>(required)  | AddressPool links supported for the Zone of Zones (AddressPool links created for ZoneOfZones). |
+| ContainedByZones | Array<br/>(required)  | Represents an array of default zones for the zone being created |
+| AddressPools     | Array<br/>(required)  | AddressPool links supported for the Zone of Zones (AddressPool links created for ZoneOfZones) |
 
 >**Sample response header** 
 
@@ -896,7 +896,7 @@ Zones/6415d9aa-47a3-439d-93bb-5b23dccf5d60",
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricid}/Switches/{switchid}/Ports/{portid}` |
 | **Description**    | This operation updates a connected port.                     |
-| **Returns**        | JSON schema representing the updated connected port.         |
+| **Returns**        | JSON schema representing the updated connected port          |
 | **Response code**  | On success, `200 OK`                                         |
 | **Authentication** | Yes                                                          |
 
@@ -935,10 +935,10 @@ curl -i PATCH \
 
 **Request parameters**
 
-| Parameter      | Type                 | Description                                      |
-| -------------- | -------------------- | ------------------------------------------------ |
-| Links{         | (required)           |                                                  |
-| ContainedPorts | Array<br/>(required) | Represents an array of links to connected ports. |
+| Parameter      | Type                 | Description                                     |
+| -------------- | -------------------- | ----------------------------------------------- |
+| Links{         | (required)           |                                                 |
+| ContainedPorts | Array<br/>(required) | Represents an array of links to connected ports |
 >**Sample response header** 
 
 ```
@@ -990,7 +990,7 @@ ccae270d-4524-44de-95ba-62a92d9476d6:eth1-2",
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/Endpoints`                   |
 | **Description**    | This operation creates a redundant endpoint in a specific fabric. |
-| **Returns**        | • Link to the created endpoint in the `Location` header.<br/>• JSON schema representing the created endpoint. |
+| **Returns**        | • Link to the created endpoint in the `Location` header<br/>• JSON schema representing the created endpoint |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
 
@@ -1057,10 +1057,10 @@ Leaf switch ports",
 
 | Parameter      | Type                  | Description                                                  |
 | -------------- | --------------------- | ------------------------------------------------------------ |
-| Name           | String<br/>(optional) | Name for the endpoint.                                       |
-| Description    | String<br/>(optional) | Description for the endpoint.                                |
+| Name           | String<br/>(optional) | Name for the endpoint                                        |
+| Description    | String<br/>(optional) | Description for the endpoint                                 |
 | Redundancy[    | Array                 |                                                              |
-| Mode           | String                | Redundancy mode.                                             |
+| Mode           | String                | Redundancy mode                                              |
 | RedundancySet] | Array                 | Set of redundancy ports connected to the switches.<br/>These links must be switch leaf ports URIs. |
 
 >**Sample response header** 
@@ -1117,7 +1117,7 @@ b3a5-3afe84f73fd7:102/Ports/43730998-10fe-491e-94a9-f48eeaa1e202:eth1-2"
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/zones`                       |
 | **Description**    | This operation creates a zone of endpoints in a specific fabric.<br />**NOTE**: Ensure that the endpoints are created first before assigning them to the zone of endpoints. |
-| **Returns**        | JSON schema representing the created zone.                   |
+| **Returns**        | JSON schema representing the created zone                    |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
 
@@ -1191,15 +1191,15 @@ curl -i POST \
 | Parameter           | Type                       | Description                                                  |
 | ------------------- | -------------------------- | ------------------------------------------------------------ |
 | Name                | String<br/>(optional)      | Name for the zone.<br />**NOTE**: Ensure that there are no spaces. |
-| Description         | String<br/>(optional)      | Description for the zone.                                    |
+| Description         | String<br/>(optional)      | Description for the zone.<br />**NOTE**: Ensure that there are no spaces. |
 | ZoneType            | String<br/>(required)<br/> | The type of the zone to be created. Options include:<br/>• ZoneOfZones<br/>• ZoneOfEndpoints<br/>• Default<br/>The type of the zone for a zone of endpoints is<br/>ZoneOfEndpoints. |
-| Links{              | Object<br/>(required)      | Contains references to other resources that are related to the zone. |
-| ContainedByZones [{ | Array<br/>(required)       | Represents an array of ZoneOfZones for the zone being created. |
-| @odata.id }]        | String                     | Link to a Zone of zones.                                     |
-| AddressPools [{     | Array<br/>(required)       | Represents an array of address pools linked with a ZoneOfZones. |
-| @odata.id }]        | String                     | Link to an address pool.                                     |
-| Endpoints [{        | Array<br/>(required)       | Represents an array of endpoints to be included in the zone. |
-| @odata.id }]        | String                     | Link to an endpoint.                                         |
+| Links{              | Object<br/>(required)      | Contains references to other resources that are related to the zone |
+| ContainedByZones [{ | Array<br/>(required)       | Represents an array of ZoneOfZones for the zone being created |
+| @odata.id }]        | String                     | Link to a Zone of zones                                      |
+| AddressPools [{     | Array<br/>(required)       | Represents an array of address pools linked with a ZoneOfZones |
+| @odata.id }]        | String                     | Link to an address pool                                      |
+| Endpoints [{        | Array<br/>(required)       | Represents an array of endpoints to be included in the zone  |
+| @odata.id }]        | String                     | Link to an endpoint                                          |
 
 >**Sample response header** 
 
@@ -1259,13 +1259,13 @@ c219ad891842"
 
 ## Updating a zone of endpoints
 
-| **Method**         | `PATCH`                                                 |
-| ------------------ | ------------------------------------------------------- |
-| **URI**            | `/redfish/v1/Fabrics/{fabricid}/Zones/{zoneid}`         |
-| **Description**    | This operation updates a zone of endpoints.             |
-| **Returns**        | JSON schema representing the updated zone of endpoints. |
-| **Response code**  | On success, `200 OK`                                    |
-| **Authentication** | Yes                                                     |
+| **Method**         | `PATCH`                                                |
+| ------------------ | ------------------------------------------------------ |
+| **URI**            | `/redfish/v1/Fabrics/{fabricid}/Zones/{zoneid}`        |
+| **Description**    | This operation updates a zone of endpoints.            |
+| **Returns**        | JSON schema representing the updated zone of endpoints |
+| **Response code**  | On success, `200 OK`                                   |
+| **Authentication** | Yes                                                    |
 
 >**curl command**
 
@@ -1396,12 +1396,12 @@ curl -i -X DELETE \
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | Default zone                                                 | Tenant                                                       |
 | *ZoneOfZone*                                                 | Application profile and VRF                                  |
-| *VLANIdentifierAddressRange of ZoneOfZoneAddressPool*        | VLAN range of a domain.                                      |
+| *VLANIdentifierAddressRange of ZoneOfZoneAddressPool*        | VLAN range of a domain                                       |
 | Redundant ports of an endpoint                               | VPC Policy Group                                             |
 | *ZoneOfEndpoints*                                            | BridgeDomain and Application EPGs (Endpoint Group)           |
 | *GatewayIPAddress of ZoneOfEndpoints'* addresspool           | Subnet in BridgeDomain                                       |
 | *VLANIdentifierAddressRange of ZoneOfEndpoints'* addresspool | VLAN in StaticPort of Application EPGs                       |
-| Health and status of Redfish fabrics, switches, and ports    | Health and status of ACI fabrics, switches, and ports. See the following table. |
+| Health and status of Redfish fabrics, switches, and ports    | Health and status of ACI fabrics, switches, and ports. See the following table |
 
 **Mapping of Redfish fabric health to ACI fabric health range**
 
