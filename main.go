@@ -72,6 +72,13 @@ func main() {
 	// which is passed to it as Publish method after reading the data from the channel.
 	go common.RunReadWorkers(caphandler.Out, capmessagebus.Publish, 1)
 	intializeACIData()
+	configFilePath := os.Getenv("PLUGIN_CONFIG_FILE_PATH")
+	if configFilePath == "" {
+		log.Fatal("No value get the environment variable PLUGIN_CONFIG_FILE_PATH")
+	}
+	// TrackConfigFileChanges monitors the config changes using fsnotfiy
+	go caputilities.TrackConfigFileChanges(configFilePath)
+
 	intializePluginStatus()
 	app()
 }
