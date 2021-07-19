@@ -44,11 +44,11 @@ var Status capresponse.Status
 func TrackConfigFileChanges(configFilePath string) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 	err = watcher.Add(configFilePath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 	go func() {
 		for {
@@ -58,17 +58,17 @@ func TrackConfigFileChanges(configFilePath string) {
 					continue
 				}
 				if fileEvent.Op&fsnotify.Write == fsnotify.Write || fileEvent.Op&fsnotify.Remove == fsnotify.Remove {
-					log.Println("modified file:", fileEvent.Name)
+					log.Debug("Modified file: " + fileEvent.Name)
 					// update the plugin config
 					if err := config.SetConfiguration(); err != nil {
-						log.Printf("error while trying to set configuration: %v", err)
+						log.Error("While trying to set configuration, got: " + err.Error())
 					}
 				}
 				//Reading file to continue the watch
 				watcher.Add(configFilePath)
 			case err, _ := <-watcher.Errors:
 				if err != nil {
-					log.Println(err)
+					log.Error(err.Error())
 					defer watcher.Close()
 				}
 			}
