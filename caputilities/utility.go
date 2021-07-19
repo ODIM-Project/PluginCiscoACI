@@ -30,8 +30,48 @@
 package caputilities
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"github.com/ODIM-Project/PluginCiscoACI/capresponse"
+	"github.com/ODIM-Project/PluginCiscoACI/config"
+	"github.com/fsnotify/fsnotify"
 )
 
 // Status holds the Status of plugin it will be intizaied during startup time
 var Status capresponse.Status
+
+// TrackConfigFileChanges monitors the config changes using fsnotfiy
+func TrackConfigFileChanges(configFilePath string) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = watcher.Add(configFilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	go func() {
+		for {
+			select {
+			case fileEvent, ok := <-watcher.Events:
+				if !ok {
+					continue
+				}
+				if fileEvent.Op&fsnotify.Write == fsnotify.Write || fileEvent.Op&fsnotify.Remove == fsnotify.Remove {
+					log.Println("modified file:", fileEvent.Name)
+					// update the plugin config
+					if err := config.SetConfiguration(); err != nil {
+						log.Printf("error while trying to set configuration: %v", err)
+					}
+				}
+				//Reading file to continue the watch
+				watcher.Add(configFilePath)
+			case err, _ := <-watcher.Errors:
+				if err != nil {
+					log.Println(err)
+					defer watcher.Close()
+				}
+			}
+		}
+	}()
+}
