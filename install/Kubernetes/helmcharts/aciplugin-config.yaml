@@ -1,7 +1,3 @@
-odimra:
-  namespace: odim 
-  groupID:
-  haDeploymentEnabled:
 aciplugin:
   eventListenerNodePort: 30086
   aciPluginRootServiceUUID: 
