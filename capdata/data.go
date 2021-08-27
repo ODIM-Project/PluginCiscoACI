@@ -37,7 +37,7 @@ type ACIPolicyGroupData struct {
 	SwitchProfileName         string
 	SwitchAssociationName     string
 	SwitchProfileSelectorName string
-	AccessPortSeletorName     string
+	AccessPortSelectorName    string
 	PcVPCPolicyGroupName      string
 	PCVPCPolicyGroupDN        string
 }

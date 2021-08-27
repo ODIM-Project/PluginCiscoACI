@@ -317,7 +317,7 @@ func createPolicyGroup(switchPattern, portPattern string) (interface{}, int, *ca
 	var err error
 
 	switchProfileSelectorName := "Switch" + switchPattern + "_Profile_ifselector"
-	accessPortSeletorName := "Switch" + switchPattern + "_" + portPattern
+	accessPortSelectorName := "Switch" + switchPattern + "_" + portPattern
 
 	var switchInterfaceProfileResp *aciModels.LeafInterfaceProfile
 	portPatternData := strings.Split(portPattern, "-ports-")
@@ -343,10 +343,10 @@ func createPolicyGroup(switchPattern, portPattern string) (interface{}, int, *ca
 	}
 	// create access port seletor
 	accessPortSelectorAttributes := aciModels.AccessPortSelectorAttributes{
-		Name:                    accessPortSeletorName,
+		Name:                    accessPortSelectorName,
 		AccessPortSelector_type: "range",
 	}
-	accessPortSelectorResp, err := aciClient.CreateAccessPortSelector(accessPortSelectorAttributes.AccessPortSelector_type, accessPortSeletorName, switchProfileSelectorName, "", accessPortSelectorAttributes)
+	accessPortSelectorResp, err := aciClient.CreateAccessPortSelector(accessPortSelectorAttributes.AccessPortSelector_type, accessPortSelectorName, switchProfileSelectorName, "", accessPortSelectorAttributes)
 	if err != nil {
 		errMsg := "Error while creating Endpoint: " + err.Error()
 		log.Error(errMsg)
@@ -359,7 +359,7 @@ func createPolicyGroup(switchPattern, portPattern string) (interface{}, int, *ca
 		FromPort: portPatternData[1],
 		ToPort:   portPatternData[1],
 	}
-	_, err = aciClient.CreateAccessPortBlock(portBlockName, accessPortSelectorAttributes.AccessPortSelector_type, accessPortSeletorName, switchProfileSelectorName, "", portBlockAttributes)
+	_, err = aciClient.CreateAccessPortBlock(portBlockName, accessPortSelectorAttributes.AccessPortSelector_type, accessPortSelectorName, switchProfileSelectorName, "", portBlockAttributes)
 	if err != nil {
 		errMsg := "Error while creating Endpoint: " + err.Error()
 		log.Error(errMsg)
@@ -504,7 +504,7 @@ func createPolicyGroup(switchPattern, portPattern string) (interface{}, int, *ca
 		SwitchProfileName:         switchProfileName,
 		SwitchAssociationName:     switchAssociationName,
 		SwitchProfileSelectorName: switchProfileSelectorName,
-		AccessPortSeletorName:     accessPortSeletorName,
+		AccessPortSelectorName:    accessPortSelectorName,
 		PcVPCPolicyGroupName:      pcVPCPolicyGroupName,
 		PCVPCPolicyGroupDN:        pcVPCPolicyGroupResp.BaseAttributes.DistinguishedName,
 	}
@@ -544,7 +544,7 @@ func createNodeBlock(switchProfileName, switchAssociationName, switchID string, 
 func deletePolicyGroup(aciPolicyGroupData *capdata.ACIPolicyGroupData) (interface{}, int) {
 	aciClient := caputilities.GetConnection()
 
-	err := aciClient.DeleteAccessPortSelector("range", aciPolicyGroupData.AccessPortSeletorName, aciPolicyGroupData.SwitchProfileSelectorName)
+	err := aciClient.DeleteAccessPortSelector("range", aciPolicyGroupData.AccessPortSelectorName, aciPolicyGroupData.SwitchProfileSelectorName)
 	if err != nil {
 		errMsg := "Error while deleting Endpoint: " + err.Error()
 		log.Error(errMsg)
