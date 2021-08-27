@@ -4,7 +4,7 @@
 # Table of contents
 
 - [Overview of Cisco ACI](#overview-of-cisco-aci)
-  - [Filing Resource Aggregator for ODIM defects](#filing-resource-aggregator-for-odim-defects)
+  - [Filing defects in ACI plugin](#filing-defects-in-aci-plugin)
   - [Deploying the Cisco ACI plugin](#deploying-the-cisco-aci-plugin)
   - [Adding a plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework)
   - [Plugin configuration parameters](#plugin-configuration-parameters)
@@ -30,16 +30,17 @@ Cisco ACI (Application Centric Infrastructure) is an open ecosystem model that u
 Resource Aggregator for ODIM supports Cisco ACI plugin that can abstract, translate, and expose southbound resource information to the resource aggregator through
 RESTful APIs.
 
-## Filing Resource Aggregator for ODIM defects 
+## Filing defects in ACI plugin
 
-**Important**: In case of any unforeseen issues you experience while deploying or using Resource Aggregator for ODIM, log on to the following website and file your defect by clicking **Create**.
+**Important**: In case of any unforeseen issues you experience while deploying or using ACI plugin, log on to the following website and file your defect by clicking **Create**.
 
 **Prerequisite**: You must have valid LFN Jira credentials to create defects.
 
 - Website: https://jira.lfnetworking.org/secure/Dashboard.jspa
 - Discussion Forums: https://odim.slack.com/archives/C01DG9MH479
 - Documentation:
-  - Deployment Document- https://github.com/ODIM-Project/ODIM#readme
+  - Cisco ACI Plugin Deployment Document - https://github.com/ODIM-Project/PluginCiscoACI/blob/main/README.md
+  - Resource Aggregator for ODIM Deployment Document- https://github.com/ODIM-Project/ODIM#readme
   - Additional documents - https://github.com/ODIM-Project/ODIM/blob/main/docs
 
 ## Deploying the Cisco ACI plugin
@@ -410,8 +411,6 @@ The following table lists all the default ports used by the resource aggregator,
 | Container ports (access restricted only to the Kubernetes cluster network) | 45000 — API service port<br />45101- 45201 — Resource Aggregator for ODIM service ports<br />9082, 9092 — Kafka ports<br />6379 — Redis port<br />26379 — Redis Sentinel port<br />2181 — Zookeeper port<br>2379, 2380 — etcd ports |
 | API node port (for external access)                          | 30080                                                        |
 | Kafka node port (for external access)                        | 30092 for a one-node cluster configuration<br />30092, 30093, and 30094 for a three-node cluster configuration |
-| GRF plugin port<br />EventListenerNodePort<br />lbport       | 45001 — Port to be used while adding GRF plugin<br />30081 — Port used for event subscriptions in one-node cluster configuration <br />lbport — For three-node cluster configuration, specify lbport as per your requirement. This port must be assigned with a free port (preferably above 45000) available on all cluster nodes. This port is used as nginx proxy port for the plugin<br />For one-node cluster configuration, it is the same as EventListenerNodePort |
-| UR plugin port                                               | 45007 — Port to be used while adding UR plugin               |
 | ACI port<br />EventListenerNodePort<br />lbport              | 45020 — Port to be used while adding Cisco ACI plugin<br />30083 — Port used for event subscriptions in one-node cluster configuration <br />lbport — For three-node cluster configuration, specify lbport as per your requirement. This port must be assigned with a free port (preferably above 45000) available on all cluster nodes. This port is used as nginx proxy port for the plugin<br />For one-node cluster configuration, it is the same as EventListenerNodePort |
 
 # Cisco ACI fabric APIs
