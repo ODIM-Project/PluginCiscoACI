@@ -26,6 +26,7 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/capdata"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
+	"github.com/ciscoecosystem/aci-go-client/client"
 
 	aciModels "github.com/ciscoecosystem/aci-go-client/models"
 	iris "github.com/kataras/iris/v12"
@@ -666,29 +667,30 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 		log.Error(errMsg)
 		return "", updateErrorResponse(response.ResourceNotFound, errMsg, []interface{}{zoneofZoneURL, "Domain"}), http.StatusNotFound
 	}
-	bdResp, bdDN, statusCode := createBridgeDomain(defaultZoneData.Name, zone)
+	aciClient := caputilities.GetConnection()
+
+	bdResp, bdDN, statusCode := createBridgeDomain(defaultZoneData.Name, zone, aciClient)
 	if statusCode != http.StatusCreated {
 		return "", bdResp, statusCode
 	}
 
 	// create the subnet for BD for all given address pool
-	resp, statusCode = createSubnets(defaultZoneData.Name, zone.Name, addresspoolData)
+	resp, statusCode = createSubnets(defaultZoneData.Name, zone.Name, addresspoolData, aciClient)
 	if statusCode != http.StatusCreated {
 		return "", resp, statusCode
 	}
 	// link bridgedomain to vrf
-	resp, statusCode = linkBDtoVRF(bdDN, zoneofZoneData.Name+"-VRF")
+	resp, statusCode = linkBDtoVRF(bdDN, zoneofZoneData.Name+"-VRF", aciClient)
 	if statusCode != http.StatusCreated {
 		return "", resp, statusCode
 	}
-	resp, statusCode = applicationEPGOperation(defaultZoneData.Name, zoneofZoneData.Name, zone.Name, domainData, endPointData, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower)
+	resp, statusCode = applicationEPGOperation(defaultZoneData.Name, zoneofZoneData.Name, zone.Name, domainData, endPointData, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, aciClient)
 	return zoneofZoneURL, resp, statusCode
 }
 
-func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, string, int) {
+func createBridgeDomain(tenantName string, zone model.Zone, aciClient *client.ServiceManager) (interface{}, string, int) {
 	var bridgeDomainAttributes aciModels.BridgeDomainAttributes
 	bridgeDomainAttributes.Name = zone.Name
-	aciClient := caputilities.GetConnection()
 	//var tenantList []*aciModels.Tenant
 	bridgeDomainList, err := aciClient.ListBridgeDomain(tenantName)
 	if err != nil && !strings.Contains(err.Error(), "Object may not exists") {
@@ -715,10 +717,9 @@ func createBridgeDomain(tenantName string, zone model.Zone) (interface{}, string
 	return resp, resp.BaseAttributes.DistinguishedName, http.StatusCreated
 }
 
-func createSubnets(tenantName, bdName string, addresspoolData *model.AddressPool) (interface{}, int) {
+func createSubnets(tenantName, bdName string, addresspoolData *model.AddressPool, aciClient *client.ServiceManager) (interface{}, int) {
 	var subnetAttributes aciModels.SubnetAttributes
 	subnetAttributes.Ip = addresspoolData.Ethernet.IPv4.GatewayIPAddress
-	aciClient := caputilities.GetConnection()
 	_, err := aciClient.CreateSubnet(subnetAttributes.Ip, bdName, tenantName, "subnet for ip"+subnetAttributes.Ip, subnetAttributes)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
@@ -728,8 +729,7 @@ func createSubnets(tenantName, bdName string, addresspoolData *model.AddressPool
 	return nil, http.StatusCreated
 }
 
-func linkBDtoVRF(bdDN, vrfName string) (interface{}, int) {
-	aciClient := caputilities.GetConnection()
+func linkBDtoVRF(bdDN, vrfName string, aciClient *client.ServiceManager) (interface{}, int) {
 	err := aciClient.CreateRelationfvRsCtxFromBridgeDomain(bdDN, vrfName)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
@@ -739,26 +739,26 @@ func linkBDtoVRF(bdDN, vrfName string) (interface{}, int) {
 	return nil, http.StatusCreated
 }
 
-func applicationEPGOperation(tenantName, applicationProfileName, bdName string, domainData capdata.ACIDomainData, endPointData map[string]*capdata.EndpointData, nativeVLAN int) (interface{}, int) {
+func applicationEPGOperation(tenantName, applicationProfileName, bdName string, domainData capdata.ACIDomainData, endPointData map[string]*capdata.EndpointData, nativeVLAN int, aciClient *client.ServiceManager) (interface{}, int) {
 	//create EPG with name of bd adding -EPG suffix
 	epgName := bdName + "-EPG"
-	resp, appEPGDN, statusCode := createapplicationEPG(tenantName, applicationProfileName, epgName)
+	resp, appEPGDN, statusCode := createapplicationEPG(tenantName, applicationProfileName, epgName, aciClient)
 	if statusCode != http.StatusCreated {
 		return resp, statusCode
 	}
 	// Link EPG to BD
-	resp, statusCode = linkAPPEPGtoBD(appEPGDN, bdName)
+	resp, statusCode = linkAPPEPGtoBD(appEPGDN, bdName, aciClient)
 	if statusCode != http.StatusCreated {
 		return resp, statusCode
 	}
 	// Link EPG to Domain
-	resp, statusCode = linkEpgtoDomain(appEPGDN, domainData.DomainDN)
+	resp, statusCode = linkEpgtoDomain(appEPGDN, domainData.DomainDN, aciClient)
 	if statusCode != http.StatusCreated {
 		return resp, statusCode
 	}
 	// Create static port
 	for _, data := range endPointData {
-		resp, statusCode = createStaticPort(epgName, tenantName, applicationProfileName, data.ACIPolicyGroupData, nativeVLAN, &domainData)
+		resp, statusCode = createStaticPort(epgName, tenantName, applicationProfileName, data.ACIPolicyGroupData, nativeVLAN, &domainData, aciClient)
 		if statusCode != http.StatusCreated {
 			return resp, statusCode
 		}
@@ -766,11 +766,10 @@ func applicationEPGOperation(tenantName, applicationProfileName, bdName string, 
 	return nil, http.StatusCreated
 }
 
-func createapplicationEPG(tenantName, applicationProfileName, epgName string) (interface{}, string, int) {
+func createapplicationEPG(tenantName, applicationProfileName, epgName string, aciClient *client.ServiceManager) (interface{}, string, int) {
 	var epgAttributes = aciModels.ApplicationEPGAttributes{
 		Name: epgName,
 	}
-	aciClient := caputilities.GetConnection()
 	resp, err := aciClient.CreateApplicationEPG(epgName, applicationProfileName, tenantName, "Application EPG for "+epgName, epgAttributes)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
@@ -780,8 +779,7 @@ func createapplicationEPG(tenantName, applicationProfileName, epgName string) (i
 	return resp, resp.BaseAttributes.DistinguishedName, http.StatusCreated
 }
 
-func linkAPPEPGtoBD(appEPGDN, bdName string) (interface{}, int) {
-	aciClient := caputilities.GetConnection()
+func linkAPPEPGtoBD(appEPGDN, bdName string, aciClient *client.ServiceManager) (interface{}, int) {
 	err := aciClient.CreateRelationfvRsBdFromApplicationEPG(appEPGDN, bdName)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
@@ -791,9 +789,8 @@ func linkAPPEPGtoBD(appEPGDN, bdName string) (interface{}, int) {
 	return nil, http.StatusCreated
 }
 
-func linkEpgtoDomain(appEPGDN, domain string) (interface{}, int) {
+func linkEpgtoDomain(appEPGDN, domain string, aciClient *client.ServiceManager) (interface{}, int) {
 
-	aciClient := caputilities.GetConnection()
 	err := aciClient.CreateRelationfvRsDomAttFromApplicationEPG(appEPGDN, domain)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Endpoints: " + err.Error()
@@ -933,13 +930,12 @@ func createContract(vrfName, tenantName, description string) (interface{}, int) 
 	return nil, http.StatusCreated
 }
 
-func createStaticPort(epgName, tenantName, applicationProfileName string, aciPolicyGroupData *capdata.ACIPolicyGroupData, nativeVLAN int, domainData *capdata.ACIDomainData) (interface{}, int) {
+func createStaticPort(epgName, tenantName, applicationProfileName string, aciPolicyGroupData *capdata.ACIPolicyGroupData, nativeVLAN int, domainData *capdata.ACIDomainData, aciClient *client.ServiceManager) (interface{}, int) {
 	staticPathAttributes := aciModels.StaticPathAttributes{
 		TDn:         aciPolicyGroupData.PolicyGroupDN,
 		Encap:       fmt.Sprintf("vlan-%d", nativeVLAN),
 		InstrImedcy: "immediate",
 	}
-	aciClient := caputilities.GetConnection()
 	_, err := aciClient.CreateStaticPath(aciPolicyGroupData.PolicyGroupDN, epgName, applicationProfileName, tenantName, "", staticPathAttributes)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
@@ -947,7 +943,7 @@ func createStaticPort(epgName, tenantName, applicationProfileName string, aciPol
 		return resp, http.StatusBadRequest
 	}
 	// Attach the domain entity profile to given policy group
-	err = aciClient.CreateRelationinfraRsAttEntPFromPCVPCInterfacePolicyGroup(aciPolicyGroupData.PCVPCPolicyGroupDN, domainData.DomaineEntityProfileDn)
+	err = aciClient.CreateRelationinfraRsAttEntPFromPCVPCInterfacePolicyGroup(aciPolicyGroupData.PCVPCPolicyGroupDN, domainData.DomainEntityProfileDn)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
@@ -1008,8 +1004,8 @@ func createACIDomain(addressPoolData *model.AddressPool, zoneName string) (inter
 	}
 	err = aciClient.CreateRelationinfraRsDomPFromAttachableAccessEntityProfile(entityProfileResp.BaseAttributes.DistinguishedName, physDomResp.BaseAttributes.DistinguishedName)
 	return nil, http.StatusCreated, &capdata.ACIDomainData{
-		DomainDN:               physDomResp.BaseAttributes.DistinguishedName,
-		DomaineEntityProfileDn: entityProfileResp.BaseAttributes.DistinguishedName,
+		DomainDN:              physDomResp.BaseAttributes.DistinguishedName,
+		DomainEntityProfileDn: entityProfileResp.BaseAttributes.DistinguishedName,
 	}
 }
 
@@ -1120,11 +1116,11 @@ func UpdateZoneData(ctx iris.Context) {
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", defaultZoneURL})
 		return
 	}
-
+	aciClient := caputilities.GetConnection()
 	for endpointOID, data := range endpointRequestData {
 		_, ok := endPointData[endpointOID]
 		if !ok {
-			resp, statusCode = createStaticPort(zoneData.Name+"-EPG", defaultZoneData.Name, zoneofZoneData.Name, data.ACIPolicyGroupData, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, &domainData)
+			resp, statusCode = createStaticPort(zoneData.Name+"-EPG", defaultZoneData.Name, zoneofZoneData.Name, data.ACIPolicyGroupData, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, &domainData, aciClient)
 			if statusCode != http.StatusCreated {
 				ctx.StatusCode(statusCode)
 				ctx.JSON(resp)
