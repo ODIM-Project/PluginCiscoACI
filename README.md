@@ -4,6 +4,7 @@
 # Table of contents
 
 - [Overview of Cisco ACI](#overview-of-cisco-aci)
+  - [Filing Resource Aggregator for ODIM defects](#filing-resource-aggregator-for-odim-defects)
   - [Deploying the Cisco ACI plugin](#deploying-the-cisco-aci-plugin)
   - [Adding a plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework)
   - [Configuring proxy server for a plugin version](#configuring-proxy-server-for-a-plugin-version)
@@ -30,6 +31,18 @@ Cisco ACI (Application Centric Infrastructure) is an open ecosystem model that u
 Resource Aggregator for ODIM supports Cisco ACI plugin that can abstract, translate, and expose southbound resource information to the resource aggregator through
 RESTful APIs.
 
+## Filing Resource Aggregator for ODIM defects 
+
+**Important**: In case of any unforeseen issues you experience while deploying or using Resource Aggregator for ODIM, log on to the following website and file your defect by clicking **Create**.
+
+**Prerequisite**: You must have valid LFN Jira credentials to create defects.
+
+- Website: https://jira.lfnetworking.org/secure/Dashboard.jspa
+- Discussion Forums: https://odim.slack.com/archives/C01DG9MH479
+- Documentation:
+  - Deployment Document- https://github.com/ODIM-Project/ODIM#readme
+  - Additional documents - https://github.com/ODIM-Project/ODIM/blob/main/docs
+
 ## Deploying the Cisco ACI plugin
 
 **Prerequisites**
@@ -39,44 +52,48 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 1. Create a directory called `plugins` on the deployment node.
 
    ```
-   $ mkdir plugins
+   mkdir -p ~/plugins
    ```
 
 3. In the `plugins` directory, create a directory called `aciplugin`.
 
    ```
-   $ mkdir ~/plugins/aciplugin
+   mkdir ~/plugins/aciplugin
    ```
 
-4. Log in to each cluster node and run the following commands: 
+3. Run the following commands on the deployment node:
+
+   1. ```
+      git clone https://github.com/ODIM-Project/PluginCiscoACI.git
+      ```
+
+   2. ```
+      cd PluginCiscoACI/
+      ```
+
+   3. ```
+      ./build_images.sh
+      ```
+
+4. On the deployment node, copy the Cisco ACI plugin configuration file and the hook script to `~/plugins/aciplugin`.
 
    ```
-   $ sudo mkdir -p /var/log/aciplugin_logs/
+   cp PluginCiscoACI/install/Kubernetes/helmcharts/aciplugin-config.yaml ~/plugins/aciplugin
    ```
 
    ```
-   $ sudo chown odimra:odimra /var/log/aciplugin_logs
-   ```
-
-5. On the deployment node, copy the Cisco ACI plugin configuration file to `~/plugins/aciplugin`.
-
-   ```
-   $ cp ~/ODIM/odim-controller/helmcharts/aciplugin/aciplugin-config.yaml ~/plugins/aciplugin
+   cp PluginCiscoACI/install/Kubernetes/helmcharts/aciplugin.sh ~/plugins/aciplugin
    ```
 
 5. Open the Cisco ACI plugin configuration YAML file.
 
    ```
-   $ vi ~/plugins/aciplugin/aciplugin-config.yaml
+   vi ~/plugins/aciplugin/aciplugin-config.yaml
    ```
 
    **Sample aciplugin-config.yaml file:**
 
    ```
-   odimra:
-    namespace: odim
-    groupID: 2021
-    haDeploymentEnabled: false
    aciplugin:
     eventListenerNodePort: 30086
     aciPluginRootServiceUUID: a127eedc-c29b-416c-8c82-413153a3c351
@@ -94,35 +111,37 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     odimPassword: Od!m12$4
    ```
    
-8. Update the following parameters in the plugin configuration file:
+6. Update the following parameters in the plugin configuration file:
 
    - **eventListenerNodePort**: The port used for listening to the ACI plugin events. Default port is 30086.
-   
+
    - **aciPluginRootServiceUUID**: The RootServiceUUID to be used by the ACI plugin service. To generate an UUID, run the following command:
-   
+
      `uuidgen`
-   
+
      Copy the output and paste it as the value for rootServiceUUID.
-   
-   - **lbHost**: Default value is aciplugin for one node cluster configuration.  For three node cluster configuration,  \(haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived.
-   
-   - **lbPort**: Default port is 30086. It is the same as eventListenerNodePort for one node cluster configuration. For three node cluster configuration, \(haDeploymentEnabled is true\), lbPort is the Nginx API node port configured in the Nginx plugin configuration file.
-   
+
+   - **lbHost**: Default value is aciplugin for one node cluster configuration.  For three node cluster configuration, (haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived.
+
+   - **lbPort**: Default port is 30086. for one node cluster configuration. For three node cluster configuration, lbport must be assigned with a free port (preferably above 45000) available on all cluster nodes. This port is used as nginx proxy port for the plugin.
+
+     <blockquote>Note: The lbport is used as proxy port for eventlistenernodeport, which is used for subscribing to events.</blockquote>
+
    - **apicHost**: The IP address of the machine where Cisco APIC UI is launched.
-   
+
    - **apicUserName**: The Cisco APIC username.
-   
+
    - **apicPassword**: The Cisco APIC password.
-   
+
    - **odimURL**: The URL of the ODIMRA API service. URL is https://api:45000.
-   
+
    - **odimUserName**: The username of the default administrator account of Resource Aggregator for ODIM.
-   
+
    - **odimPassword**: The encrypted password of the default administrator account of Resource Aggregator for ODIM.
      To generate the encrypted password, run the following command:
-   
+
      ```
-     $ echo -n '<odimra_password>' \
+     echo -n '<odimra_password>' \
      | openssl pkeyutl -encrypt -inkey \
      ~/R4H60-11004/odim-controller/\
      scripts/certs/\
@@ -132,21 +151,21 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
      \
      base64 -A
      ```
-   
-   Other parameters can have default values. Optionally, you can update them with values based on your requirements. For more information on each parameter, see [Plugin configuration parameters](#plugin-configuration-parameters).
-   
-9. Generate the Helm package for the Cisco ACI plugin on the deployment node:
 
-   1. Navigate to `odim-controller/helmcharts/aciplugin`.
+   Other parameters can have default values. Optionally, you can update them with values based on your requirements. For more information on each parameter, see [Plugin configuration parameters](#plugin-configuration-parameters).
+
+7. Generate the Helm package for the Cisco ACI plugin on the deployment node:
+
+   1. Navigate to `PluginCiscoACI/install/Kubernetes/helmcharts`.
 
       ```
-      $ cd ~/ODIM/odim-controller/helmcharts/aciplugin
+      cd PluginCiscoACI/install/Kubernetes/helmcharts
       ```
 
    2. Run the following command to create `aciplugin` Helm package at `~/plugins/aciplugin`:
 
       ```
-      $ helm package aciplugin -d ~/plugins/aciplugin
+      helm package aciplugin -d ~/plugins/aciplugin
       ```
 
       The Helm package for the Cisco ACI plugin is created in the tgz format.
@@ -154,23 +173,23 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
    ```
-   $ sudo docker save aciplugin:1.0 -o ~/plugins/aciplugin/aciplugin.tar
+   docker save aciplugin:1.0 -o ~/plugins/aciplugin/aciplugin.tar
    ```
 
-9. If it is a three-node cluster configuration, log in to each cluster node and [configure proxy server for the plugin](#configuring-proxy-server-for-a-plugin-version). 
+9. Save the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to the ODIM plugin path.
 
-   Skip this step if it is a one-node cluster configuration.
+   **Important**: Do NOT change the value of any parameter in this file. 
 
 10. Navigate to the `/ODIM/odim-controller/scripts` directory on the deployment node.
 
     ```
-	$ cd ~/ODIM/odim-controller/scripts
+    cd ~/ODIM/odim-controller/scripts
     ```
-    
-12. Open the `kube_deploy_nodes.yaml` file.
 
-         $ vi kube_deploy_nodes.yaml
-    
+11. Open the `kube_deploy_nodes.yaml` file.
+
+        vi kube_deploy_nodes.yaml
+
 12. Update the following parameters in the `kube_deploy_nodes.yaml` file to their corresponding values: 
 
     | Parameter                    | Value                                                        |
@@ -179,29 +198,38 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     | odimraKafkaClientCertFQDNSan | The FQDN to be included in the Kafka client certificate of Resource Aggregator for ODIM for deploying the ACI plugin:<br />`aciplugin`, `aciplugin-events`<br>Add these values to the existing comma-separated list.<br> |
     | odimraServerCertFQDNSan      | The FQDN to be included in the server certificate of Resource Aggregator for ODIM for deploying the ACI plugin:<br /> `aciplugin`, `aciplugin-events`<br> Add these values to the existing comma-separated list.<br> |
 
-         Example:
-         
-         odimPluginPath: /home/bruce/plugins
-          connectionMethodConf:
-          - ConnectionMethodType: Redfish
-            ConnectionMethodVariant: Fabric:BasicAuth:ACI_v1.0.0
-          odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
-          odimraServerCertFQDNSan: aciplugin,aciplugin-events
+        odimPluginPath: /home/bruce/plugins
+         connectionMethodConf:
+         - ConnectionMethodType: Redfish
+           ConnectionMethodVariant: Fabric:BasicAuth:ACI_v1.0.0
+        odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
+        odimraServerCertFQDNSan: aciplugin,aciplugin-events
 
-13. Run the following command: 
+13. Move odimra_kafka_client.key, odimra_kafka_client.crt, odimra_server.key and odimra_server.crt stored in odimCertsPath to a different folder.
 
-        $ python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --upgrade odimra-config
+    <blockquote> NOTE: odimCertsPath is the absolute path of the directory where certificates required by the services of Resource Aggregator for ODIM are present. This parameter is configured in the `kube_deploy_nodes.yaml` file.</blockquote>
 
-14. Run the following command to install the Cisco ACI plugin: 
+14. Update odimra-secrets:
+
+       ```
+    python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --upgrade odimra-secret
+       ```
+
+15. Run the following command: 
+
+        python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --upgrade odimra-config
+
+16. Run the following command to install the Cisco ACI plugin: 
 
     ```
-    $ python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts\
-    /kube_deploy_nodes.yaml --add plugin --plugin aciplugin
+    python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --add plugin --plugin aciplugin
     ```
 
-15. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
+17. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
 
-    `$ kubectl get pods -n odim`
+    ```
+    kubectl get pods -n odim
+    ```
 
     Example output showing the Cisco ACI plugin pod details:
 
@@ -209,7 +237,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     | ------------------------- | ----- | ------- | -------- | ----- |
     | aciplugin-5fc4b6788-2xx97 | 1/1   | Running | 0        | 4d22h |
 
-16. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
+18. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
 
 ## Adding a plugin into the Resource Aggregator for ODIM framework
 
@@ -237,7 +265,7 @@ The plugin you want to add is successfully deployed.
    
    ```
    {
-         "HostName":"aciplugin:45007",
+         "HostName":"aciplugin:45020",
          "UserName":"admin",
          "Password":"Plug!n12$4",
          "Links":{
@@ -284,7 +312,7 @@ The plugin you want to add is successfully deployed.
        NOTE: To generate a base64 encoded string of `{odim_username:odim_password}`, run the following command:</blockquote>
    
    ```
-   $ echo -n '{odim_username}:{odim_password}' | base64 -w0
+   echo -n '{odim_username}:{odim_password}' | base64 -w0
    ```
    
    Replace `{base64_encoded_string_of_[odim_username:odim_password]}` with the generated base64 encoded string in the curl command. You will receive:
@@ -363,19 +391,19 @@ The plugin you want to add is successfully deployed.
 1. Log in to each cluster node and navigate to the following path: 
 
    ```
-   $ cd /opt/nginx/servers
+   cd /opt/nginx/servers
    ```
 
 2. Create a plugin configuration file called `<plugin-name>_nginx_server.conf`: 
 
    ```
-   $ vi <plugin-name>_nginx_server.conf
+   vi <plugin-name>_nginx_server.conf
    ```
 
    Example:
 
    ```
-   $ vi aciplugin_nginx_server.conf
+   vi aciplugin_nginx_server.conf
    ```
 
 3. Copy the following content into the `<plugin-name>_nginx_server.conf` file on each cluster node: 
@@ -420,7 +448,7 @@ The plugin you want to add is successfully deployed.
 4. Restart Nginx systemd service only on the leader node \(cluster node where Keepalived priority is set to a higher number\): 
 
    ```
-   $ sudo systemctl restart nginx
+   sudo systemctl restart nginx
    ```
 
    <blockquote>
@@ -448,17 +476,16 @@ The following table lists all the configuration parameters required to deploy a 
 
 ## Resource Aggregator for ODIM default ports
 
-The following table lists all the default ports used by the resource aggregator, plugins, and third-party services.
+The following table lists all the default ports used by the resource aggregator, plugins, and third-party services. The following ports (except container ports) must be free:
 
-| Port name                  | Ports                                                        |
-| -------------------------- | ------------------------------------------------------------ |
-| Container ports            | 45000, 45101-45201, 9092, 9082, 6380, 6379, 8500, 8300, 8302, 8301, 8600, 2181<br> |
-| API node port              | 30080                                                        |
-| Plugin event listener port | 30083                                                        |
-| Kafka node port            | 30092 for a one-node cluster configuration.<br />30092, 30093, and 30094 for a three-node cluster configuration.<br> |
-| GRF plugin port            | 45001                                                        |
-| URP port                   | 45007                                                        |
-| ACI port                   | 45020                                                        |
+| Port name                                                    | Ports                                                        |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Container ports (access restricted only to the Kubernetes cluster network) | 45000 — API service port<br />45101- 45201 — Resource Aggregator for ODIM service ports<br />9082, 9092 — Kafka ports<br />6379 — Redis port<br />26379 — Redis Sentinel port<br />2181 — Zookeeper port<br>2379, 2380 — etcd ports |
+| API node port (for external access)                          | 30080                                                        |
+| Kafka node port (for external access)                        | 30092 for a one-node cluster configuration<br />30092, 30093, and 30094 for a three-node cluster configuration |
+| GRF plugin port<br />EventListenerNodePort<br />lbport       | 45001 — Port to be used while adding GRF plugin<br />30081 — Port used for event subscriptions in one-node cluster configuration <br />lbport — For three-node cluster configuration, specify lbport as per your requirement. This port must be assigned with a free port (preferably above 45000) available on all cluster nodes. This port is used as nginx proxy port for the plugin<br />For one-node cluster configuration, it is the same as EventListenerNodePort |
+| UR plugin port                                               | 45007 — Port to be used while adding UR plugin               |
+| ACI port<br />EventListenerNodePort<br />lbport              | 45020 — Port to be used while adding Cisco ACI plugin<br />30083 — Port used for event subscriptions in one-node cluster configuration <br />lbport — For three-node cluster configuration, specify lbport as per your requirement. This port must be assigned with a free port (preferably above 45000) available on all cluster nodes. This port is used as nginx proxy port for the plugin<br />For one-node cluster configuration, it is the same as EventListenerNodePort |
 
 # Cisco ACI fabric APIs
 
