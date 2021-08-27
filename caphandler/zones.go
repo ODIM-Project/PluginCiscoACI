@@ -943,7 +943,7 @@ func createStaticPort(epgName, tenantName, applicationProfileName string, aciPol
 		return resp, http.StatusBadRequest
 	}
 	// Attach the domain entity profile to given policy group
-	err = aciClient.CreateRelationinfraRsAttEntPFromPCVPCInterfacePolicyGroup(aciPolicyGroupData.PCVPCPolicyGroupDN, domainData.DomaineEntityProfileDn)
+	err = aciClient.CreateRelationinfraRsAttEntPFromPCVPCInterfacePolicyGroup(aciPolicyGroupData.PCVPCPolicyGroupDN, domainData.DomainEntityProfileDn)
 	if err != nil {
 		errMsg := "Error while creating  Zone of Zones: " + err.Error()
 		resp := updateErrorResponse(response.GeneralError, errMsg, nil)
@@ -1004,8 +1004,8 @@ func createACIDomain(addressPoolData *model.AddressPool, zoneName string) (inter
 	}
 	err = aciClient.CreateRelationinfraRsDomPFromAttachableAccessEntityProfile(entityProfileResp.BaseAttributes.DistinguishedName, physDomResp.BaseAttributes.DistinguishedName)
 	return nil, http.StatusCreated, &capdata.ACIDomainData{
-		DomainDN:               physDomResp.BaseAttributes.DistinguishedName,
-		DomaineEntityProfileDn: entityProfileResp.BaseAttributes.DistinguishedName,
+		DomainDN:              physDomResp.BaseAttributes.DistinguishedName,
+		DomainEntityProfileDn: entityProfileResp.BaseAttributes.DistinguishedName,
 	}
 }
 

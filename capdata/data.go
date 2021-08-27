@@ -35,15 +35,15 @@ type EndpointData struct {
 type ACIPolicyGroupData struct {
 	PolicyGroupDN             string
 	SwitchProfileName         string
-	SwitchAssoicationName     string
+	SwitchAssociationName     string
 	SwitchProfileSelectorName string
-	AccesPortSeletorName      string
+	AccessPortSeletorName     string
 	PcVPCPolicyGroupName      string
 	PCVPCPolicyGroupDN        string
 }
 
 // ACIDomainData hold dn of ACI DOMAIN and DomaineEntity
 type ACIDomainData struct {
-	DomainDN               string
-	DomaineEntityProfileDn string
+	DomainDN              string
+	DomainEntityProfileDn string
 }
