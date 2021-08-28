@@ -121,9 +121,9 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
      Copy the output and paste it as the value for rootServiceUUID.
 
-   - **lbHost**: Default value is aciplugin for one node cluster configuration.  For three node cluster configuration, (haDeploymentEnabled is true\), lbHost is the virtual IP address configured in Nginx and Keepalived.
+   - **lbHost**: Default value is `aciplugin` for one node and three node cluster configuration.
 
-   - **lbPort**: Default port is 30086. for one node cluster configuration. For three node cluster configuration, lbport must be assigned with a free port (preferably above 45000) available on all cluster nodes. This port is used as nginx proxy port for the plugin.
+   - **lbPort**: Default port is 30086 for one node and three node cluster configuration.
 
      <blockquote>Note: The lbport is used as proxy port for eventlistenernodeport, which is used for subscribing to events.</blockquote>
 
@@ -176,7 +176,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    docker save aciplugin:1.0 -o ~/plugins/aciplugin/aciplugin.tar
    ```
 
-9. Save the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to the ODIM plugin path.
+9. Save the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to `~/plugins/aciplugin`.
 
    **Important**: Do NOT change the value of any parameter in this file. 
 
