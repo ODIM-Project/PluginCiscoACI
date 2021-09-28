@@ -638,11 +638,18 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 		errorMessage := fmt.Sprintf("Given AddressPool %s doesn't contain the GatewayIPAddress ", zone.Links.AddressPools[0].Oid)
 		return "", updateErrorResponse(response.PropertyMissing, errorMessage, []interface{}{"GatewayIPAddress"}), http.StatusBadRequest
 	}
-	if addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower != addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper {
-		errorMessage := fmt.Sprintf("Given AddressPool %s VLANIdentifierAddressRange Lower and Upper values are not matching ", zone.Links.AddressPools[0].Oid)
-		return "", updateErrorResponse(response.PropertyUnknown, errorMessage, []interface{}{"VLANIdentifierAddressRange"}), http.StatusBadRequest
+	var untagVLANflag bool
+	var vlan int
+	if addresspoolData.Ethernet.IPv4.NativeVLAN != 0 {
+		untagVLANflag = true
+		vlan = addresspoolData.Ethernet.IPv4.NativeVLAN
+	} else {
+		if addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower != addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper {
+			errorMessage := fmt.Sprintf("Given AddressPool %s VLANIdentifierAddressRange Lower and Upper values are not matching ", zone.Links.AddressPools[0].Oid)
+			return "", updateErrorResponse(response.PropertyUnknown, errorMessage, []interface{}{"VLANIdentifierAddressRange"}), http.StatusBadRequest
+		}
+		vlan = addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower
 	}
-
 	// Get the default zone data
 	defaultZoneURL := zoneofZoneData.Links.ContainedByZones[0].Oid
 	defaultZoneData, err := capmodel.GetZone(fabricID, defaultZoneURL)
@@ -684,7 +691,7 @@ func createZoneOfEndpoints(uri, fabricID string, zone model.Zone) (string, inter
 	if statusCode != http.StatusCreated {
 		return "", resp, statusCode
 	}
-	resp, statusCode = applicationEPGOperation(defaultZoneData.Name, zoneofZoneData.Name, zone.Name, domainData, endPointData, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, aciClient)
+	resp, statusCode = applicationEPGOperation(defaultZoneData.Name, zoneofZoneData.Name, zone.Name, domainData, endPointData, vlan, aciClient, untagVLANflag)
 	return zoneofZoneURL, resp, statusCode
 }
 
@@ -739,7 +746,7 @@ func linkBDtoVRF(bdDN, vrfName string, aciClient *client.ServiceManager) (interf
 	return nil, http.StatusCreated
 }
 
-func applicationEPGOperation(tenantName, applicationProfileName, bdName string, domainData capdata.ACIDomainData, endPointData map[string]*capdata.EndpointData, nativeVLAN int, aciClient *client.ServiceManager) (interface{}, int) {
+func applicationEPGOperation(tenantName, applicationProfileName, bdName string, domainData capdata.ACIDomainData, endPointData map[string]*capdata.EndpointData, nativeVLAN int, aciClient *client.ServiceManager, untagVLANflag bool) (interface{}, int) {
 	//create EPG with name of bd adding -EPG suffix
 	epgName := bdName + "-EPG"
 	resp, appEPGDN, statusCode := createapplicationEPG(tenantName, applicationProfileName, epgName, aciClient)
@@ -758,7 +765,7 @@ func applicationEPGOperation(tenantName, applicationProfileName, bdName string, 
 	}
 	// Create static port
 	for _, data := range endPointData {
-		resp, statusCode = createStaticPort(epgName, tenantName, applicationProfileName, data.ACIPolicyGroupData, nativeVLAN, &domainData, aciClient)
+		resp, statusCode = createStaticPort(epgName, tenantName, applicationProfileName, data.ACIPolicyGroupData, nativeVLAN, &domainData, aciClient, untagVLANflag)
 		if statusCode != http.StatusCreated {
 			return resp, statusCode
 		}
@@ -930,11 +937,14 @@ func createContract(vrfName, tenantName, description string) (interface{}, int) 
 	return nil, http.StatusCreated
 }
 
-func createStaticPort(epgName, tenantName, applicationProfileName string, aciPolicyGroupData *capdata.ACIPolicyGroupData, nativeVLAN int, domainData *capdata.ACIDomainData, aciClient *client.ServiceManager) (interface{}, int) {
+func createStaticPort(epgName, tenantName, applicationProfileName string, aciPolicyGroupData *capdata.ACIPolicyGroupData, nativeVLAN int, domainData *capdata.ACIDomainData, aciClient *client.ServiceManager, untagVLANflag bool) (interface{}, int) {
 	staticPathAttributes := aciModels.StaticPathAttributes{
 		TDn:         aciPolicyGroupData.PolicyGroupDN,
 		Encap:       fmt.Sprintf("vlan-%d", nativeVLAN),
 		InstrImedcy: "immediate",
+	}
+	if untagVLANflag {
+		staticPathAttributes.Mode = "untagged"
 	}
 	_, err := aciClient.CreateStaticPath(aciPolicyGroupData.PolicyGroupDN, epgName, applicationProfileName, tenantName, "", staticPathAttributes)
 	if err != nil {
@@ -1116,11 +1126,19 @@ func UpdateZoneData(ctx iris.Context) {
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", defaultZoneURL})
 		return
 	}
+	var vlan int
+	var untagVLANflag bool
+	if addresspoolData.Ethernet.IPv4.NativeVLAN != 0 {
+		vlan = addresspoolData.Ethernet.IPv4.NativeVLAN
+		untagVLANflag = true
+	} else {
+		vlan = addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower
+	}
 	aciClient := caputilities.GetConnection()
 	for endpointOID, data := range endpointRequestData {
 		_, ok := endPointData[endpointOID]
 		if !ok {
-			resp, statusCode = createStaticPort(zoneData.Name+"-EPG", defaultZoneData.Name, zoneofZoneData.Name, data.ACIPolicyGroupData, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, &domainData, aciClient)
+			resp, statusCode = createStaticPort(zoneData.Name+"-EPG", defaultZoneData.Name, zoneofZoneData.Name, data.ACIPolicyGroupData, vlan, &domainData, aciClient, untagVLANflag)
 			if statusCode != http.StatusCreated {
 				ctx.StatusCode(statusCode)
 				ctx.JSON(resp)
