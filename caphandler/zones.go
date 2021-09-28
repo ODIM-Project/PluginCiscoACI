@@ -825,15 +825,28 @@ func deleteZoneOfEndpoints(fabricID string, zoneData *model.Zone) (interface{}, 
 		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", defaultZoneURL})
 		return resp, statusCode
 	}
+	// get all zone of endpoints
+	zonesData, err := capmodel.GetAllZones(fabricID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", zoneofZoneURL, err.Error())
+		statusCode, resp := createDbErrResp(nil, err, errMsg, []interface{}{"Zone", fabricID})
+		return resp, statusCode
+
+	}
 	aciClient := caputilities.GetConnection()
 	for i := 0; i < len(zoneData.Links.Endpoints); i++ {
+		// check if endpoint belongs to other ZoneOfEndpoint
+
 		endpointData, statusCode, resp := getEndpointData(fabricID, zoneData.Links.Endpoints[i].Oid)
 		if statusCode != http.StatusOK {
 			return resp, statusCode
 		}
-		resp, statusCode = deleteRelationDomainEntityGroupInterfacePolicyGroup(endpointData.ACIPolicyGroupData.PCVPCPolicyGroupDN)
-		if statusCode != http.StatusOK {
-			return resp, statusCode
+		endpointPresentFlag := checkEndpointExits(zoneData.Links.Endpoints[i].Oid, zonesData, defaultZoneData, zoneData.ODataID)
+		if !endpointPresentFlag {
+			resp, statusCode = deleteRelationDomainEntityGroupInterfacePolicyGroup(endpointData.ACIPolicyGroupData.PCVPCPolicyGroupDN)
+			if statusCode != http.StatusOK {
+				return resp, statusCode
+			}
 		}
 	}
 	if err = aciClient.DeleteApplicationEPG(zoneData.Name+"-EPG", zoneofZoneData.Name, defaultZoneData.Name); err != nil {
@@ -1118,6 +1131,12 @@ func UpdateZoneData(ctx iris.Context) {
 		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", zoneofZoneURL})
 		return
 	}
+	zonesData, err := capmodel.GetAllZones(fabricID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch zone data for uri %s: %s", uri, err.Error())
+		createDbErrResp(ctx, err, errMsg, []interface{}{"Zone", fabricID})
+		return
+	}
 	// Get the default zone data
 	defaultZoneURL := zoneofZoneData.Links.ContainedByZones[0].Oid
 	defaultZoneData, err := capmodel.GetZone(fabricID, defaultZoneURL)
@@ -1155,11 +1174,16 @@ func UpdateZoneData(ctx iris.Context) {
 			ctx.JSON(resp)
 			return
 		}
-		resp, statusCode = deleteRelationDomainEntityGroupInterfacePolicyGroup(data.ACIPolicyGroupData.PCVPCPolicyGroupDN)
-		if statusCode != http.StatusOK {
-			ctx.StatusCode(statusCode)
-			ctx.JSON(resp)
-			return
+		endpointPresentFlag := checkEndpointExits(endpointOID, zonesData, defaultZoneData, zoneData.ODataID)
+		if !endpointPresentFlag {
+
+			resp, statusCode = deleteRelationDomainEntityGroupInterfacePolicyGroup(data.ACIPolicyGroupData.PCVPCPolicyGroupDN)
+
+			if statusCode != http.StatusOK {
+				ctx.StatusCode(statusCode)
+				ctx.JSON(resp)
+				return
+			}
 		}
 		delete(endPointData, endpointOID)
 	}
@@ -1197,4 +1221,19 @@ func deleteRelationDomainEntityGroupInterfacePolicyGroup(policyGroupDN string) (
 
 func updatezoneData(fabricID, zoneOID string, zoneData *model.Zone) error {
 	return capmodel.UpdateZone(fabricID, zoneOID, zoneData)
+}
+
+func checkEndpointExits(enpointURL string, zonesData map[string]model.Zone, zoneofZoneData model.Zone, zoeURL string) bool {
+	for i := 0; i < len(zoneofZoneData.Links.ContainsZones); i++ {
+		if zoneofZoneData.Links.ContainsZones[i].Oid != zoeURL {
+			zoneData := zonesData[zoneofZoneData.Links.ContainsZones[i].Oid]
+			for i := 0; i < len(zoneData.Links.Endpoints); i++ {
+				if zoneData.Links.Endpoints[i].Oid == enpointURL {
+					return true
+				}
+			}
+
+		}
+	}
+	return false
 }
