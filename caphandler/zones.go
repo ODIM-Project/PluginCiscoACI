@@ -1227,8 +1227,8 @@ func checkEndpointExits(enpointURL string, zonesData map[string]model.Zone, zone
 	for i := 0; i < len(zoneofZoneData.Links.ContainsZones); i++ {
 		if zoneofZoneData.Links.ContainsZones[i].Oid != zoeURL {
 			zoneData := zonesData[zoneofZoneData.Links.ContainsZones[i].Oid]
-			for i := 0; i < len(zoneData.Links.Endpoints); i++ {
-				if zoneData.Links.Endpoints[i].Oid == enpointURL {
+			for j := 0; j < len(zoneData.Links.Endpoints); j++ {
+				if zoneData.Links.Endpoints[j].Oid == enpointURL {
 					return true
 				}
 			}
