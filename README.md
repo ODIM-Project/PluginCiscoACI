@@ -11,7 +11,8 @@
   - [Resource Aggregator for ODIM default ports](#resource-aggregator-for-odim-default-ports)
 - [Cisco ACI fabric APIs](#Cisco-ACI-fabric-APIs)
   - [Creating an addresspool for a zone of zones](#creating-an-addresspool-for-a-zone-of-zones)
-  - [Creating an addresspool for a zone of endpoints](#creating-an-addresspool-for-a-zone-of-endpoints)
+  - [Creating an addresspool for a zone of endpoints (with tagged VLAN)](#creating-an-addresspool-for-a-zone-of-endpoints-with-tagged-vlan)
+  - [Creating an addresspool for a zone of endpoints (with untagged VLAN)](#creating-an-addresspool-for-a-zone-of-endpoints-with-untagged-vlan)
   - [Creating a default zone](#creating-a-default-zone)
   - [Creating a zone of zones](#creating-a-zone-of-zones)
   - [Updating the connected ports](#updating-the-connected-ports)
@@ -423,7 +424,7 @@ When creating fabric entities, ensure to create them in the following order:
 2.  Default zones
 3.  Zone of zones
 4.  Endpoints
-5.  Zone of endpoints
+5.  Zone of endpoints (with tagged and untagged VLAN)
 
 <blockquote>
     IMPORTANT:Before using the `Fabrics` APIs, ensure that the fabric manager is installed, its plugin is deployed, and added into the Resource Aggregator for ODIM framework. </blockquote>
@@ -538,12 +539,12 @@ Transfer-Encoding:chunked
 }
 ```
 
-## Creating an addresspool for a zone of endpoints
+## Creating an addresspool for a zone of endpoints with Tagged VLAN
 
 | **Method**         | `POST`                                                       |
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/AddressPools`                |
-| **Description**    | This operation creates an address pool that can be used by a zone of endpoints. |
+| **Description**    | This operation creates an address pool (with tagged VLAN) that can be used by a zone of endpoints. |
 | **Returns**        | - Link to the created address pool in the `Location` header<br />- JSON schema representing the created address pool |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
@@ -637,6 +638,97 @@ Transfer-Encoding:chunked
 "id":"bb2cd119-01e5-499d-8465-c219ad891842"
 }
 ```
+
+## Creating an addresspool for a zone of endpoints with untagged VLAN
+
+| **Method**         | `POST`                                                       |
+| ------------------ | ------------------------------------------------------------ |
+| **URI**            | `/redfish/v1/Fabrics/{fabricID}/AddressPools`                |
+| **Description**    | This operation creates an address pool (with untagged VLAN) that can be used by a zone of endpoints. |
+| **Returns**        | - Link to the created address pool in the `Location` header<br />- JSON schema representing the created address pool |
+| **Response code**  | On success, `201 Created`                                    |
+| **Authentication** | Yes                                                          |
+
+
+>**curl command**
+
+
+```
+curl -i POST \
+   -H "X-Auth-Token:{X-Auth-Token}" \
+    -d \
+'{
+  "Name":"Test-AddressPool-1",
+"Ethernet":{
+"IPv4":{
+"GatewayIPAddress":"10.18.100.1/24",
+"NativeVLAN":101
+   	    	}
+		}
+}'
+ 'https://{odimra_host}:{port}/redfish/v1/Fabrics/{fabricID}/AddressPools'
+
+```
+
+>**Sample request body**
+
+```
+{
+ "Name":"Test-AddressPool-1",
+ "Ethernet":{
+ "IPv4":{
+ "GatewayIPAddress":"10.18.100.1/24",
+ "NativeVLAN":101
+ 		  }
+ 		 	  }
+ }
+```
+
+**Request parameters**
+
+| Parameter              | Type                   | Description                                                  |
+| ---------------------- | ---------------------- | ------------------------------------------------------------ |
+| Name                   | String (optional)      | Name for the address pool                                    |
+| Ethernet{              |                        |                                                              |
+| IPv4\{                 | \(required\)<br>       |                                                              |
+| GatewayIPAddressList\{ | Array \(required\)<br> | IP pool to assign IPv4 address to the IP interface for VLAN per switch |
+| NativeVLAN             | (required)             | A single VLAN (virtual LAN) used for creating the IP interface for the user Virtual Routing and Forwarding (VRF) |
+
+>**Sample response header** 
+
+```
+HTTP/1.1 201 Created
+Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
+Cache-Control:no-cache
+Connection:keep-alive
+Content-Type:application/json; charset=utf-8
+Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/AddressPools/bb2cd119-01e5-499d-8465-c219ad891842
+Odata-Version:4.0
+X-Frame-Options:sameorigin
+Date:Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
+Transfer-Encoding:chunked
+
+```
+
+>**Sample response body**
+
+```
+{
+"@odata.context":"/redfish/v1/$metadata#AddressPool.AddressPool",
+"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/AddressPools/bb2cd119-01e5-499d-8465-c219ad891842",
+"@odata.type":"#AddressPool.v1_1_0.AddressPool",
+"Ethernet":{
+"IPv4":{
+"GatewayIPAddress":"10.18.100.1/24",
+"NativeVLAN":101
+		}
+			},
+"Name":"HPE-AddressPool-1",
+"id":"bb2cd119-01e5-499d-8465-c219ad891842"
+}
+```
+
+
 
 ## Creating a default zone
 
@@ -1073,6 +1165,9 @@ b3a5-3afe84f73fd7:102/Ports/43730998-10fe-491e-94a9-f48eeaa1e202:eth1-2"
 | **Returns**        | JSON schema representing the created zone                    |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
+
+<blockquote> NOTE: MultiVLAN is supported for the creation of multiple zone of endpoints.</blockquote>
+
 
 >**curl command**
 
