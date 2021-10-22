@@ -55,6 +55,7 @@ type TokenObject struct {
 func main() {
 	// intializing the plugin start time
 	caputilities.PluginStartTime = time.Now()
+	log.Info("Plugin Start time:", caputilities.PluginStartTime.Format(time.RFC3339))
 
 	// verifying the uid of the user
 	if uid := os.Geteuid(); uid == 0 {
