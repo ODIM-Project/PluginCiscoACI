@@ -17,6 +17,9 @@ package caphandler
 
 import (
 	"encoding/json"
+	"net/http"
+	"time"
+
 	"github.com/ODIM-Project/ODIM/lib-utilities/common"
 	"github.com/ODIM-Project/PluginCiscoACI/capmessagebus"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
@@ -28,8 +31,6 @@ import (
 	iris "github.com/kataras/iris/v12"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
-	"net/http"
-	"time"
 )
 
 // GetPluginStatus defines the GetPluginStatus iris handler.
@@ -54,6 +55,9 @@ func GetPluginStatus(ctx iris.Context) {
 		Version: pluginConfig.Data.FirmwareVersion,
 	}
 	resp.Status = caputilities.Status
+	elapsedTime := time.Since(caputilities.PluginStartTime)
+	log.Info("Time elapsed after the plugin started: ", elapsedTime.String())
+	resp.Status.Uptime = elapsedTime.String()
 	resp.Status.TimeStamp = time.Now().Format(time.RFC3339)
 	resp.EventMessageBus = capresponse.EventMessageBus{
 		EmbType: pluginConfig.Data.MessageBusConf.EmbType,

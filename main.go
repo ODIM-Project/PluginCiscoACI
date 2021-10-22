@@ -53,6 +53,9 @@ type TokenObject struct {
 }
 
 func main() {
+	// intializing the plugin start time
+	caputilities.PluginStartTime = time.Now()
+
 	// verifying the uid of the user
 	if uid := os.Geteuid(); uid == 0 {
 		log.Fatal("Plugin Service should not be run as the root user")
@@ -189,7 +192,6 @@ func eventsrouters() {
 // intializePluginStatus sets plugin status
 func intializePluginStatus() {
 	caputilities.Status.Available = "yes"
-	caputilities.Status.Uptime = time.Now().Format(time.RFC3339)
 
 	go sendStartupEvent()
 }
