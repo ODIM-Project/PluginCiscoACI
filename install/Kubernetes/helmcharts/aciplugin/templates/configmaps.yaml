@@ -60,16 +60,16 @@ data:
     	},
     	"MessageBusConf": {
     		"MessageQueueConfigFilePath": "/etc/aciplugin_config/platformconfig.toml",
-				{{ if eq .Values.odimra.haDeploymentEnabled false }}
-        "MessageBusAddress": "redis-inmemory",
-        "HASet": "",
-				{{ else }}
-				"MessageBusAddress": "redis-ha-inmemory",
-        "HASet": "redisSentinel",
-				{{ end }}
-				"MessageBusPort": 6379,
-        "MessageBusType": {{ .Values.aciplugin.messageBusType | quote }},
-    		"MessageBusQueue": ["ACI-EVENTS-TOPIC"]
+                {{ if eq .Values.odimra.haDeploymentEnabled false }}
+                "MessageBusAddress": "redis-inmemory",
+                "HASet": "",
+                {{ else }}
+                "MessageBusAddress": "redis-ha-inmemory",
+                "HASet": "redisSentinel",
+                {{ end }}
+                "MessageBusPort": "6379",
+                "MessageBusType": {{ .Values.aciplugin.messageBusType | quote }},
+                "MessageBusQueue": ["ACI-EVENTS-TOPIC"]
     	},
     	"URLTranslation": {
     		"NorthBoundURL": {
