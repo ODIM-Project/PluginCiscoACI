@@ -22,3 +22,9 @@ const (
 	// DefaultDBMinIdleConns - default MinIdleConns value
 	DefaultDBMinIdleConns = 10
 )
+
+// AllowedMessageBusTypes is for checking for message types are allowed
+var AllowedMessageBusTypes = map[string]bool{
+	"Kafka":       true,
+	"RedisStream": true,
+}
