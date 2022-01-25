@@ -36,7 +36,7 @@ RUN go build -i .
 COPY install/Docker/dockerfiles/scripts/add-hosts .
 RUN go build -o add-hosts add-hosts.go
 
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 ARG ODIMRA_USER_ID
 ARG ODIMRA_GROUP_ID
