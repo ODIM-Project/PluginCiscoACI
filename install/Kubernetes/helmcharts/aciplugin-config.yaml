@@ -12,4 +12,3 @@ aciplugin:
   odimURL:
   odimUserName:
   odimPassword:
-  messageBusType: Kafka
