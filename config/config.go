@@ -82,9 +82,6 @@ type EventConf struct {
 // MessageBusConf will have configuration data of MessageBusConf
 type MessageBusConf struct {
 	MessageQueueConfigFilePath string   `json:"MessageQueueConfigFilePath"` // Message Queue Config File Path
-	MessageBusAddress          string   `json:"MessageBusAddress"`
-	MessageBusPort             string   `json:"MessageBusPort"`
-	HASet                      string   `json:"HASet"`
 	EmbType                    string   `json:"MessageBusType"`
 	EmbQueue                   []string `json:"MessageBusQueue"`
 }
@@ -272,22 +269,12 @@ func checkMessageBusConf() error {
 		log.Warn("No value set for MessageBusType, setting default value")
 		Data.MessageBusConf.EmbType = "Kafka"
 	}
-	if Data.MessageBusConf.EmbType == "Kafka" {
-		if _, err := os.Stat(Data.MessageBusConf.MessageQueueConfigFilePath); err != nil {
-			return fmt.Errorf("Value check failed for MessageQueueConfigFilePath:%s with %v", Data.MessageBusConf.MessageQueueConfigFilePath, err)
-		}
-		if len(Data.MessageBusConf.EmbQueue) <= 0 {
-			log.Warn("No value set for MessageBusQueue, setting default value")
-			Data.MessageBusConf.EmbQueue = []string{"REDFISH-EVENTS-TOPIC"}
-		}
+	if _, err := os.Stat(Data.MessageBusConf.MessageQueueConfigFilePath); err != nil {
+		return fmt.Errorf("Value check failed for MessageQueueConfigFilePath:%s with %v", Data.MessageBusConf.MessageQueueConfigFilePath, err)
 	}
-	if Data.MessageBusConf.EmbType == "RedisStream" {
-		if Data.MessageBusConf.MessageBusAddress == "" {
-			return fmt.Errorf("error: no value configured for MessageBusAddress")
-		}
-		if Data.MessageBusConf.MessageBusPort == "" {
-			return fmt.Errorf("error: no value configured for MessageBusPort")
-		}
+	if len(Data.MessageBusConf.EmbQueue) <= 0 {
+		log.Warn("No value set for MessageBusQueue, setting default value")
+		Data.MessageBusConf.EmbQueue = []string{"REDFISH-EVENTS-TOPIC"}
 	}
 	if !AllowedMessageBusTypes[Data.MessageBusConf.EmbType] {
 		return fmt.Errorf("error: invalid value configured for MessageBusType")
