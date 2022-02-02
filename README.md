@@ -171,27 +171,33 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
       The Helm package for the Cisco ACI plugin is created in the tgz format.
 
-8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
+8. Navigate to the `ODIM` directory.
+
+   ```
+   cd ODIM
+   ```
+
+9. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
    ```
    docker save aciplugin:1.0 -o ~/plugins/aciplugin/aciplugin.tar
    ```
 
-9. Save the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to `~/plugins/aciplugin`.
+10. Save the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to `~/plugins/aciplugin`.
 
    **Important**: Do NOT change the value of any parameter in this file. 
 
-10. Navigate to the `/ODIM/odim-controller/scripts` directory on the deployment node.
+11. Navigate to the `/ODIM/odim-controller/scripts` directory on the deployment node.
 
     ```
     cd ~/ODIM/odim-controller/scripts
     ```
 
-11. Open the `kube_deploy_nodes.yaml` file.
+12. Open the `kube_deploy_nodes.yaml` file.
 
         vi kube_deploy_nodes.yaml
 
-12. Update the following parameters in the `kube_deploy_nodes.yaml` file to their corresponding values: 
+13. Update the following parameters in the `kube_deploy_nodes.yaml` file to their corresponding values: 
 
     | Parameter                    | Value                                                        |
     | ---------------------------- | ------------------------------------------------------------ |
@@ -206,27 +212,27 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
         odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
         odimraServerCertFQDNSan: aciplugin,aciplugin-events
 
-13. Move odimra_kafka_client.key, odimra_kafka_client.crt, odimra_server.key and odimra_server.crt stored in odimCertsPath to a different folder.
+14. Move odimra_kafka_client.key, odimra_kafka_client.crt, odimra_server.key and odimra_server.crt stored in odimCertsPath to a different folder.
 
     <blockquote> NOTE: odimCertsPath is the absolute path of the directory where certificates required by the services of Resource Aggregator for ODIM are present. This parameter is configured in the `kube_deploy_nodes.yaml` file.</blockquote>
 
-14. Update odimra-secrets:
+15. Update odimra-secrets:
 
        ```
     python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --upgrade odimra-secret
        ```
 
-15. Run the following command: 
+16. Run the following command: 
 
         python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --upgrade odimra-config
 
-16. In `~/ODIM/odim-controller/scripts`, run the following command to install the Cisco ACI plugin: 
+17. In `~/ODIM/odim-controller/scripts`, run the following command to install the Cisco ACI plugin: 
 
     ```
     python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --add plugin --plugin aciplugin
     ```
 
-17. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
+18. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
 
     ```
     kubectl get pods -n odim
@@ -238,7 +244,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     | ------------------------- | ----- | ------- | -------- | ----- |
     | aciplugin-5fc4b6788-2xx97 | 1/1   | Running | 0        | 4d22h |
 
-18. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
+19. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
 
 ## Adding a plugin into the Resource Aggregator for ODIM framework
 
