@@ -28,8 +28,7 @@
 
 Cisco ACI (Application Centric Infrastructure) is an open ecosystem model that uses a holistic, systems-based approach to integrate hardware and software, and the physical and virtual elements, to enable unique business value for modern data centers.
 
-Resource Aggregator for ODIM supports Cisco ACI plugin that can abstract, translate, and expose southbound resource information to the resource aggregator through
-RESTful APIs.
+Resource Aggregator for ODIM supports Cisco ACI plugin that can abstract, translate, and expose southbound resource information to the resource aggregator through RESTful APIs.
 
 ## Filing defects in ACI plugin
 
@@ -180,7 +179,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 9. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
    ```
-   docker save aciplugin:1.0 -o ~/plugins/aciplugin/aciplugin.tar
+   docker save aciplugin:2.0 -o ~/plugins/aciplugin/aciplugin.tar
    ```
 
 10. Save the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to `~/plugins/aciplugin`.
