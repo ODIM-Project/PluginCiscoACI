@@ -32,4 +32,4 @@ else
 fi
 
 
-/usr/bin/docker build -f install/Docker/dockerfiles/Dockerfile.aciplugin -t aciplugin:2.0 $build_args .
+/usr/bin/docker build -f install/Docker/dockerfiles/Dockerfile.aciplugin -t aciplugin:3.0 $build_args .
