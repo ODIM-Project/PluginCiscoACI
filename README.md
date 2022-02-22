@@ -283,7 +283,7 @@ The plugin you want to add is successfully deployed.
          "Password":"Plug!n12$4",
          "Links":{
                  "ConnectionMethod": {
-                   "@odata.id": "/redfish/v1/AggregationService/ConnectionMethods/d172e66c-b4a8-437c-981b-1c07ddfeacaa"
+                   "@odata.id": "/redfish/v1/AggregationService/ConnectionMethods/{ConnectionMethodId}"
                }
          }
       }
