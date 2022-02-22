@@ -205,11 +205,18 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     | odimraServerCertFQDNSan      | The FQDN to be included in the server certificate of Resource Aggregator for ODIM for deploying the ACI plugin:<br /> `aciplugin`, `aciplugin-events`<br> Add these values to the existing comma-separated list.<br> |
 
         odimPluginPath: /home/bruce/plugins
-         connectionMethodConf:
-         - ConnectionMethodType: Redfish
-           ConnectionMethodVariant: Fabric:BasicAuth:ACI_v1.0.0
-        odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
-        odimraServerCertFQDNSan: aciplugin,aciplugin-events
+        odimra:
+          groupID: 2021
+          userID: 2021
+          namespace: odim
+          fqdn:
+          rootServiceUUID:
+          haDeploymentEnabled: True
+          connectionMethodConf:
+          - ConnectionMethodType: Redfish
+            ConnectionMethodVariant: Fabric:BasicAuth:ACI_v1.0.0
+          odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
+          odimraServerCertFQDNSan: aciplugin,aciplugin-events
 
 14. Move odimra_kafka_client.key, odimra_kafka_client.crt, odimra_server.key and odimra_server.crt stored in odimCertsPath to a different folder.
 
@@ -321,18 +328,19 @@ The plugin you want to add is successfully deployed.
    echo -n '{odim_username}:{odim_password}' | base64 -w0
    ```
    
+   Default username is `admin` and default password is `Od!m12$4`.
    Replace `{base64_encoded_string_of_[odim_username:odim_password]}` with the generated base64 encoded string in the curl command. You will receive:
    
       -   An HTTP `202 Accepted` status code.
-      -   A link to the task monitor associated with this operation in the response header.
+      -   A link of the executed task. Performing a `GET` operation on this link displays the task monitor associated with this operation in the response header.
    
-      To know the status of this task, perform HTTP `GET` on the `taskmon` URI until the task is complete. If the plugin is added successfully, you will receive an HTTP `200 OK` status code.
+   To know the status of this task, perform HTTP `GET` on the `taskmon` URI until the task is complete. If the plugin is added successfully, you will receive an HTTP `200 OK` status code.
    
    After the plugin is successfully added, it will also be available as a manager resource at:
    
       `/redfish/v1/Managers`
    
-   For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).  
+   For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs). 
    
 2. To verify that the added plugin is active and running, do the following: 
 
