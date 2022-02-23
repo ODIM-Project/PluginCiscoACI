@@ -196,7 +196,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
         vi kube_deploy_nodes.yaml
 
-13. Update the following parameters in the `kube_deploy_nodes.yaml` file to their corresponding values: 
+13. Specify values for the following parameters in the `kube_deploy_nodes.yaml` file: 
 
     | Parameter                    | Value                                                        |
     | ---------------------------- | ------------------------------------------------------------ |
