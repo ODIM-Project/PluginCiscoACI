@@ -170,13 +170,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
       The Helm package for the Cisco ACI plugin is created in the tgz format.
 
-8. Navigate to the `ODIM` directory.
-
-   ```
-   cd ODIM
-   ```
-
-9. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
+8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
    ```
    docker save aciplugin:2.0 -o ~/plugins/aciplugin/aciplugin.tar
