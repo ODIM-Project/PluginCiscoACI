@@ -43,6 +43,8 @@ Resource Aggregator for ODIM supports Cisco ACI plugin that can abstract, transl
   - Resource Aggregator for ODIM Deployment Document- https://github.com/ODIM-Project/ODIM#readme
   - Additional documents - https://github.com/ODIM-Project/ODIM/blob/main/docs
 
+
+
 ## Deploying the Cisco ACI plugin
 
 **Prerequisites**
@@ -170,21 +172,25 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
       The Helm package for the Cisco ACI plugin is created in the tgz format.
 
-8. Navigate to the `ODIM` directory.
+8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
    ```
-   cd ODIM
+   docker save aciplugin:3.0 -o ~/plugins/aciplugin/aciplugin.tar
    ```
 
-9. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
+9. Navigate to the `PluginCiscoACI` directory.
 
    ```
-   docker save aciplugin:2.0 -o ~/plugins/aciplugin/aciplugin.tar
+   cd PluginCiscoACI
    ```
 
-10. Save the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to `~/plugins/aciplugin`.
+10. Copy the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to `~/plugins/aciplugin`.
 
-   **Important**: Do NOT change the value of any parameter in this file. 
+    ```
+    cp install/templates/aciplugin_proxy_server.conf.j2 ~/plugins/aciplugin
+    ```
+
+    **Important**: Do NOT change the value of any parameter in this file. 
 
 11. Navigate to the `/ODIM/odim-controller/scripts` directory on the deployment node.
 
@@ -196,7 +202,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
         vi kube_deploy_nodes.yaml
 
-13. Update the following parameters in the `kube_deploy_nodes.yaml` file to their corresponding values: 
+13. Specify values for the following parameters in the `kube_deploy_nodes.yaml` file: 
 
     | Parameter                    | Value                                                        |
     | ---------------------------- | ------------------------------------------------------------ |
@@ -205,11 +211,18 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     | odimraServerCertFQDNSan      | The FQDN to be included in the server certificate of Resource Aggregator for ODIM for deploying the ACI plugin:<br /> `aciplugin`, `aciplugin-events`<br> Add these values to the existing comma-separated list.<br> |
 
         odimPluginPath: /home/bruce/plugins
-         connectionMethodConf:
-         - ConnectionMethodType: Redfish
-           ConnectionMethodVariant: Fabric:BasicAuth:ACI_v1.0.0
-        odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
-        odimraServerCertFQDNSan: aciplugin,aciplugin-events
+        odimra:
+          groupID: 2021
+          userID: 2021
+          namespace: odim
+          fqdn:
+          rootServiceUUID:
+          haDeploymentEnabled: True
+          connectionMethodConf:
+          - ConnectionMethodType: Redfish
+            ConnectionMethodVariant: Fabric:BasicAuth:ACI_v1.0.0
+          odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
+          odimraServerCertFQDNSan: aciplugin,aciplugin-events
 
 14. Move odimra_kafka_client.key, odimra_kafka_client.crt, odimra_server.key and odimra_server.crt stored in odimCertsPath to a different folder.
 
@@ -276,7 +289,7 @@ The plugin you want to add is successfully deployed.
          "Password":"Plug!n12$4",
          "Links":{
                  "ConnectionMethod": {
-                   "@odata.id": "/redfish/v1/AggregationService/ConnectionMethods/d172e66c-b4a8-437c-981b-1c07ddfeacaa"
+                   "@odata.id": "/redfish/v1/AggregationService/ConnectionMethods/{ConnectionMethodId}"
                }
          }
       }
@@ -321,10 +334,11 @@ The plugin you want to add is successfully deployed.
    echo -n '{odim_username}:{odim_password}' | base64 -w0
    ```
    
+   Default username is `admin` and default password is `Od!m12$4`.
    Replace `{base64_encoded_string_of_[odim_username:odim_password]}` with the generated base64 encoded string in the curl command. You will receive:
    
       -   An HTTP `202 Accepted` status code.
-      -   A link to the task monitor associated with this operation in the response header.
+      -   A link of the executed task. Performing a `GET` operation on this link displays the task monitor associated with this operation in the response header.
    
       To know the status of this task, perform HTTP `GET` on the `taskmon` URI until the task is complete. If the plugin is added successfully, you will receive an HTTP `200 OK` status code.
    
@@ -332,7 +346,7 @@ The plugin you want to add is successfully deployed.
    
       `/redfish/v1/Managers`
    
-   For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).  
+   For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).
    
 2. To verify that the added plugin is active and running, do the following: 
 
