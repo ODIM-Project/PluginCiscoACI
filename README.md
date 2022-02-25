@@ -172,16 +172,16 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
       The Helm package for the Cisco ACI plugin is created in the tgz format.
 
-8. Navigate to the `PluginCiscoACI` directory.
-
-   ```
-   cd PluginCiscoACI
-   ```
-
-9. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
+8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
    ```
    docker save aciplugin:3.0 -o ~/plugins/aciplugin/aciplugin.tar
+   ```
+
+9. Navigate to the `PluginCiscoACI` directory.
+
+   ```
+   cd PluginCiscoACI
    ```
 
 10. Copy the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to `~/plugins/aciplugin`.
@@ -202,7 +202,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
         vi kube_deploy_nodes.yaml
 
-13. Update the following parameters in the `kube_deploy_nodes.yaml` file to their corresponding values: 
+13. Specify values for the following parameters in the `kube_deploy_nodes.yaml` file: 
 
     | Parameter                    | Value                                                        |
     | ---------------------------- | ------------------------------------------------------------ |
@@ -334,6 +334,7 @@ The plugin you want to add is successfully deployed.
    echo -n '{odim_username}:{odim_password}' | base64 -w0
    ```
    
+   Default username is `admin` and default password is `Od!m12$4`.
    Replace `{base64_encoded_string_of_[odim_username:odim_password]}` with the generated base64 encoded string in the curl command. You will receive:
    
       -   An HTTP `202 Accepted` status code.
@@ -345,7 +346,7 @@ The plugin you want to add is successfully deployed.
    
       `/redfish/v1/Managers`
    
-   For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).  
+   For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).
    
 2. To verify that the added plugin is active and running, do the following: 
 
