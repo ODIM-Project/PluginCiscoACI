@@ -176,9 +176,19 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
    docker save aciplugin:2.0 -o ~/plugins/aciplugin/aciplugin.tar
    ```
 
-10. Save the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to `~/plugins/aciplugin`.
+9. Navigate to the `PluginCiscoACI` directory.
 
-   **Important**: Do NOT change the value of any parameter in this file. 
+    ```
+   cd ~/PluginCiscoACI
+    ```
+
+10. Copy the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to `~/plugins/aciplugin`.
+
+    ```
+    cp install/templates/aciplugin_proxy_server.conf.j2 ~/plugins/aciplugin
+    ```
+
+    **Important**: Do NOT change the value of any parameter in this file. 
 
 11. Navigate to the `/ODIM/odim-controller/scripts` directory on the deployment node.
 
