@@ -43,6 +43,8 @@ Resource Aggregator for ODIM supports Cisco ACI plugin that can abstract, transl
   - Resource Aggregator for ODIM Deployment Document- https://github.com/ODIM-Project/ODIM#readme
   - Additional documents - https://github.com/ODIM-Project/ODIM/blob/main/docs
 
+
+
 ## Deploying the Cisco ACI plugin
 
 **Prerequisites**
