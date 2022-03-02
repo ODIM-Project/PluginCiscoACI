@@ -112,6 +112,7 @@ func CreateAddressPool(ctx iris.Context) {
 		ctx.JSON(resp)
 		return
 	}
+	var nativeVLANflag bool
 	if addresspoolData.Ethernet.IPv4.GatewayIPAddress != "" {
 		if _, _, err := net.ParseCIDR(addresspoolData.Ethernet.IPv4.GatewayIPAddress); err != nil {
 			errorMessage := "Invalid value for GatewayIPAddress:" + err.Error()
@@ -122,7 +123,12 @@ func CreateAddressPool(ctx iris.Context) {
 			return
 
 		}
-		if addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower != addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper {
+
+		// check if it's the untagged vlan
+		if addresspoolData.Ethernet.IPv4.NativeVLAN != 0 {
+			nativeVLANflag = true
+		}
+		if !nativeVLANflag && addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower != addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper {
 			errorMessage := fmt.Sprintf("Requested VLANIdentifierAddressRange Lower %d is not equal to Upper %d", addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper)
 			log.Error(errorMessage)
 			resp := updateErrorResponse(response.PropertyUnknown, errorMessage, []interface{}{"VLANIdentifierAddressRange"})
@@ -138,6 +144,9 @@ func CreateAddressPool(ctx iris.Context) {
 		}
 		for _, data := range addressPools {
 			if data.Ethernet.IPv4.GatewayIPAddress == addresspoolData.Ethernet.IPv4.GatewayIPAddress {
+				if nativeVLANflag && data.Ethernet.IPv4.NativeVLAN != addresspoolData.Ethernet.IPv4.NativeVLAN {
+					break
+				}
 				errorMessage := "Requested GatewayIPAddress is already present in the addresspool " + data.ODataID
 				log.Error(errorMessage)
 				resp := updateErrorResponse(response.ResourceAlreadyExists, errorMessage, []interface{}{"AddressPool", "GatewayIPAddress", addresspoolData.Ethernet.IPv4.GatewayIPAddress})
@@ -147,7 +156,8 @@ func CreateAddressPool(ctx iris.Context) {
 			}
 		}
 	}
-	if addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower > addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper {
+
+	if !nativeVLANflag && (addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower > addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper) {
 		errorMessage := fmt.Sprintf("Requested VLANIdentifierAddressRange Lower %d is greater than Upper %d", addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper)
 		log.Error(errorMessage)
 		resp := updateErrorResponse(response.PropertyUnknown, errorMessage, []interface{}{"VLANIdentifierAddressRange"})
@@ -156,7 +166,13 @@ func CreateAddressPool(ctx iris.Context) {
 		return
 	}
 	// validate the  VLANIdentifierAddressRange lower value
-	resp, statusCode := validateVLANIdentifierAddressRange(addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper)
+	var resp interface{}
+	var statusCode int
+	if !nativeVLANflag {
+		resp, statusCode = validateVLANIdentifierAddressRange(addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Lower, addresspoolData.Ethernet.IPv4.VLANIdentifierAddressRange.Upper, nativeVLANflag)
+	} else {
+		resp, statusCode = validateVLANIdentifierAddressRange(addresspoolData.Ethernet.IPv4.NativeVLAN, 0, nativeVLANflag)
+	}
 	if statusCode != http.StatusOK {
 		ctx.StatusCode(statusCode)
 		ctx.JSON(resp)
@@ -187,7 +203,7 @@ func validateAddressPoolRequest(request model.AddressPool) (string, error) {
 	if request.Ethernet == nil {
 		return "Ethernet", fmt.Errorf("Ethernet data in request is missing")
 	}
-	if request.Ethernet.IPv4.VLANIdentifierAddressRange == nil {
+	if request.Ethernet.IPv4.VLANIdentifierAddressRange == nil && request.Ethernet.IPv4.NativeVLAN == 0 {
 		return "VLANIdentifierAddressRange", fmt.Errorf("IPV4 VLANIdentifierAddressRange data  in request is missing")
 	}
 	return "", nil
@@ -264,7 +280,7 @@ func updateAddressPoolData(fabricID, zoneOID, addresspoolOID, operation string) 
 	return nil
 }
 
-func validateVLANIdentifierAddressRange(lowerValue int, upperValue int) (interface{}, int) {
+func validateVLANIdentifierAddressRange(lowerValue int, upperValue int, nativeVLANflag bool) (interface{}, int) {
 	statusCode := http.StatusOK
 	errorArgs := []response.ErrArgs{}
 	if lowerValue < 2 ||
@@ -279,17 +295,19 @@ func validateVLANIdentifierAddressRange(lowerValue int, upperValue int) (interfa
 		})
 		statusCode = http.StatusBadRequest
 	}
-	if upperValue < 2 ||
-		(upperValue > 1001 && upperValue < 1006) ||
-		upperValue > 4094 {
-		errorMessage := fmt.Sprintf("Invalid value for VLANIdentifierAddressRange %s: it should in range of 2 to 1001 or 1006 to 4094 not %d", "Upper", upperValue)
-		log.Errorf(errorMessage)
-		errorArgs = append(errorArgs, response.ErrArgs{
-			StatusMessage: response.PropertyValueNotInList,
-			ErrorMessage:  errorMessage,
-			MessageArgs:   []interface{}{fmt.Sprintf("%d", upperValue), "VLANIdentifierAddressRange Upper"},
-		})
-		statusCode = http.StatusBadRequest
+	if !nativeVLANflag {
+		if upperValue < 2 ||
+			(upperValue > 1001 && upperValue < 1006) ||
+			upperValue > 4094 {
+			errorMessage := fmt.Sprintf("Invalid value for VLANIdentifierAddressRange %s: it should in range of 2 to 1001 or 1006 to 4094 not %d", "Upper", upperValue)
+			log.Errorf(errorMessage)
+			errorArgs = append(errorArgs, response.ErrArgs{
+				StatusMessage: response.PropertyValueNotInList,
+				ErrorMessage:  errorMessage,
+				MessageArgs:   []interface{}{fmt.Sprintf("%d", upperValue), "VLANIdentifierAddressRange Upper"},
+			})
+			statusCode = http.StatusBadRequest
+		}
 	}
 	if statusCode != http.StatusOK {
 		args := response.Args{

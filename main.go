@@ -14,8 +14,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -51,6 +53,10 @@ type TokenObject struct {
 }
 
 func main() {
+	// intializing the plugin start time
+	caputilities.PluginStartTime = time.Now()
+	log.Info("Plugin Start time:", caputilities.PluginStartTime.Format(time.RFC3339))
+
 	// verifying the uid of the user
 	if uid := os.Geteuid(); uid == 0 {
 		log.Fatal("Plugin Service should not be run as the root user")
@@ -66,12 +72,14 @@ func main() {
 
 	// CreateJobQueue defines the queue which will act as an infinite buffer
 	// In channel is an entry or input channel and the Out channel is an exit or output channel
-	caphandler.In, caphandler.Out = common.CreateJobQueue()
+	caphandler.In, caphandler.Out = common.CreateJobQueue(1)
 
 	// RunReadWorkers will create a worker pool for doing a specific task
 	// which is passed to it as Publish method after reading the data from the channel.
 	go common.RunReadWorkers(caphandler.Out, capmessagebus.Publish, 1)
+
 	intializeACIData()
+
 	configFilePath := os.Getenv("PLUGIN_CONFIG_FILE_PATH")
 	if configFilePath == "" {
 		log.Fatal("No value get the environment variable PLUGIN_CONFIG_FILE_PATH")
@@ -80,6 +88,7 @@ func main() {
 	go caputilities.TrackConfigFileChanges(configFilePath)
 
 	intializePluginStatus()
+
 	app()
 }
 
@@ -183,8 +192,9 @@ func eventsrouters() {
 
 // intializePluginStatus sets plugin status
 func intializePluginStatus() {
-	caputilities.Status.Available = "no"
-	caputilities.Status.Uptime = time.Now().Format(time.RFC3339)
+	caputilities.Status.Available = "yes"
+
+	go sendStartupEvent()
 }
 
 // intializeACIData reads required fabric,switch and port data from aci and stored it in the data store
@@ -240,9 +250,6 @@ func intializeACIData() {
 
 	// TODO:
 	// registering the for the aci events
-
-	//updating the plugin status
-	caputilities.Status.Available = "yes"
 
 	return
 }
@@ -372,4 +379,34 @@ func checkSwitchIDExists(switchIDs []string, nodeID string) (exists bool) {
 		}
 	}
 	return false
+}
+
+// sendStartupEvent is for sending startup event
+func sendStartupEvent() {
+	// grace wait time for plugin to be functional
+	time.Sleep(3 * time.Second)
+
+	var pluginIP string
+	if pluginIP = os.Getenv("ASSIGNED_POD_IP"); pluginIP == "" {
+		pluginIP = config.Data.PluginConf.Host
+	}
+
+	startupEvt := common.PluginStatusEvent{
+		Name:         "Plugin startup event",
+		Type:         "PluginStarted",
+		Timestamp:    time.Now().String(),
+		OriginatorID: pluginIP,
+	}
+
+	request, _ := json.Marshal(startupEvt)
+	event := common.Events{
+		IP:        net.JoinHostPort(config.Data.PluginConf.Host, config.Data.PluginConf.Port),
+		Request:   request,
+		EventType: "PluginStartUp",
+	}
+
+	done := make(chan bool)
+	events := []interface{}{event}
+	go common.RunWriteWorkers(caphandler.In, events, 1, done)
+	log.Info("successfully sent startup event")
 }

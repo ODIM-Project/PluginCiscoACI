@@ -265,17 +265,21 @@ func checkMessageBusConf() error {
 	if Data.MessageBusConf == nil {
 		return fmt.Errorf("no value found for MessageBusConf")
 	}
-	if _, err := os.Stat(Data.MessageBusConf.MessageQueueConfigFilePath); err != nil {
-		return fmt.Errorf("value check failed for MessageQueueConfigFilePath:%s with %v", Data.MessageBusConf.MessageQueueConfigFilePath, err)
-	}
 	if Data.MessageBusConf.EmbType == "" {
-		log.Info("no value set for MessageBusType, setting default value")
+		log.Warn("No value set for MessageBusType, setting default value")
 		Data.MessageBusConf.EmbType = "Kafka"
 	}
+	if _, err := os.Stat(Data.MessageBusConf.MessageQueueConfigFilePath); err != nil {
+		return fmt.Errorf("Value check failed for MessageQueueConfigFilePath:%s with %v", Data.MessageBusConf.MessageQueueConfigFilePath, err)
+	}
 	if len(Data.MessageBusConf.EmbQueue) <= 0 {
-		log.Info("no value set for MessageBusQueue, setting default value")
+		log.Warn("No value set for MessageBusQueue, setting default value")
 		Data.MessageBusConf.EmbQueue = []string{"REDFISH-EVENTS-TOPIC"}
 	}
+	if !AllowedMessageBusTypes[Data.MessageBusConf.EmbType] {
+		return fmt.Errorf("error: invalid value configured for MessageBusType")
+	}
+
 	return nil
 }
 

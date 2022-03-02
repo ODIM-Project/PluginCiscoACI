@@ -30,6 +30,8 @@
 package caputilities
 
 import (
+	"time"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ODIM-Project/PluginCiscoACI/capresponse"
@@ -39,6 +41,9 @@ import (
 
 // Status holds the Status of plugin it will be intizaied during startup time
 var Status capresponse.Status
+
+// PluginStartTime hold the time from which plugin started
+var PluginStartTime time.Time
 
 // TrackConfigFileChanges monitors the config changes using fsnotfiy
 func TrackConfigFileChanges(configFilePath string) {

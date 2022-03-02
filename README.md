@@ -11,7 +11,8 @@
   - [Resource Aggregator for ODIM default ports](#resource-aggregator-for-odim-default-ports)
 - [Cisco ACI fabric APIs](#Cisco-ACI-fabric-APIs)
   - [Creating an addresspool for a zone of zones](#creating-an-addresspool-for-a-zone-of-zones)
-  - [Creating an addresspool for a zone of endpoints](#creating-an-addresspool-for-a-zone-of-endpoints)
+  - [Creating an addresspool for a zone of endpoints (with tagged VLAN)](#creating-an-addresspool-for-a-zone-of-endpoints-with-tagged-vlan)
+  - [Creating an addresspool for a zone of endpoints (with untagged VLAN)](#creating-an-addresspool-for-a-zone-of-endpoints-with-untagged-vlan)
   - [Creating a default zone](#creating-a-default-zone)
   - [Creating a zone of zones](#creating-a-zone-of-zones)
   - [Updating the connected ports](#updating-the-connected-ports)
@@ -27,8 +28,7 @@
 
 Cisco ACI (Application Centric Infrastructure) is an open ecosystem model that uses a holistic, systems-based approach to integrate hardware and software, and the physical and virtual elements, to enable unique business value for modern data centers.
 
-Resource Aggregator for ODIM supports Cisco ACI plugin that can abstract, translate, and expose southbound resource information to the resource aggregator through
-RESTful APIs.
+Resource Aggregator for ODIM supports Cisco ACI plugin that can abstract, translate, and expose southbound resource information to the resource aggregator through RESTful APIs.
 
 ## Filing defects in ACI plugin
 
@@ -173,24 +173,34 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
    ```
-   docker save aciplugin:1.0 -o ~/plugins/aciplugin/aciplugin.tar
+   docker save aciplugin:3.0 -o ~/plugins/aciplugin/aciplugin.tar
    ```
 
-9. Save the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to `~/plugins/aciplugin`.
+9. Navigate to the `PluginCiscoACI` directory.
 
-   **Important**: Do NOT change the value of any parameter in this file. 
+    ```
+   cd ~/PluginCiscoACI
+   ```
 
-10. Navigate to the `/ODIM/odim-controller/scripts` directory on the deployment node.
+10. Copy the proxy configuration file `install/templates/aciplugin_proxy_server.conf.j2` to `~/plugins/aciplugin`.
+
+    ```
+    cp install/templates/aciplugin_proxy_server.conf.j2 ~/plugins/aciplugin
+    ```
+
+    **Important**: Do NOT change the value of any parameter in this file. 
+
+11. Navigate to the `/ODIM/odim-controller/scripts` directory on the deployment node.
 
     ```
     cd ~/ODIM/odim-controller/scripts
     ```
 
-11. Open the `kube_deploy_nodes.yaml` file.
+12. Open the `kube_deploy_nodes.yaml` file.
 
         vi kube_deploy_nodes.yaml
 
-12. Update the following parameters in the `kube_deploy_nodes.yaml` file to their corresponding values: 
+13. Specify values for the following parameters in the `kube_deploy_nodes.yaml` file: 
 
     | Parameter                    | Value                                                        |
     | ---------------------------- | ------------------------------------------------------------ |
@@ -199,33 +209,40 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     | odimraServerCertFQDNSan      | The FQDN to be included in the server certificate of Resource Aggregator for ODIM for deploying the ACI plugin:<br /> `aciplugin`, `aciplugin-events`<br> Add these values to the existing comma-separated list.<br> |
 
         odimPluginPath: /home/bruce/plugins
-         connectionMethodConf:
-         - ConnectionMethodType: Redfish
-           ConnectionMethodVariant: Fabric:BasicAuth:ACI_v1.0.0
-        odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
-        odimraServerCertFQDNSan: aciplugin,aciplugin-events
+        odimra:
+          groupID: 2021
+          userID: 2021
+          namespace: odim
+          fqdn:
+          rootServiceUUID:
+          haDeploymentEnabled: True
+          connectionMethodConf:
+          - ConnectionMethodType: Redfish
+            ConnectionMethodVariant: Fabric:BasicAuth:ACI_v1.0.0
+          odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
+          odimraServerCertFQDNSan: aciplugin,aciplugin-events
 
-13. Move odimra_kafka_client.key, odimra_kafka_client.crt, odimra_server.key and odimra_server.crt stored in odimCertsPath to a different folder.
+14. Move odimra_kafka_client.key, odimra_kafka_client.crt, odimra_server.key and odimra_server.crt stored in odimCertsPath to a different folder.
 
     <blockquote> NOTE: odimCertsPath is the absolute path of the directory where certificates required by the services of Resource Aggregator for ODIM are present. This parameter is configured in the `kube_deploy_nodes.yaml` file.</blockquote>
 
-14. Update odimra-secrets:
+15. Update odimra-secrets:
 
        ```
     python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --upgrade odimra-secret
        ```
 
-15. Run the following command: 
+16. Run the following command: 
 
         python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --upgrade odimra-config
 
-16. In `~/ODIM/odim-controller/scripts`, run the following command to install the Cisco ACI plugin: 
+17. In `~/ODIM/odim-controller/scripts`, run the following command to install the Cisco ACI plugin: 
 
     ```
     python3 odim-controller.py --config /home/${USER}/ODIM/odim-controller/scripts/kube_deploy_nodes.yaml --add plugin --plugin aciplugin
     ```
 
-17. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
+18. Run the following command on the cluster nodes to verify the Cisco ACI plugin pod is up and running: 
 
     ```
     kubectl get pods -n odim
@@ -237,7 +254,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     | ------------------------- | ----- | ------- | -------- | ----- |
     | aciplugin-5fc4b6788-2xx97 | 1/1   | Running | 0        | 4d22h |
 
-18. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
+19. [Add the Cisco ACI plugin into the Resource Aggregator for ODIM framework](#adding-a-plugin-into-the-resource-aggregator-for-odim-framework). 
 
 ## Adding a plugin into the Resource Aggregator for ODIM framework
 
@@ -270,7 +287,7 @@ The plugin you want to add is successfully deployed.
          "Password":"Plug!n12$4",
          "Links":{
                  "ConnectionMethod": {
-                   "@odata.id": "/redfish/v1/AggregationService/ConnectionMethods/d172e66c-b4a8-437c-981b-1c07ddfeacaa"
+                   "@odata.id": "/redfish/v1/AggregationService/ConnectionMethods/{ConnectionMethodId}"
                }
          }
       }
@@ -315,18 +332,19 @@ The plugin you want to add is successfully deployed.
    echo -n '{odim_username}:{odim_password}' | base64 -w0
    ```
    
+   Default username is `admin` and default password is `Od!m12$4`.
    Replace `{base64_encoded_string_of_[odim_username:odim_password]}` with the generated base64 encoded string in the curl command. You will receive:
    
       -   An HTTP `202 Accepted` status code.
-      -   A link to the task monitor associated with this operation in the response header.
+      -   A link of the executed task. Performing a `GET` operation on this link displays the task monitor associated with this operation in the response header.
    
-      To know the status of this task, perform HTTP `GET` on the `taskmon` URI until the task is complete. If the plugin is added successfully, you will receive an HTTP `200 OK` status code.
+   To know the status of this task, perform HTTP `GET` on the `taskmon` URI until the task is complete. If the plugin is added successfully, you will receive an HTTP `200 OK` status code.
    
    After the plugin is successfully added, it will also be available as a manager resource at:
    
       `/redfish/v1/Managers`
    
-   For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).  
+   For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs). 
    
 2. To verify that the added plugin is active and running, do the following: 
 
@@ -423,7 +441,7 @@ When creating fabric entities, ensure to create them in the following order:
 2.  Default zones
 3.  Zone of zones
 4.  Endpoints
-5.  Zone of endpoints
+5.  Zone of endpoints (with tagged and untagged VLAN)
 
 <blockquote>
     IMPORTANT:Before using the `Fabrics` APIs, ensure that the fabric manager is installed, its plugin is deployed, and added into the Resource Aggregator for ODIM framework. </blockquote>
@@ -538,12 +556,12 @@ Transfer-Encoding:chunked
 }
 ```
 
-## Creating an addresspool for a zone of endpoints
+## Creating an addresspool for a zone of endpoints with Tagged VLAN
 
 | **Method**         | `POST`                                                       |
 | ------------------ | ------------------------------------------------------------ |
 | **URI**            | `/redfish/v1/Fabrics/{fabricID}/AddressPools`                |
-| **Description**    | This operation creates an address pool that can be used by a zone of endpoints. |
+| **Description**    | This operation creates an address pool (with tagged VLAN) that can be used by a zone of endpoints. |
 | **Returns**        | - Link to the created address pool in the `Location` header<br />- JSON schema representing the created address pool |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
@@ -637,6 +655,97 @@ Transfer-Encoding:chunked
 "id":"bb2cd119-01e5-499d-8465-c219ad891842"
 }
 ```
+
+## Creating an addresspool for a zone of endpoints with untagged VLAN
+
+| **Method**         | `POST`                                                       |
+| ------------------ | ------------------------------------------------------------ |
+| **URI**            | `/redfish/v1/Fabrics/{fabricID}/AddressPools`                |
+| **Description**    | This operation creates an address pool (with untagged VLAN) that can be used by a zone of endpoints. |
+| **Returns**        | - Link to the created address pool in the `Location` header<br />- JSON schema representing the created address pool |
+| **Response code**  | On success, `201 Created`                                    |
+| **Authentication** | Yes                                                          |
+
+
+>**curl command**
+
+
+```
+curl -i POST \
+   -H "X-Auth-Token:{X-Auth-Token}" \
+    -d \
+'{
+  "Name":"Test-AddressPool-1",
+"Ethernet":{
+"IPv4":{
+"GatewayIPAddress":"10.18.100.1/24",
+"NativeVLAN":101
+   	    	}
+		}
+}'
+ 'https://{odimra_host}:{port}/redfish/v1/Fabrics/{fabricID}/AddressPools'
+
+```
+
+>**Sample request body**
+
+```
+{
+ "Name":"Test-AddressPool-1",
+ "Ethernet":{
+ "IPv4":{
+ "GatewayIPAddress":"10.18.100.1/24",
+ "NativeVLAN":101
+ 		  }
+ 		 	  }
+ }
+```
+
+**Request parameters**
+
+| Parameter              | Type                   | Description                                                  |
+| ---------------------- | ---------------------- | ------------------------------------------------------------ |
+| Name                   | String (optional)      | Name for the address pool                                    |
+| Ethernet{              |                        |                                                              |
+| IPv4\{                 | \(required\)<br>       |                                                              |
+| GatewayIPAddressList\{ | Array \(required\)<br> | IP pool to assign IPv4 address to the IP interface for VLAN per switch |
+| NativeVLAN             | (required)             | A single VLAN (virtual LAN) used for creating the IP interface for the user Virtual Routing and Forwarding (VRF) |
+
+>**Sample response header** 
+
+```
+HTTP/1.1 201 Created
+Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
+Cache-Control:no-cache
+Connection:keep-alive
+Content-Type:application/json; charset=utf-8
+Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/AddressPools/bb2cd119-01e5-499d-8465-c219ad891842
+Odata-Version:4.0
+X-Frame-Options:sameorigin
+Date:Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
+Transfer-Encoding:chunked
+
+```
+
+>**Sample response body**
+
+```
+{
+"@odata.context":"/redfish/v1/$metadata#AddressPool.AddressPool",
+"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/AddressPools/bb2cd119-01e5-499d-8465-c219ad891842",
+"@odata.type":"#AddressPool.v1_1_0.AddressPool",
+"Ethernet":{
+"IPv4":{
+"GatewayIPAddress":"10.18.100.1/24",
+"NativeVLAN":101
+		}
+			},
+"Name":"HPE-AddressPool-1",
+"id":"bb2cd119-01e5-499d-8465-c219ad891842"
+}
+```
+
+
 
 ## Creating a default zone
 
@@ -1073,6 +1182,9 @@ b3a5-3afe84f73fd7:102/Ports/43730998-10fe-491e-94a9-f48eeaa1e202:eth1-2"
 | **Returns**        | JSON schema representing the created zone                    |
 | **Response code**  | On success, `201 Created`                                    |
 | **Authentication** | Yes                                                          |
+
+<blockquote> NOTE: MultiVLAN is supported for the creation of multiple zone of endpoints.</blockquote>
+
 
 >**curl command**
 
