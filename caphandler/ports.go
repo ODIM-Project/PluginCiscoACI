@@ -28,7 +28,6 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	"github.com/ODIM-Project/PluginCiscoACI/db"
-
 	iris "github.com/kataras/iris/v12"
 	log "github.com/sirupsen/logrus"
 )
@@ -118,7 +117,9 @@ func PatchPort(ctx iris.Context) {
 				for key, value := range config.Data.URLTranslation.SouthBoundURL {
 					reqURL = strings.Replace(reqURL, key, value, -1)
 				}
-				checkFlag, err = caputilities.CheckValidityOfEthernet(reqURL, odimUsername, odimPassword)
+				enigma := caputilities.NewEnigma(config.Data.PluginConf.RSAPrivateKeyPath, config.Data.PluginConf.RSAPublicKeyPath)
+
+				checkFlag, err = caputilities.CheckValidityOfEthernet(reqURL, odimUsername, string(enigma.Decrypt(odimPassword)))
 				if err != nil {
 					errMsg := fmt.Sprintf("Error while trying to contact ODIM")
 					log.Error(errMsg)
