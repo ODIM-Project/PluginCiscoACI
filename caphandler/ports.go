@@ -118,7 +118,7 @@ func PatchPort(ctx iris.Context) {
 				for key, value := range config.Data.URLTranslation.SouthBoundURL {
 					reqURL = strings.Replace(reqURL, key, value, -1)
 				}
-				enigma, err := caputilities.NewEnigma(string(config.Data.KeyCertConf.PrivateKeyPath))
+				enigma, err := caputilities.NewEnigma(string(config.Data.KeyCertConf.PrivateKeyPath), string(config.Data.KeyCertConf.PublicKeyPath))
 				if err != nil {
 					errMsg := fmt.Sprintf("Error while trying to read private key path")
 					log.Error(errMsg)

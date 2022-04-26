@@ -92,6 +92,7 @@ type MessageBusConf struct {
 type KeyCertConf struct {
 	RootCACertificatePath string `json:"RootCACertificatePath"` // RootCACertificate will be added to truststore
 	PrivateKeyPath        string `json:"PrivateKeyPath"`        // plugin private key
+	PublicKeyPath         string `json:"PublicKeyPath"`         // plugin private key
 	CertificatePath       string `json:"CertificatePath"`       // plugin certificate
 	RootCACertificate     []byte
 	PrivateKey            []byte
@@ -293,6 +294,9 @@ func checkCertsAndKeysConf() error {
 	}
 	if Data.KeyCertConf.Certificate, err = ioutil.ReadFile(Data.KeyCertConf.CertificatePath); err != nil {
 		return fmt.Errorf("value check failed for CertificatePath:%s with %v", Data.KeyCertConf.CertificatePath, err)
+	}
+	if Data.KeyCertConf.PrivateKey, err = ioutil.ReadFile(Data.KeyCertConf.PrivateKeyPath); err != nil {
+		return fmt.Errorf("value check failed for PrivateKeyPath:%s with %v", Data.KeyCertConf.PrivateKeyPath, err)
 	}
 	if Data.KeyCertConf.PrivateKey, err = ioutil.ReadFile(Data.KeyCertConf.PrivateKeyPath); err != nil {
 		return fmt.Errorf("value check failed for PrivateKeyPath:%s with %v", Data.KeyCertConf.PrivateKeyPath, err)
