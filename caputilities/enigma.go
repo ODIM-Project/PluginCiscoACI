@@ -64,7 +64,8 @@ func (e *Enigma) Encrypt(toBeEncrypted []byte) string {
 
 	return base64.StdEncoding.EncodeToString(encrypted)
 }
-func NewEnigma(privKeyPath string) *Enigma {
+
+func NewEnigma(privKeyPath, pubKeyPath string) *Enigma {
 	privateKeyBytes, err := ioutil.ReadFile(privKeyPath)
 	if err != nil {
 		logging.Fatalf("Cannot load PrivateKey from given path: '%s' because of  %s", privKeyPath, err)
