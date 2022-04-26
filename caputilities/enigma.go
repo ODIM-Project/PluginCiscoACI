@@ -40,14 +40,15 @@ type Enigma struct {
 func (e *Enigma) Decrypt(toBeDecrypted string) []byte {
 	decoded, err := base64.StdEncoding.DecodeString(toBeDecrypted)
 	if err != nil {
-		logging.Fatal(err)
+		logging.Fatal("Decrypt error", err)
 	}
 
 	hash := sha512.New()
 	plaintext, err := rsa.DecryptOAEP(hash, rand.Reader, e.priv, decoded, nil)
 	if err != nil {
-		logging.Fatal(err)
+		logging.Fatal("DecryptOAEP error", err)
 	}
+	fmt.Println("plaintext", plaintext)
 	return plaintext
 }
 
