@@ -117,7 +117,15 @@ func PatchPort(ctx iris.Context) {
 				for key, value := range config.Data.URLTranslation.SouthBoundURL {
 					reqURL = strings.Replace(reqURL, key, value, -1)
 				}
-				enigma := caputilities.NewEnigma(string(config.Data.KeyCertConf.PrivateKeyPath))
+				enigma, err := caputilities.NewEnigma(string(config.Data.KeyCertConf.PrivateKeyPath))
+				if err != nil {
+					errMsg := fmt.Sprintf("Error while trying to read private key path")
+					log.Error(errMsg)
+					resp := updateErrorResponse(response.InternalError, errMsg, nil)
+					ctx.StatusCode(http.StatusServiceUnavailable)
+					ctx.JSON(resp)
+					return
+				}
 				//decrypting odim pwd
 				odimPwd := string(enigma.Decrypt(odimPassword))
 				fmt.Println("-----------------**************odimPwd,odimPwd", odimPwd)
