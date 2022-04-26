@@ -43,14 +43,14 @@ func (e *Enigma) Decrypt(toBeDecrypted string) []byte {
 	if err != nil {
 		logging.Fatal("Decrypt error", err)
 	}
-	fmt.Println("e.priv---------", e.priv)
+	fmt.Println("e.priv", toBeDecrypted)
 
 	hash := sha512.New()
 	plaintext, err := rsa.DecryptOAEP(hash, rand.Reader, e.priv, decoded, nil)
 	if err != nil {
-		logging.Fatal("DecryptOAEP error---", err)
+		logging.Fatal("DecryptOAEP error", err)
 	}
-	fmt.Println("plaintext-----------", plaintext)
+	fmt.Println("plaintext", plaintext)
 	return plaintext
 }
 
@@ -64,19 +64,21 @@ func (e *Enigma) Encrypt(toBeEncrypted []byte) string {
 
 	return base64.StdEncoding.EncodeToString(encrypted)
 }
-
-// NewEnigma constructs Enigma by loading private/public key pair from provided paths
-func NewEnigma(privKeyPath string) (*Enigma, error) {
+func NewEnigma(privKeyPath string) *Enigma {
 	privateKeyBytes, err := ioutil.ReadFile(privKeyPath)
 	if err != nil {
-		//	logging.Fatalf("Cannot load PrivateKey from given path: '%s' because of  %s", privKeyPath, err)
-		return nil, fmt.Errorf("Cannot load PrivateKey from given path: '%s' because of  %s", privKeyPath, err)
+		logging.Fatalf("Cannot load PrivateKey from given path: '%s' because of  %s", privKeyPath, err)
+	}
 
+	publicKeyBytes, err := ioutil.ReadFile(pubKeyPath)
+	if err != nil {
+		logging.Fatalf("Cannot load PublicKey from given path: '%s' because of %s", privKeyPath, err)
 	}
 
 	return &Enigma{
 		priv: bytesToPrivateKey(privateKeyBytes),
-	}, nil
+		pub:  bytesToPublicKey(publicKeyBytes),
+	}
 }
 
 // CreateEnigma constructs Enigma using provided private/public key pair
