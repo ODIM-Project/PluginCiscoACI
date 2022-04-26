@@ -23,6 +23,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 
 	logging "github.com/sirupsen/logrus"
@@ -62,15 +63,17 @@ func (e *Enigma) Encrypt(toBeEncrypted []byte) string {
 }
 
 // NewEnigma constructs Enigma by loading private/public key pair from provided paths
-func NewEnigma(privKeyPath string) *Enigma {
+func NewEnigma(privKeyPath string) (*Enigma, error) {
 	privateKeyBytes, err := ioutil.ReadFile(privKeyPath)
 	if err != nil {
-		logging.Fatalf("Cannot load PrivateKey from given path: '%s' because of  %s", privKeyPath, err)
+		//	logging.Fatalf("Cannot load PrivateKey from given path: '%s' because of  %s", privKeyPath, err)
+		return nil, fmt.Errorf("Cannot load PrivateKey from given path: '%s' because of  %s", privKeyPath, err)
+
 	}
 
 	return &Enigma{
 		priv: bytesToPrivateKey(privateKeyBytes),
-	}
+	}, nil
 }
 
 // CreateEnigma constructs Enigma using provided private/public key pair

@@ -117,10 +117,10 @@ func PatchPort(ctx iris.Context) {
 				for key, value := range config.Data.URLTranslation.SouthBoundURL {
 					reqURL = strings.Replace(reqURL, key, value, -1)
 				}
-				enigma := caputilities.NewEnigma(string(config.Data.KeyCertConf.PrivateKey))
+				enigma := caputilities.NewEnigma(string(config.Data.KeyCertConf.PrivateKeyPath))
 				//decrypting odim pwd
 				odimPwd := string(enigma.Decrypt(odimPassword))
-				fmt.Println("odimPwd,odimPwd", odimPwd)
+				fmt.Println("-----------------**************odimPwd,odimPwd", odimPwd)
 				checkFlag, err = caputilities.CheckValidityOfEthernet(reqURL, odimUsername, odimPwd)
 				if err != nil {
 					errMsg := fmt.Sprintf("Error while trying to contact ODIM")
