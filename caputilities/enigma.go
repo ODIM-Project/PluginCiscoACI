@@ -62,20 +62,14 @@ func (e *Enigma) Encrypt(toBeEncrypted []byte) string {
 }
 
 // NewEnigma constructs Enigma by loading private/public key pair from provided paths
-func NewEnigma(privKeyPath, pubKeyPath string) *Enigma {
+func NewEnigma(privKeyPath string) *Enigma {
 	privateKeyBytes, err := ioutil.ReadFile(privKeyPath)
 	if err != nil {
 		logging.Fatalf("Cannot load PrivateKey from given path: '%s' because of  %s", privKeyPath, err)
 	}
 
-	publicKeyBytes, err := ioutil.ReadFile(pubKeyPath)
-	if err != nil {
-		logging.Fatalf("Cannot load PublicKey from given path: '%s' because of %s", privKeyPath, err)
-	}
-
 	return &Enigma{
 		priv: bytesToPrivateKey(privateKeyBytes),
-		pub:  bytesToPublicKey(publicKeyBytes),
 	}
 }
 

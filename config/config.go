@@ -59,13 +59,11 @@ type DBConf struct {
 
 //PluginConf is for holding all the plugin related configurations
 type PluginConf struct {
-	ID                string `json:"ID"` // PluginID hold the id of the plugin
-	Host              string `json:"Host"`
-	Port              string `json:"Port"`
-	UserName          string `json:"UserName"`
-	Password          string `json:"Password"`
-	RSAPrivateKeyPath string `json:"RSAPrivateKeyPath"`
-	RSAPublicKeyPath  string `json:"RSAPublicKeyPath"`
+	ID       string `json:"ID"` // PluginID hold the id of the plugin
+	Host     string `json:"Host"`
+	Port     string `json:"Port"`
+	UserName string `json:"UserName"`
+	Password string `json:"Password"`
 }
 
 //LoadBalancerConf is for holding all load balancer related configurations
