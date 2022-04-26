@@ -38,17 +38,19 @@ type Enigma struct {
 
 // Decrypt decrypts provided toBeDecrypted string.
 func (e *Enigma) Decrypt(toBeDecrypted string) []byte {
+	fmt.Println("toBeDecrypted", toBeDecrypted)
 	decoded, err := base64.StdEncoding.DecodeString(toBeDecrypted)
 	if err != nil {
 		logging.Fatal("Decrypt error", err)
 	}
+	fmt.Println("e.priv---------", e.priv)
 
 	hash := sha512.New()
 	plaintext, err := rsa.DecryptOAEP(hash, rand.Reader, e.priv, decoded, nil)
 	if err != nil {
-		logging.Fatal("DecryptOAEP error", err)
+		logging.Fatal("DecryptOAEP error---", err)
 	}
-	fmt.Println("plaintext", plaintext)
+	fmt.Println("plaintext-----------", plaintext)
 	return plaintext
 }
 
