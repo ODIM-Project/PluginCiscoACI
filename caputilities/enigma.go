@@ -73,7 +73,7 @@ func NewEnigma(privKeyPath, pubKeyPath string) (*Enigma, error) {
 
 	publicKeyBytes, err := ioutil.ReadFile(pubKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot load PublicKey from given path: '%s' because of %s", privKeyPath, err)
+		return nil, fmt.Errorf("Cannot load PublicKey from given path: '%s' because of %s", pubKeyPath, err)
 	}
 
 	return &Enigma{
