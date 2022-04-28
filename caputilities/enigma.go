@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Intel Corporation
+(C) Copyright [2022] Hewlett Packard Enterprise Development LP
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,8 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-
+*/
 package caputilities
 
 import (
@@ -27,7 +26,6 @@ import (
 	"io/ioutil"
 
 	logging "github.com/sirupsen/logrus"
-	//"github.com/ODIM-Project/ODIM/plugin-unmanaged-racks/logging"
 )
 
 // Enigma offers encryption/decryption API which utilizes provided private/public key pair.
@@ -66,15 +64,8 @@ func NewEnigma(privKeyPath string) (*Enigma, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Cannot load PrivateKey from given path: '%s' because of  %s", privKeyPath, err)
 	}
-
-	// publicKeyBytes, err := ioutil.ReadFile(pubKeyPath)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("Cannot load PublicKey from given path: '%s' because of %s", pubKeyPath, err)
-	// }
-
 	return &Enigma{
 		priv: bytesToPrivateKey(privateKeyBytes),
-		// pub:  bytesToPublicKey(publicKeyBytes),
 	}, nil
 }
 

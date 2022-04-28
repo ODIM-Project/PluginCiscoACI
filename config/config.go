@@ -90,7 +90,6 @@ type MessageBusConf struct {
 type KeyCertConf struct {
 	RootCACertificatePath string `json:"RootCACertificatePath"` // RootCACertificate will be added to truststore
 	PrivateKeyPath        string `json:"PrivateKeyPath"`        // plugin private key
-	PublicKeyPath         string `json:"PublicKeyPath"`         // plugin private key
 	CertificatePath       string `json:"CertificatePath"`       // plugin certificate
 	RootCACertificate     []byte
 	PrivateKey            []byte
