@@ -23,7 +23,7 @@ data:
     		"RootCACertificatePath": "/etc/odimra_certs/rootCA.crt",
     		"PrivateKeyPath": "/etc/odimra_certs/odimra_server.key",
     		"CertificatePath": "/etc/odimra_certs/odimra_server.crt",
-				"RSAPrivateKeyPath": '/etc/urplugin_certs/odimra_rsa.private"
+				"RSAPrivateKeyPath": "/etc/urplugin_certs/odimra_rsa.private"
     	},
         "DBConf": {
                 "Protocol": "tcp",
