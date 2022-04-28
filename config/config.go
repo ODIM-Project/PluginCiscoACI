@@ -96,7 +96,8 @@ type KeyCertConf struct {
 	CertificatePath       string `json:"CertificatePath"`       // plugin certificate
 	RootCACertificate     []byte
 	PrivateKey            []byte
-	Certificate           []byte
+
+	Certificate []byte
 }
 
 // URLTranslation ...
@@ -299,7 +300,7 @@ func checkCertsAndKeysConf() error {
 		return fmt.Errorf("value check failed for PrivateKeyPath:%s with %v", Data.KeyCertConf.PrivateKeyPath, err)
 	}
 	if Data.KeyCertConf.PublicKey, err = ioutil.ReadFile(Data.KeyCertConf.PublicKeyPath); err != nil {
-		return fmt.Errorf("value check failed for PrivateKeyPath:%s with %v", Data.KeyCertConf.PrivateKeyPath, err)
+		return fmt.Errorf("value check failed for PrivateKeyPath:%s with %v", Data.KeyCertConf.PublicKeyPath, err)
 	}
 	if Data.KeyCertConf.RootCACertificate, err = ioutil.ReadFile(Data.KeyCertConf.RootCACertificatePath); err != nil {
 		return fmt.Errorf("value check failed for RootCACertificatePath:%s with %v", Data.KeyCertConf.RootCACertificatePath, err)

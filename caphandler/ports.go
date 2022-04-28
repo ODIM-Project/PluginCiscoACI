@@ -114,11 +114,11 @@ func PatchPort(ctx iris.Context) {
 				reqURL := config.Data.ODIMConf.URL + ethernetURI
 				odimUsername := config.Data.ODIMConf.UserName
 				odimPassword := config.Data.ODIMConf.Password
-				fmt.Println("odimPassword------", odimPassword)
+				fmt.Println("odimPassword------:  ", odimPassword)
 				for key, value := range config.Data.URLTranslation.SouthBoundURL {
 					reqURL = strings.Replace(reqURL, key, value, -1)
 				}
-				enigma, err := caputilities.NewEnigma(string(config.Data.KeyCertConf.PrivateKeyPath), string(config.Data.KeyCertConf.PublicKeyPath))
+				enigma, err := caputilities.NewEnigma(string(config.Data.KeyCertConf.PrivateKeyPath))
 				if err != nil {
 					errMsg := fmt.Sprintf("Error while trying to read private key path ", err)
 					log.Error(errMsg)

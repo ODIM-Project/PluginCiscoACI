@@ -65,20 +65,20 @@ func (e *Enigma) Encrypt(toBeEncrypted []byte) string {
 	return base64.StdEncoding.EncodeToString(encrypted)
 }
 
-func NewEnigma(privKeyPath, pubKeyPath string) (*Enigma, error) {
+func NewEnigma(privKeyPath string) (*Enigma, error) {
 	privateKeyBytes, err := ioutil.ReadFile(privKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot load PrivateKey from given path: '%s' because of  %s", privKeyPath, err)
 	}
 
-	publicKeyBytes, err := ioutil.ReadFile(pubKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot load PublicKey from given path: '%s' because of %s", pubKeyPath, err)
-	}
+	// publicKeyBytes, err := ioutil.ReadFile(pubKeyPath)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("Cannot load PublicKey from given path: '%s' because of %s", pubKeyPath, err)
+	// }
 
 	return &Enigma{
 		priv: bytesToPrivateKey(privateKeyBytes),
-		pub:  bytesToPublicKey(publicKeyBytes),
+		// pub:  bytesToPublicKey(publicKeyBytes),
 	}, nil
 }
 
