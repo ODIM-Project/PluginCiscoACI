@@ -59,13 +59,11 @@ type DBConf struct {
 
 //PluginConf is for holding all the plugin related configurations
 type PluginConf struct {
-	ID                string `json:"ID"` // PluginID hold the id of the plugin
-	Host              string `json:"Host"`
-	Port              string `json:"Port"`
-	UserName          string `json:"UserName"`
-	Password          string `json:"Password"`
-	RSAPrivateKeyPath string `json:"RSAPrivateKeyPath"`
-	RSAPublicKeyPath  string `json:"RSAPublicKeyPath"`
+	ID       string `json:"ID"` // PluginID hold the id of the plugin
+	Host     string `json:"Host"`
+	Port     string `json:"Port"`
+	UserName string `json:"UserName"`
+	Password string `json:"Password"`
 }
 
 //LoadBalancerConf is for holding all load balancer related configurations
@@ -96,8 +94,9 @@ type KeyCertConf struct {
 	CertificatePath       string `json:"CertificatePath"`       // plugin certificate
 	RootCACertificate     []byte
 	PrivateKey            []byte
-
-	Certificate []byte
+	RSAPrivateKeyPath     string `json:"RSAPrivateKeyPath"`
+	Certificate           []byte
+	RSAPrivateKey         []byte
 }
 
 // URLTranslation ...
@@ -302,6 +301,9 @@ func checkCertsAndKeysConf() error {
 
 	if Data.KeyCertConf.RootCACertificate, err = ioutil.ReadFile(Data.KeyCertConf.RootCACertificatePath); err != nil {
 		return fmt.Errorf("value check failed for RootCACertificatePath:%s with %v", Data.KeyCertConf.RootCACertificatePath, err)
+	}
+	if Data.KeyCertConf.RSAPrivateKey, err = ioutil.ReadFile(Data.KeyCertConf.RSAPrivateKeyPath); err != nil {
+		return fmt.Errorf("value check failed for RSAPrivateKeyPath:%s with %v", Data.KeyCertConf.RSAPrivateKeyPath, err)
 	}
 	return nil
 }
