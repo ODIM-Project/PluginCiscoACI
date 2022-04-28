@@ -120,7 +120,7 @@ func PatchPort(ctx iris.Context) {
 				}
 				enigma, err := caputilities.NewEnigma(string(config.Data.KeyCertConf.RSAPrivateKeyPath))
 				if err != nil {
-					errMsg := fmt.Sprintf("Error while trying to read private key path ", err.Error())
+					errMsg := fmt.Sprintf("Error while trying to read private key path %s ", err.Error())
 					log.Error(errMsg)
 					resp := updateErrorResponse(response.InternalError, errMsg, nil)
 					ctx.StatusCode(http.StatusServiceUnavailable)
