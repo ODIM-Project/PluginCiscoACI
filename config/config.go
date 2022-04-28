@@ -299,9 +299,7 @@ func checkCertsAndKeysConf() error {
 	if Data.KeyCertConf.PrivateKey, err = ioutil.ReadFile(Data.KeyCertConf.PrivateKeyPath); err != nil {
 		return fmt.Errorf("value check failed for PrivateKeyPath:%s with %v", Data.KeyCertConf.PrivateKeyPath, err)
 	}
-	if Data.KeyCertConf.PublicKey, err = ioutil.ReadFile(Data.KeyCertConf.PublicKeyPath); err != nil {
-		return fmt.Errorf("value check failed for PrivateKeyPath:%s with %v", Data.KeyCertConf.PublicKeyPath, err)
-	}
+
 	if Data.KeyCertConf.RootCACertificate, err = ioutil.ReadFile(Data.KeyCertConf.RootCACertificatePath); err != nil {
 		return fmt.Errorf("value check failed for RootCACertificatePath:%s with %v", Data.KeyCertConf.RootCACertificatePath, err)
 	}
