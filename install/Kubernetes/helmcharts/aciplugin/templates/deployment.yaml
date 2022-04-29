@@ -52,6 +52,9 @@ spec:
             - key: odimra_kafka_clientkey
               path: odimra_kafka_client.key
               mode: 0444
+            - key: odimra_rsaprivate
+              path: odimra_rsa.private
+              mode: 0444
         - name: aciplugin-log
           persistentVolumeClaim:
             claimName: aciplugin-log-claim

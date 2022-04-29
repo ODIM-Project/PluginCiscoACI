@@ -19,13 +19,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
 	lutilconf "github.com/ODIM-Project/ODIM/lib-utilities/config"
 	"github.com/ODIM-Project/PluginCiscoACI/capmodel"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	"github.com/ciscoecosystem/aci-go-client/client"
 	"github.com/ciscoecosystem/aci-go-client/models"
-	"io/ioutil"
-	"net/http"
 )
 
 //ACIHTTPClient struct definition of HTTP wraper clinet used to communicate with ACI
@@ -390,6 +391,7 @@ func CheckValidityOfEthernet(reqURL string, odimUsername string, odimPassword st
 	if err != nil {
 		return false, err
 	}
+
 	auth := odimUsername + ":" + odimPassword
 	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
 	resp, err := newClient.httpClient.Do(req)
