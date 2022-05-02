@@ -15,7 +15,8 @@
 	"KeyCertConf": {
 		"RootCACertificatePath": "",
 		"PrivateKeyPath": "",
-		"CertificatePath": ""
+		"CertificatePath": "",
+		"RSAPrivateKeyPath":""
 	},
 	"DBConf": {
 		"Protocol": "tcp",

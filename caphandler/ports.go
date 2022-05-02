@@ -28,7 +28,6 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/caputilities"
 	"github.com/ODIM-Project/PluginCiscoACI/config"
 	"github.com/ODIM-Project/PluginCiscoACI/db"
-
 	iris "github.com/kataras/iris/v12"
 	log "github.com/sirupsen/logrus"
 )
@@ -118,7 +117,18 @@ func PatchPort(ctx iris.Context) {
 				for key, value := range config.Data.URLTranslation.SouthBoundURL {
 					reqURL = strings.Replace(reqURL, key, value, -1)
 				}
-				checkFlag, err = caputilities.CheckValidityOfEthernet(reqURL, odimUsername, odimPassword)
+				enigma, err := caputilities.NewEnigma(string(config.Data.KeyCertConf.RSAPrivateKeyPath))
+				if err != nil {
+					errMsg := fmt.Sprintf("Error while trying to read private key path %s ", err.Error())
+					log.Error(errMsg)
+					resp := updateErrorResponse(response.InternalError, errMsg, nil)
+					ctx.StatusCode(http.StatusServiceUnavailable)
+					ctx.JSON(resp)
+					return
+				}
+				//decrypting odim password
+				odimPwd := string(enigma.Decrypt(odimPassword))
+				checkFlag, err = caputilities.CheckValidityOfEthernet(reqURL, odimUsername, odimPwd)
 				if err != nil {
 					errMsg := fmt.Sprintf("Error while trying to contact ODIM")
 					log.Error(errMsg)
