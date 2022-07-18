@@ -14,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
+
+//Package caputilities ...
 package caputilities
 
 import (
@@ -60,6 +62,7 @@ func (e *Enigma) Encrypt(toBeEncrypted []byte) string {
 	return base64.StdEncoding.EncodeToString(encrypted)
 }
 
+// NewEnigma function create enigma object and sets  the private key path
 func NewEnigma(privKeyPath string) (*Enigma, error) {
 	privateKeyBytes, err := ioutil.ReadFile(privKeyPath)
 	if err != nil {

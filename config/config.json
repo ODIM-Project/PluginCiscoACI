@@ -26,7 +26,8 @@
 		"PoolSize": 120,
 		"RedisHAEnabled": false,
 		"SentinelPort": "26379",
-		"MasterSet": "mymaster"
+		"MasterSet": "mymaster",
+		"RedisOnDiskEncryptedPassword":""
 	},
 	"TLSConf" : {
 		"MinVersion": "TLS_1.2",

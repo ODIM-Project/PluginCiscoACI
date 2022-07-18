@@ -23,8 +23,8 @@ data:
     		"RootCACertificatePath": "/etc/odimra_certs/rootCA.crt",
     		"PrivateKeyPath": "/etc/odimra_certs/odimra_server.key",
     		"CertificatePath": "/etc/odimra_certs/odimra_server.crt",
-		"RSAPrivateKeyPath": "/etc/odimra_certs/odimra_rsa.private"
-    	},
+				"RSAPrivateKeyPath":"/etc/odimra_certs/odimra_rsa.private"
+				},
         "DBConf": {
                 "Protocol": "tcp",
                 {{ if eq .Values.odimra.haDeploymentEnabled false }}
@@ -38,7 +38,8 @@ data:
                 "MinIdleConns": 10,
                 "PoolSize": 120,
                 "RedisHAEnabled": {{ .Values.odimra.haDeploymentEnabled }},
-                "SentinelPort": "26379"
+                "SentinelPort": "26379",
+								"RedisOnDiskEncryptedPassword":{{ . .Values.odimra.redisOnDiskPassword }}
         },
         "TLSConf" : {
     		"MinVersion": "TLS_1.2",
