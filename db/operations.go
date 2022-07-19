@@ -17,8 +17,9 @@ package db
 import (
 	"errors"
 	"fmt"
-	"github.com/go-redis/redis"
 	"strings"
+
+	"github.com/go-redis/redis"
 )
 
 // Using below variables as part of errors will enabling errors.Is() function

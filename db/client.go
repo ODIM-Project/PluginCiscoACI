@@ -15,7 +15,10 @@
 package db
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"sync"
 	"time"
@@ -108,12 +111,20 @@ func retryForSentinelClient() *redis.Client {
 
 // getNewClient is used is utility function to create new connection pool for DB.
 func (r redisExtCallsImp) getNewClient() *redis.Client {
+	tlsConfig, e := getTLSConfig(config.Data.KeyCertConf.CertificatePath, config.Data.KeyCertConf.PrivateKeyPath, config.Data.KeyCertConf.RootCACertificatePath)
+	if e != nil {
+		log.Error(e.Error())
+		return nil
+	}
+
 	if config.Data.DBConf.RedisHAEnabled {
 		return redis.NewFailoverClient(&redis.FailoverOptions{
 			MasterName:    config.Data.DBConf.MasterSet,
 			SentinelAddrs: []string{net.JoinHostPort(config.Data.DBConf.Host, config.Data.DBConf.SentinelPort)},
 			PoolSize:      config.Data.DBConf.PoolSize,
 			MinIdleConns:  config.Data.DBConf.MinIdleConns,
+			TLSConfig:     tlsConfig,
+			Password:      string(config.Data.DBConf.RedisOnDiskPassword),
 		})
 	}
 	return redis.NewClient(&redis.Options{
@@ -121,5 +132,31 @@ func (r redisExtCallsImp) getNewClient() *redis.Client {
 		Addr:         net.JoinHostPort(config.Data.DBConf.Host, config.Data.DBConf.Port),
 		PoolSize:     config.Data.DBConf.PoolSize,
 		MinIdleConns: config.Data.DBConf.MinIdleConns,
+		TLSConfig:    tlsConfig,
+		Password:     string(config.Data.DBConf.RedisOnDiskPassword),
 	})
+}
+
+func getTLSConfig(cCert, cKey, caCert string) (*tls.Config, error) {
+
+	tlsConfig := tls.Config{}
+
+	// Load client cert
+	cert, e1 := tls.LoadX509KeyPair(cCert, cKey)
+	if e1 != nil {
+		return &tlsConfig, e1
+	}
+	tlsConfig.Certificates = []tls.Certificate{cert}
+
+	// Load CA cert
+	caCertR, e2 := ioutil.ReadFile(caCert)
+	if e2 != nil {
+		return &tlsConfig, e2
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCertR)
+	tlsConfig.RootCAs = caCertPool
+
+	tlsConfig.BuildNameToCertificate()
+	return &tlsConfig, e2
 }
