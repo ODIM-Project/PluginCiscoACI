@@ -139,12 +139,12 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
    - **odimPassword**: The encrypted password of the default administrator account of Resource Aggregator for ODIM. To generate the encrypted password, run the following command:
      
-```
-     echo -n '<HPE ODIMRA password>' |openssl pkeyutl -encrypt -inkey <odimCertsPath>/odimra_rsa.private -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha512|openssl base64 -A
-```
-
+     ```
+     echo -n '< ODIMRA password>' |openssl pkeyutl -encrypt -inkey <odimCertsPath>/odimra_rsa.private -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha512|openssl base64 -A
+     ```
+   
    Other parameters can have default values. Optionally, you can update them with values based on your requirements. For more information on each parameter, see [Plugin configuration parameters](#plugin-configuration-parameters).
-
+   
 7. Generate the Helm package for the Cisco ACI plugin on the deployment node:
 
    1. Navigate to `PluginCiscoACI/install/Kubernetes/helmcharts`.
@@ -164,12 +164,12 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
    ```
-   docker save aciplugin:3.0 -o ~/plugins/aciplugin/aciplugin.tar
+   docker save aciplugin:3.1 -o ~/plugins/aciplugin/aciplugin.tar
    ```
 
 9. Navigate to the `PluginCiscoACI` directory.
 
-    ```
+   ```
    cd ~/PluginCiscoACI
    ```
 
@@ -213,7 +213,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
           odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
           odimraServerCertFQDNSan: aciplugin,aciplugin-events
 
-14. Move odimra_kafka_client.key, odimra_kafka_client.crt, odimra_server.key and odimra_server.crt stored in odimCertsPath to a different folder.
+14. Move `odimra_kafka_client.key`, `odimra_kafka_client.crt`, `odimra_server.key`, and `odimra_server.crt` stored in odimCertsPath to a different folder.
 
     <blockquote> NOTE: odimCertsPath is the absolute path of the directory where certificates required by the services of Resource Aggregator for ODIM are present. This parameter is configured in the `kube_deploy_nodes.yaml` file.</blockquote>
 
@@ -288,7 +288,7 @@ The plugin you want to add is successfully deployed.
    
    | Parameter        | Type                    | Description                                                  |
    | ---------------- | ----------------------- | ------------------------------------------------------------ |
-   | HostName         | String \(required\)<br> | It is the plugin service name and the port specified in the Kubernetes environment. For default plugin ports, see [Resource Aggregator for ODIM default ports](#resource-aggregator-for-odim-default-ports).<br>**NOTE**: If you are using a different port for a plugin, ensure that the port is greater than `45000`. |
+   | HostName         | String \(required\)<br> | It is the plugin service name and the port specified in the Kubernetes environment. For default plugin ports, see *[Resource Aggregator for ODIM default ports](#resource-aggregator-for-odim-default-ports)*.<br>**NOTE**: If you are using a different port for a plugin, ensure that the port is greater than `45000`. |
    | UserName         | String \(required\)<br> | The plugin username. See default administrator account usernames of all the plugins in "Default plugin credentials". |
    | Password         | String \(required\)<br> | The plugin password. See default administrator account passwords of all the plugins in "Default plugin credentials". |
    | ConnectionMethod | Array \(required\)<br>  | Links to the connection methods that are used to communicate with this endpoint: `/redfish/v1/AggregationService/AggregationSources`.<br>**NOTE**: Ensure that the connection method information for the plugin you want to add is updated in the odim-controller configuration file.<br>To know which connection method to use, do the following:<br>    1.  Perform HTTP `GET` on: `/redfish/v1/AggregationService/ConnectionMethods`.<br>You will receive a list of links to available connection methods.<br>    2.  Perform HTTP `GET` on each link. Check the value of the `ConnectionMethodVariant` property in the JSON response. It displays the details of a plugin. Choose a connection method having the details of the plugin of your choice. For available connection method variants, see "Connection method variants" table.<br> |
@@ -335,7 +335,7 @@ The plugin you want to add is successfully deployed.
    
       `/redfish/v1/Managers`
    
-   For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs). 
+   For more information, see *Adding a plugin* in the *[Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs)*. 
    
 2. To verify that the added plugin is active and running, do the following: 
 
@@ -351,7 +351,7 @@ The plugin you want to add is successfully deployed.
 
    2. To identify the plugin Id of the added plugin, perform HTTP `GET` on each manager link in the response. 
       The JSON response body for a plugin manager has `Name` as the plugin name.
-      Example:
+      **Example**:
       The JSON response body for the Cisco ACI plugin manager has `Name` as `CiscoACI`.
 
       **Sample response**
@@ -393,7 +393,7 @@ The plugin you want to add is successfully deployed.
 
       - `Health` is `Ok` 
 
-      For more information, refer to "Managers" in [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).
+      For more information, refer to "Managers" in *[Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs)*.
 
 
 
