@@ -81,6 +81,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
    5. ```
       ./build_images.sh
+
       ```
 
 4. On the deployment node, copy the Cisco ACI plugin configuration file and the hook script to `~/plugins/aciplugin`.
