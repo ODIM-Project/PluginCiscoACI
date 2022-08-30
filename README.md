@@ -72,6 +72,14 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
       ```
 
    3. ```
+      export ODIMRA_USER_ID=2021
+      ```
+      
+   4. ```
+      export ODIMRA_GROUP_ID=2021
+      ```
+
+   5. ```
       ./build_images.sh
       ```
 
@@ -110,7 +118,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     odimUserName: admin
     odimPassword: H/r7PSBpgBafwA2UPPm6CrkGTBT9H0VJX0EQKz61ktpCJbdUXUiJdoX1LoU2JMxPEQPPv2tU4z1BO0HtiELe8muJ7VilCmW51zMWv0D7O+qjV4IxhvZ5EZT4tHqfjJwBSBBZZ5cV11ceic5p8L26soCT8KMNTRhksYVQJXUJnyT6qiNuTrLAIouJ4kj4xIdelpP4Zgzy7fdyd+x+yQP2DPWgCF5fYErmk7H7gxVibay1YUaE6qVAbYypqwRmUHIjnv3VC3qTRyRfwGMWEm+xD5ySNUOocXqUORuFcSPWDpZYXWRKSYnwKA+XZuCdm6KUiqU84Hyq4O5hWLwz51XZ/SutnOIoZoooqKxhMwmqLvAsx8/ndG9m2j+M/Vx+Cm22OWweGMKvXP5xKqR5X2bMybvLbKb+mJLW8WxjM+EI+Y4XpgunRlsaExYRW/4GCg7vWcvQ8Sc5a74n20+sNKqjqs/SgLdmJTzfh/6MN0TSfn8DtALJiN/17KAyTjH/2YO/arguin/eYiMfO9X6avgjy7x2ceOzUJFaWkWEOYMV8Ksm4msvlfhHcZ+2NgIsJRgfZgbO49+K+0jwQ7p7fXv5GOcFJ6HMVPNTJ8kCayU0Yh50bsqv3e7KTIERT1XyI6zXa7LYk5sswOvl7gsndE3vkPddrHg+m194tFo92chsnv0=
    ```
-   
+
 6. Update the following parameters in the plugin configuration file:
 
    - **eventListenerNodePort**: The port used for listening to the ACI plugin events. Default port is 30086.
@@ -142,9 +150,9 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
      ```
      echo -n '< ODIMRA password>' |openssl pkeyutl -encrypt -inkey <odimCertsPath>/odimra_rsa.private -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha512|openssl base64 -A
      ```
-   
+
    Other parameters can have default values. Optionally, you can update them with values based on your requirements. For more information on each parameter, see [Plugin configuration parameters](#plugin-configuration-parameters).
-   
+
 7. Generate the Helm package for the Cisco ACI plugin on the deployment node:
 
    1. Navigate to `PluginCiscoACI/install/Kubernetes/helmcharts`.
