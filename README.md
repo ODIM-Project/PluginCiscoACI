@@ -72,7 +72,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
       ```
 
    3. ```
-      ./build_images.sh
+      export ODIMRA_USER_ID=2021 ; export ODIMRA_GROUP_ID=2021 ; ./build_images.sh
       ```
 
 4. On the deployment node, copy the Cisco ACI plugin configuration file and the hook script to `~/plugins/aciplugin`.
