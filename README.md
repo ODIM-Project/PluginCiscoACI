@@ -72,7 +72,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
       ```
 
    3. ```
-      ./build_images.sh
+      export ODIMRA_USER_ID=2021 ; export ODIMRA_GROUP_ID=2021 ; ./build_images.sh
       ```
 
 4. On the deployment node, copy the Cisco ACI plugin configuration file and the hook script to `~/plugins/aciplugin`.
@@ -103,12 +103,12 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
     lbHost: aciplugin
     lbPort: 30086
     logPath: /var/log/aciplugin_logs
-    apicHost: 10.42.0.50
+    apicHost: 17.5.7.8
     apicUserName: admin
     apicPassword: Apic123
     odimURL: https://api:45000
     odimUserName: admin
-    odimPassword: Od!m12$4
+    odimPassword: H/r7PSBpgBafwA2UPPm6CrkGTBT9H0VJX0EQKz61ktpCJbdUXUiJdoX1LoU2JMxPEQPPv2tU4z1BO0HtiELe8muJ7VilCmW51zMWv0D7O+qjV4IxhvZ5EZT4tHqfjJwBSBBZZ5cV11ceic5p8L26soCT8KMNTRhksYVQJXUJnyT6qiNuTrLAIouJ4kj4xIdelpP4Zgzy7fdyd+x+yQP2DPWgCF5fYErmk7H7gxVibay1YUaE6qVAbYypqwRmUHIjnv3VC3qTRyRfwGMWEm+xD5ySNUOocXqUORuFcSPWDpZYXWRKSYnwKA+XZuCdm6KUiqU84Hyq4O5hWLwz51XZ/SutnOIoZoooqKxhMwmqLvAsx8/ndG9m2j+M/Vx+Cm22OWweGMKvXP5xKqR5X2bMybvLbKb+mJLW8WxjM+EI+Y4XpgunRlsaExYRW/4GCg7vWcvQ8Sc5a74n20+sNKqjqs/SgLdmJTzfh/6MN0TSfn8DtALJiN/17KAyTjH/2YO/arguin/eYiMfO9X6avgjy7x2ceOzUJFaWkWEOYMV8Ksm4msvlfhHcZ+2NgIsJRgfZgbO49+K+0jwQ7p7fXv5GOcFJ6HMVPNTJ8kCayU0Yh50bsqv3e7KTIERT1XyI6zXa7LYk5sswOvl7gsndE3vkPddrHg+m194tFo92chsnv0=
    ```
    
 6. Update the following parameters in the plugin configuration file:
@@ -137,23 +137,14 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 
    - **odimUserName**: The username of the default administrator account of Resource Aggregator for ODIM.
 
-   - **odimPassword**: The encrypted password of the default administrator account of Resource Aggregator for ODIM.
-     To generate the encrypted password, run the following command:
-
+   - **odimPassword**: The encrypted password of the default administrator account of Resource Aggregator for ODIM. To generate the encrypted password, run the following command:
+     
      ```
-     echo -n '<odimra_password>' \
-     | openssl pkeyutl -encrypt -inkey \
-     ~/R4H60-11004/odim-controller/\
-     scripts/certs/\
-     <deploymentid>/odimra_rsa.private \
-     -pkeyopt rsa_padding_mode:oaep \
-     -pkeyopt rsa_oaep_md:sha512|openssl
-     \
-     base64 -A
+     echo -n '< ODIMRA password>' |openssl pkeyutl -encrypt -inkey <odimCertsPath>/odimra_rsa.private -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha512|openssl base64 -A
      ```
-
+   
    Other parameters can have default values. Optionally, you can update them with values based on your requirements. For more information on each parameter, see [Plugin configuration parameters](#plugin-configuration-parameters).
-
+   
 7. Generate the Helm package for the Cisco ACI plugin on the deployment node:
 
    1. Navigate to `PluginCiscoACI/install/Kubernetes/helmcharts`.
@@ -173,12 +164,12 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
    ```
-   docker save aciplugin:3.0 -o ~/plugins/aciplugin/aciplugin.tar
+   docker save aciplugin:3.1 -o ~/plugins/aciplugin/aciplugin.tar
    ```
 
 9. Navigate to the `PluginCiscoACI` directory.
 
-    ```
+   ```
    cd ~/PluginCiscoACI
    ```
 
@@ -222,7 +213,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
           odimraKafkaClientCertFQDNSan: aciplugin,aciplugin-events
           odimraServerCertFQDNSan: aciplugin,aciplugin-events
 
-14. Move odimra_kafka_client.key, odimra_kafka_client.crt, odimra_server.key and odimra_server.crt stored in odimCertsPath to a different folder.
+14. Move `odimra_kafka_client.key`, `odimra_kafka_client.crt`, `odimra_server.key`, and `odimra_server.crt` stored in odimCertsPath to a different folder.
 
     <blockquote> NOTE: odimCertsPath is the absolute path of the directory where certificates required by the services of Resource Aggregator for ODIM are present. This parameter is configured in the `kube_deploy_nodes.yaml` file.</blockquote>
 
@@ -297,7 +288,7 @@ The plugin you want to add is successfully deployed.
    
    | Parameter        | Type                    | Description                                                  |
    | ---------------- | ----------------------- | ------------------------------------------------------------ |
-   | HostName         | String \(required\)<br> | It is the plugin service name and the port specified in the Kubernetes environment. For default plugin ports, see [Resource Aggregator for ODIM default ports](#resource-aggregator-for-odim-default-ports).<br>**NOTE**: If you are using a different port for a plugin, ensure that the port is greater than `45000`. |
+   | HostName         | String \(required\)<br> | It is the plugin service name and the port specified in the Kubernetes environment. For default plugin ports, see *[Resource Aggregator for ODIM default ports](#resource-aggregator-for-odim-default-ports)*.<br>**NOTE**: If you are using a different port for a plugin, ensure that the port is greater than `45000`. |
    | UserName         | String \(required\)<br> | The plugin username. See default administrator account usernames of all the plugins in "Default plugin credentials". |
    | Password         | String \(required\)<br> | The plugin password. See default administrator account passwords of all the plugins in "Default plugin credentials". |
    | ConnectionMethod | Array \(required\)<br>  | Links to the connection methods that are used to communicate with this endpoint: `/redfish/v1/AggregationService/AggregationSources`.<br>**NOTE**: Ensure that the connection method information for the plugin you want to add is updated in the odim-controller configuration file.<br>To know which connection method to use, do the following:<br>    1.  Perform HTTP `GET` on: `/redfish/v1/AggregationService/ConnectionMethods`.<br>You will receive a list of links to available connection methods.<br>    2.  Perform HTTP `GET` on each link. Check the value of the `ConnectionMethodVariant` property in the JSON response. It displays the details of a plugin. Choose a connection method having the details of the plugin of your choice. For available connection method variants, see "Connection method variants" table.<br> |
@@ -344,7 +335,7 @@ The plugin you want to add is successfully deployed.
    
       `/redfish/v1/Managers`
    
-   For more information, refer to "Adding a plugin" in the [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs). 
+   For more information, see *Adding a plugin* in the *[Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs)*. 
    
 2. To verify that the added plugin is active and running, do the following: 
 
@@ -360,7 +351,7 @@ The plugin you want to add is successfully deployed.
 
    2. To identify the plugin Id of the added plugin, perform HTTP `GET` on each manager link in the response. 
       The JSON response body for a plugin manager has `Name` as the plugin name.
-      Example:
+      **Example**:
       The JSON response body for the Cisco ACI plugin manager has `Name` as `CiscoACI`.
 
       **Sample response**
@@ -375,13 +366,13 @@ The plugin you want to add is successfully deployed.
           "Links": {
               "ManagerForSwitches": [
                   {
-                      "@odata.id": "/redfish/v1/Fabrics/fb40f2dc-0c6d-4464-bc98-fea775adbbb9:1/Switches/af10c386-68d5-45aa-b3c3-431e3e4c3647:101"
+                      "@odata.id": "/redfish/v1/Fabrics/fb40f2dc-0c6d-4464-bc98-fea775adbbb9.1/Switches/af10c386-68d5-45aa-b3c3-431e3e4c3647.101"
                   },
                   {
-                      "@odata.id": "/redfish/v1/Fabrics/fb40f2dc-0c6d-4464-bc98-fea775adbbb9:1/Switches/668f20cf-b6e7-4ded-a180-bf8e33dc18fc:102"
+                      "@odata.id": "/redfish/v1/Fabrics/fb40f2dc-0c6d-4464-bc98-fea775adbbb9.1/Switches/668f20cf-b6e7-4ded-a180-bf8e33dc18fc.102"
                   },
                   {
-                      "@odata.id": "/redfish/v1/Fabrics/fb40f2dc-0c6d-4464-bc98-fea775adbbb9:1/Switches/7d5a25b3-3ac4-49f4-a929-243b5b97bba0:201"
+                      "@odata.id": "/redfish/v1/Fabrics/fb40f2dc-0c6d-4464-bc98-fea775adbbb9.1/Switches/7d5a25b3-3ac4-49f4-a929-243b5b97bba0.201"
                   }
               ],
               "ManagerForSwitches@odata.count": 3
@@ -402,7 +393,7 @@ The plugin you want to add is successfully deployed.
 
       - `Health` is `Ok` 
 
-      For more information, refer to "Managers" in [Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs).
+      For more information, refer to "Managers" in *[Resource Aggregator for Open Distributed Infrastructure Management™ API Reference and User Guide](https://github.com/ODIM-Project/ODIM/tree/development/docs)*.
 
 
 
@@ -419,6 +410,7 @@ The following table lists all the configuration parameters required to deploy a 
 | username            | Username of the plugin                                       |
 | password            | The encrypted password of the plugin                         |
 | logPath             | The path where the plugin logs are stored. Default path is `/var/log/<plugin_name>_logs`<br/>**Example**: `/var/log/aciplugin_logs`<br/> |
+| odimPassword        | The encrypted password of the default administrator account of Resource Aggregator for ODIM. To generate the encrypted password, run the following command:<br />`echo -n '<HPE ODIMRA password>' |openssl pkeyutl -encrypt -inkey <odimCertsPath>/odimra_rsa.private -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha512|openssl base64 -A` |
 
 ## Resource Aggregator for ODIM default ports
 
@@ -524,15 +516,8 @@ curl -i POST \
 ```
 HTTP/1.1 201 Created
 Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
-Cache-Control:no-cache
-Connection:keep-alive
-Content-Type:application/json; charset=utf-8
 Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/AddressPools/e08cdf22-3c69-4548-a73b-0532111876de
-Odata-Version:4.0
-X-Frame-Options:sameorigin
 Date:Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
-Transfer-Encoding:chunked
-
 ```
 
 >**Sample response body**
@@ -578,7 +563,7 @@ curl -i POST \
   "Name":"Test-AddressPool-1",
 "Ethernet":{
 "IPv4":{
-"GatewayIPAddress":"10.18.100.1/24",
+"GatewayIPAddress":"17.5.7.8/24",
 "VLANIdentifierAddressRange":{
 "Lower":100,
 "Upper":100
@@ -597,7 +582,7 @@ curl -i POST \
  "Name":"Test-AddressPool-1",
  "Ethernet":{
  "IPv4":{
- "GatewayIPAddress":"10.18.100.1/24",
+ "GatewayIPAddress":"17.5.7.8/24",
  "VLANIdentifierAddressRange":{
  "Lower":100,
  "Upper":100
@@ -624,15 +609,8 @@ curl -i POST \
 ```
 HTTP/1.1 201 Created
 Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
-Cache-Control:no-cache
-Connection:keep-alive
-Content-Type:application/json; charset=utf-8
 Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/AddressPools/bb2cd119-01e5-499d-8465-c219ad891842
-Odata-Version:4.0
-X-Frame-Options:sameorigin
 Date:Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
-Transfer-Encoding:chunked
-
 ```
 
 >**Sample response body**
@@ -644,7 +622,7 @@ Transfer-Encoding:chunked
 "@odata.type":"#AddressPool.v1_1_0.AddressPool",
 "Ethernet":{
 "IPv4":{
-"GatewayIPAddress":"10.18.100.1/24",
+"GatewayIPAddress":"17.5.7.8/24",
 "VLANIdentifierAddressRange":{
 "Lower":100,
 "Upper":100
@@ -678,7 +656,7 @@ curl -i POST \
   "Name":"Test-AddressPool-1",
 "Ethernet":{
 "IPv4":{
-"GatewayIPAddress":"10.18.100.1/24",
+"GatewayIPAddress":"17.5.7.8/24",
 "NativeVLAN":101
    	    	}
 		}
@@ -694,7 +672,7 @@ curl -i POST \
  "Name":"Test-AddressPool-1",
  "Ethernet":{
  "IPv4":{
- "GatewayIPAddress":"10.18.100.1/24",
+ "GatewayIPAddress":"17.5.7.8/24",
  "NativeVLAN":101
  		  }
  		 	  }
@@ -716,15 +694,8 @@ curl -i POST \
 ```
 HTTP/1.1 201 Created
 Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
-Cache-Control:no-cache
-Connection:keep-alive
-Content-Type:application/json; charset=utf-8
 Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/AddressPools/bb2cd119-01e5-499d-8465-c219ad891842
-Odata-Version:4.0
-X-Frame-Options:sameorigin
 Date:Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
-Transfer-Encoding:chunked
-
 ```
 
 >**Sample response body**
@@ -732,11 +703,11 @@ Transfer-Encoding:chunked
 ```
 {
 "@odata.context":"/redfish/v1/$metadata#AddressPool.AddressPool",
-"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/AddressPools/bb2cd119-01e5-499d-8465-c219ad891842",
+"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351.1/AddressPools/bb2cd119-01e5-499d-8465-c219ad891842",
 "@odata.type":"#AddressPool.v1_1_0.AddressPool",
 "Ethernet":{
 "IPv4":{
-"GatewayIPAddress":"10.18.100.1/24",
+"GatewayIPAddress":"17.5.7.8/24",
 "NativeVLAN":101
 		}
 			},
@@ -771,7 +742,6 @@ curl -i POST \
 "ZoneType":"Default"
 }'
 'https://{odim_host}:{port}/redfish/v1/Fabrics/{fabricID}/Zones'
-
 ```
 
 >**Sample request body**
@@ -797,15 +767,8 @@ curl -i POST \
 ```
 HTTP/1.1 201 Created
 Allow: "GET", "PUT", "POST", "PATCH", "DELETE"
-Cache-Control: no-cache
-Connection: keep-alive
-Content-Type: application/json; charset=utf-8
 Location: /redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Zones/adce4bd8-0f39-421d-9b78-5fb6981ca68b
-Odata-Version: 4.0
-X-Frame-Options: sameorigin
 Date: Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
-Transfer-Encoding: chunked
-
 ```
 
 >**Sample response body**
@@ -851,13 +814,13 @@ curl -i POST \
 "Links":{
 "ContainedByZones":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/Zones/e5badcc7-707c-443d-b06f-b59686e1352d"
 }
 ],
 "AddressPools":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/AddressPools/311a78f1-ce37-4ace-9020-04688e55c398"
 }
 ]
@@ -876,13 +839,13 @@ curl -i POST \
 "Links":{
 "ContainedByZones":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/Zones/e5badcc7-707c-443d-b06f-b59686e1352d"
 }
 ],
 "AddressPools":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/AddressPools/311a78f1-ce37-4ace-9020-04688e55c398"
 }
 ]
@@ -906,15 +869,8 @@ curl -i POST \
 ```
 HTTP/1.1 201 Created
 Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
-Cache-Control:no-cache
-Connection:keep-alive
-Content-Type:application/json; charset=utf-8
 Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Zones/6415d9aa-47a3-439d-93bb-5b23dccf5d60
-Odata-Version:4.0
-X-Frame-Options:sameorigin
 Date:Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
-Transfer-Encoding:chunked
-
 ```
 
 >**Sample response body**
@@ -931,14 +887,14 @@ Zones/6415d9aa-47a3-439d-93bb-5b23dccf5d60",
 "AddressPools":[
 {
 "@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
-416c-8c82-413153a3c351:1/AddressPools/
+416c-8c82-413153a3c351.1/AddressPools/
 3d251ab9-2566-410a-9416-8164a0080d9a"
 }
 ],
 "ContainedByZones":[
 {
 "@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
-416c-8c82-413153a3c351:1/Zones/adce4bd8-0f39-421d-9b78-5fb6981ca68b"
+416c-8c82-413153a3c351.1/Zones/adce4bd8-0f39-421d-9b78-5fb6981ca68b"
 }
 ],
 "ContainedByZones@odata.count":1
@@ -1006,16 +962,10 @@ curl -i PATCH \
 ```
 HTTP/1.1 200 OK
 Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
-Cache-Control:no-cache
-Connection:keep-alive
-Content-Type:application/json; charset=utf-8
 Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Switches/
 9c5735d8-5598-40a4-896f-41cbc364f2fd:101/Ports/
 ccae270d-4524-44de-95ba-62a92d9476d6:eth1-2
-Odata-Version:4.0
-X-Frame-Options:sameorigin
 Date:Fri, 02 Apr 2021 07:39:26 GMT-2d 22h
-Transfer-Encoding:chunked
 ```
 
 >**Sample response body**
@@ -1034,7 +984,7 @@ ccae270d-4524-44de-95ba-62a92d9476d6:eth1-2",
 "ConnectedPorts":[
 {
 "@odata.id":"/redfish/v1/Systems/
-951ed562-0323-4351-9c0f-6240a25ec478:1/EthernetInterfaces/1"
+951ed562-0323-4351-9c0f-6240a25ec478.1/EthernetInterfaces/1"
 }
 ]
 },
@@ -1072,14 +1022,14 @@ Leaf switch ports",
 "Mode": "Sharing",
 "RedundancySet": [
 {
-"@odata.id": "/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
-1/Switches/71b33448-9423-4c23-b517-eb6b3ce3b751:101/Ports/
-90069713-cf34-4948-a5ca-abc22a13c56b:eth1-2"
+"@odata.id": "/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
+1/Switches/71b33448-9423-4c23-b517-eb6b3ce3b751.101/Ports/
+90069713-cf34-4948-a5ca-abc22a13c56b.eth1-2"
 },
 {
-"@odata.id": "/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
-1/Switches/b1b3d0e2-3860-4caf-ade4-2db7e9f6c075:102/Ports/
-1655f138-2c46-49b6-aedf-61645d73ad3f:eth1-2"
+"@odata.id": "/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
+1/Switches/b1b3d0e2-3860-4caf-ade4-2db7e9f6c075.102/Ports/
+1655f138-2c46-49b6-aedf-61645d73ad3f.eth1-2"
 }
 ]
 }
@@ -1100,14 +1050,14 @@ Leaf switch ports",
 "Mode": "Sharing",
 "RedundancySet": [
 {
-"@odata.id": "/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
-1/Switches/71b33448-9423-4c23-b517-eb6b3ce3b751:101/Ports/
-90069713-cf34-4948-a5ca-abc22a13c56b:eth1-2"
+"@odata.id": "/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
+1/Switches/71b33448-9423-4c23-b517-eb6b3ce3b751.101/Ports/
+90069713-cf34-4948-a5ca-abc22a13c56b.eth1-2"
 },
 {
-"@odata.id": "/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
-1/Switches/b1b3d0e2-3860-4caf-ade4-2db7e9f6c075:102/Ports/
-1655f138-2c46-49b6-aedf-61645d73ad3f:eth1-2"
+"@odata.id": "/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
+1/Switches/b1b3d0e2-3860-4caf-ade4-2db7e9f6c075.102/Ports/
+1655f138-2c46-49b6-aedf-61645d73ad3f.eth1-2"
 }
 ]
 }
@@ -1130,14 +1080,8 @@ Leaf switch ports",
 ```
 HTTP/1.1 201 Created
 Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
-Cache-Control:no-cache
-Connection:keep-alive
-Content-Type:application/json; charset=utf-8
 Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Endpoints/1cf55323-c1be-43d6-bc51-7ea0d06190d8
-Odata-Version:4.0
-X-Frame-Options:sameorigin
 Date:Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
-Transfer-Encoding:chunked
 ```
 
 >**Sample response body**
@@ -1145,7 +1089,7 @@ Transfer-Encoding:chunked
 ```
 {
 "@odata.context":"/redfish/v1/$metadata#Endpoint.Endpoint",
-"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/
+"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351.1/
 Endpoints/1cf55323-c1be-43d6-bc51-7ea0d06190d8",
 "@odata.type":"#Endpoint.v1_5_0.Endpoint",
 "Description":"Redundant Endpoint to provide redundancy between two Leaf
@@ -1158,14 +1102,14 @@ switch ports",
 "RedundancySet":[
 {
 "@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
-416c-8c82-413153a3c351:1/Switches/
-8bfa29b9-7fec-412d-8b29-042df4ba46f5:101/Ports/
-903f2727-2bf8-49b1-8ebd-97729a8f1460:eth1-2"
+416c-8c82-413153a3c351.1/Switches/
+8bfa29b9-7fec-412d-8b29-042df4ba46f5.101/Ports/
+903f2727-2bf8-49b1-8ebd-97729a8f1460.eth1-2"
 },
 {
 "@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
-416c-8c82-413153a3c351:1/Switches/e941a68e-4ffc-4d65-
-b3a5-3afe84f73fd7:102/Ports/43730998-10fe-491e-94a9-f48eeaa1e202:eth1-2"
+416c-8c82-413153a3c351.1/Switches/e941a68e-4ffc-4d65-
+b3a5-3afe84f73fd7.102/Ports/43730998-10fe-491e-94a9-f48eeaa1e202.eth1-2"
 }
 ]
 }
@@ -1200,19 +1144,19 @@ curl -i POST \
 "Links":{
 "ContainedByZones":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/Zones/451a7e26-00a4-4139-87b0-49e419bfa1ee"
 }
 ],
 "AddressPools":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/AddressPools/1b695701-6ce3-457e-a530-2bc55cac5fc7"
 }
 ],
 "Endpoints":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/Endpoints/1309dbc6-85d7-4bf8-8df7-92b9f56b0092"
 }
 ]
@@ -1231,19 +1175,19 @@ curl -i POST \
 "Links":{
 "ContainedByZones":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/Zones/451a7e26-00a4-4139-87b0-49e419bfa1ee"
 }
 ],
 "AddressPools":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/AddressPools/1b695701-6ce3-457e-a530-2bc55cac5fc7"
 }
 ],
 "Endpoints":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/Endpoints/1309dbc6-85d7-4bf8-8df7-92b9f56b0092"
 }
 ]
@@ -1271,14 +1215,8 @@ curl -i POST \
 ```
 HTTP/1.1 201 Created
 Allow: "GET", "PUT", "POST", "PATCH", "DELETE"
-Cache-Control: no-cache
-Connection: keep-alive
-Content-Type: application/json; charset=utf-8
 Location: /redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Zones/8e18e640-a91b-4d9b-9810-b63af3d9ce9b
-Odata-Version: 4.0
-X-Frame-Options: sameorigin
 Date: Wed, 31 Mar 2021 12:55:55 GMT-20h 45m
-Transfer-Encoding: chunked
 ```
 
 >**Sample response body**
@@ -1309,7 +1247,7 @@ c219ad891842"
 "Endpoints":[
 {
 "@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
-416c-8c82-413153a3c351:1/Endpoints/1cf55323-c1be-43d6-bc51-7ea0d06190d8"
+416c-8c82-413153a3c351.1/Endpoints/1cf55323-c1be-43d6-bc51-7ea0d06190d8"
 }
 ]
 },
@@ -1343,7 +1281,7 @@ curl -i PATCH \
 "Links":{
 "Endpoints":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/Endpoints/1309dbc6-85d7-4bf8-8df7-92b9f56b0092"
 }
 ]
@@ -1359,7 +1297,7 @@ curl -i PATCH \
 "Links":{
 "Endpoints":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/Endpoints/1309dbc6-85d7-4bf8-8df7-92b9f56b0092"
 }
 ]
@@ -1380,14 +1318,8 @@ curl -i PATCH \
 ```
 HTTP/1.1 200 OK
 Allow:"GET", "PUT", "POST", "PATCH", "DELETE"
-Cache-Control:no-cache
-Connection:keep-alive
-Content-Type:application/json; charset=utf-8
 Location:/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/Zones/8e18e640-a91b-4d9b-9810-b63af3d9ce9b
-Odata-Version:4.0
-X-Frame-Options:sameorigin
 Date:Fri, 02 Apr 2021 07:39:26 GMT-2d 22h
-Transfer-Encoding:chunked
 ```
 
 >**Sample response body**
@@ -1395,7 +1327,7 @@ Transfer-Encoding:chunked
 ```
 {
 "@odata.context":"/redfish/v1/$metadata#Zone.Zone",
-"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351:1/
+"@odata.id":"/redfish/v1/Fabrics/a127eedc-c29b-416c-8c82-413153a3c351.1/
 Zones/8e18e640-a91b-4d9b-9810-b63af3d9ce9b",
 "@odata.type":"#Zone.v1_4_0.Zone",
 "Description":"Zone of endpoints",
@@ -1404,20 +1336,20 @@ Zones/8e18e640-a91b-4d9b-9810-b63af3d9ce9b",
 "AddressPools":[
 {
 "@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
-416c-8c82-413153a3c351:1/AddressPools/bb2cd119-01e5-499d-8465-
+416c-8c82-413153a3c351.1/AddressPools/bb2cd119-01e5-499d-8465-
 c219ad891842"
 }
 ],
 "ContainedByZones":[
 {
 "@odata.id":"/redfish/v1/Fabrics/a127eedcc29b-
-416c-8c82-413153a3c351:1/Zones/6415d9aa-47a3-439d-93bb-5b23dccf5d60"
+416c-8c82-413153a3c351.1/Zones/6415d9aa-47a3-439d-93bb-5b23dccf5d60"
 }
 ],
 "ContainedByZones@odata.count":1,
 "Endpoints":[
 {
-"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b:
+"@odata.id":"/redfish/v1/Fabrics/16b17167-de3e-483d-9f6daad629b8829b.
 1/Endpoints/1309dbc6-85d7-4bf8-8df7-92b9f56b0092"
 }
 ]

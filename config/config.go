@@ -16,7 +16,13 @@
 package config
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha512"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -47,14 +53,16 @@ type configModel struct {
 
 // DBConf holds all DB related configurations
 type DBConf struct {
-	Protocol       string `json:"Protocol"`
-	Host           string `json:"Host"`
-	Port           string `json:"Port"`
-	MinIdleConns   int    `json:"MinIdleConns"`
-	PoolSize       int    `json:"PoolSize"`
-	RedisHAEnabled bool   `json:"RedisHAEnabled"`
-	SentinelPort   string `json:"SentinelPort"`
-	MasterSet      string `json:"MasterSet"`
+	Protocol                     string `json:"Protocol"`
+	Host                         string `json:"Host"`
+	Port                         string `json:"Port"`
+	MinIdleConns                 int    `json:"MinIdleConns"`
+	PoolSize                     int    `json:"PoolSize"`
+	RedisHAEnabled               bool   `json:"RedisHAEnabled"`
+	SentinelPort                 string `json:"SentinelPort"`
+	MasterSet                    string `json:"MasterSet"`
+	RedisOnDiskEncryptedPassword string `json:"RedisOnDiskEncryptedPassword"`
+	RedisOnDiskPassword          []byte
 }
 
 //PluginConf is for holding all the plugin related configurations
@@ -93,7 +101,9 @@ type KeyCertConf struct {
 	CertificatePath       string `json:"CertificatePath"`       // plugin certificate
 	RootCACertificate     []byte
 	PrivateKey            []byte
+	RSAPrivateKeyPath     string `json:"RSAPrivateKeyPath"`
 	Certificate           []byte
+	RSAPrivateKey         []byte
 }
 
 // URLTranslation ...
@@ -295,9 +305,14 @@ func checkCertsAndKeysConf() error {
 	if Data.KeyCertConf.PrivateKey, err = ioutil.ReadFile(Data.KeyCertConf.PrivateKeyPath); err != nil {
 		return fmt.Errorf("value check failed for PrivateKeyPath:%s with %v", Data.KeyCertConf.PrivateKeyPath, err)
 	}
+
 	if Data.KeyCertConf.RootCACertificate, err = ioutil.ReadFile(Data.KeyCertConf.RootCACertificatePath); err != nil {
 		return fmt.Errorf("value check failed for RootCACertificatePath:%s with %v", Data.KeyCertConf.RootCACertificatePath, err)
 	}
+	if Data.KeyCertConf.RSAPrivateKey, err = ioutil.ReadFile(Data.KeyCertConf.RSAPrivateKeyPath); err != nil {
+		return fmt.Errorf("value check failed for RSAPrivateKeyPath:%s with %v", Data.KeyCertConf.RSAPrivateKeyPath, err)
+	}
+
 	return nil
 }
 
@@ -389,11 +404,20 @@ func checkDBConf() error {
 		log.Warn("No value configured for MinIdleConns, setting default value")
 		Data.DBConf.MinIdleConns = DefaultDBMinIdleConns
 	}
+	if Data.DBConf.RedisOnDiskEncryptedPassword == "" {
+		return fmt.Errorf("error: no value configured for Redis OnDisk Encrypted Password")
+	}
+	var err error
+	Data.DBConf.RedisOnDiskPassword, err = decryptRSAOAEPEncryptedPasswords(Data.DBConf.RedisOnDiskEncryptedPassword)
+	if err != nil {
+		return err
+	}
 	if Data.DBConf.RedisHAEnabled {
-		if err := checkDBHAConf(); err != nil {
+		if err = checkDBHAConf(); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -405,4 +429,43 @@ func checkDBHAConf() error {
 		return fmt.Errorf("error: no value configured for DB MasterSet")
 	}
 	return nil
+}
+
+func decryptRSAOAEPEncryptedPasswords(encryptedPassword string) ([]byte, error) {
+	decoded, err := base64.StdEncoding.DecodeString(encryptedPassword)
+	if err != nil {
+		return nil, err
+	}
+	hash := sha512.New()
+	priv, err := bytesToPrivateKey(Data.KeyCertConf.RSAPrivateKey)
+	if err != nil {
+
+		return nil, err
+	}
+	plaintext, err := rsa.DecryptOAEP(hash, rand.Reader, priv, decoded, nil)
+	if err != nil {
+
+		return nil, err
+	}
+	return plaintext, nil
+}
+
+func bytesToPrivateKey(privateKey []byte) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode(privateKey)
+	enc := x509.IsEncryptedPEMBlock(block)
+	b := block.Bytes
+	var err error
+	if enc {
+		b, err = x509.DecryptPEMBlock(block, nil)
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
+	}
+	key, err := x509.ParsePKCS1PrivateKey(b)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	return key, nil
 }
