@@ -1,6 +1,6 @@
 module github.com/ODIM-Project/PluginCiscoACI
 
-go 1.17
+go 1.19
 
 require (
 	github.com/ODIM-Project/ODIM/lib-dmtf v0.0.0-20220824054103-cca8c7a2fb39
