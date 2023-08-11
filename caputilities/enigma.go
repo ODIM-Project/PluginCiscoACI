@@ -15,7 +15,7 @@
  * limitations under the License.
 */
 
-//Package caputilities ...
+// Package caputilities ...
 package caputilities
 
 import (
@@ -104,6 +104,7 @@ func bytesToPublicKey(publicKey []byte) *rsa.PublicKey {
 }
 
 func bytesToPrivateKey(privateKey []byte) *rsa.PrivateKey {
+	var key *rsa.PrivateKey
 	block, _ := pem.Decode(privateKey)
 	enc := x509.IsEncryptedPEMBlock(block)
 	b := block.Bytes
@@ -115,9 +116,15 @@ func bytesToPrivateKey(privateKey []byte) *rsa.PrivateKey {
 			logging.Error(err)
 		}
 	}
-	key, err := x509.ParsePKCS1PrivateKey(b)
+	pkcs1Key, err := x509.ParsePKCS1PrivateKey(b)
 	if err != nil {
-		logging.Fatal(err)
+		pkcs8Key, err := x509.ParsePKCS8PrivateKey(b)
+		if err != nil {
+			logging.Fatal(err)
+		}
+		key = pkcs8Key.(*rsa.PrivateKey)
+	} else {
+		key = pkcs1Key
 	}
 	return key
 }
