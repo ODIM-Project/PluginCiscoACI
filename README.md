@@ -172,7 +172,7 @@ Kubernetes cluster is set up and the resource aggregator is successfully deploye
 8. Save the Cisco ACI plugin Docker image on the deployment node at `~/plugins/aciplugin`.
 
    ```
-   docker save aciplugin:3.2 -o ~/plugins/aciplugin/aciplugin.tar
+   docker save aciplugin:3.3 -o ~/plugins/aciplugin/aciplugin.tar
    ```
 
 9. Navigate to the `PluginCiscoACI` directory.
