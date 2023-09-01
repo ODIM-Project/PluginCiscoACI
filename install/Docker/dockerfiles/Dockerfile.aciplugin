@@ -12,7 +12,7 @@
 #License for the specific language governing permissions and limitations
 # under the License.
 
-FROM golang:1.17.2 as build-stage
+FROM golang:1.19.5 as build-stage
 
 WORKDIR /aciplugin/
 
@@ -36,7 +36,7 @@ RUN go build -i .
 COPY install/Docker/dockerfiles/scripts/add-hosts .
 RUN go build -o add-hosts add-hosts.go
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 ARG ODIMRA_USER_ID
 ARG ODIMRA_GROUP_ID

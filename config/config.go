@@ -12,7 +12,7 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package config ...
+// Package config ...
 package config
 
 import (
@@ -65,7 +65,7 @@ type DBConf struct {
 	RedisOnDiskPassword          []byte
 }
 
-//PluginConf is for holding all the plugin related configurations
+// PluginConf is for holding all the plugin related configurations
 type PluginConf struct {
 	ID       string `json:"ID"` // PluginID hold the id of the plugin
 	Host     string `json:"Host"`
@@ -74,13 +74,13 @@ type PluginConf struct {
 	Password string `json:"Password"`
 }
 
-//LoadBalancerConf is for holding all load balancer related configurations
+// LoadBalancerConf is for holding all load balancer related configurations
 type LoadBalancerConf struct {
 	Host string `json:"LBHost"`
 	Port string `json:"LBPort"`
 }
 
-//EventConf is for holding all events related configuration
+// EventConf is for holding all events related configuration
 type EventConf struct {
 	DestURI      string `json:"DestinationURI"`
 	ListenerHost string `json:"ListenerHost"`
@@ -94,7 +94,7 @@ type MessageBusConf struct {
 	EmbQueue                   []string `json:"MessageBusQueue"`
 }
 
-//KeyCertConf is for holding all security oriented configuration
+// KeyCertConf is for holding all security oriented configuration
 type KeyCertConf struct {
 	RootCACertificatePath string `json:"RootCACertificatePath"` // RootCACertificate will be added to truststore
 	PrivateKeyPath        string `json:"PrivateKeyPath"`        // plugin private key
@@ -120,7 +120,7 @@ type TLSConf struct {
 	PreferredCipherSuites []string `json:"PreferredCipherSuites"`
 }
 
-//APICConf is for holding all the cisco APIC related configurations
+// APICConf is for holding all the cisco APIC related configurations
 type APICConf struct {
 	APICHost   string            `json:"APICHost"`
 	UserName   string            `json:"UserName"`
@@ -237,7 +237,7 @@ func checkODIMConf() error {
 	return nil
 }
 
-//check load balancer configuration
+// check load balancer configuration
 func checkLBConf() {
 	if Data.LoadBalancerConf == nil {
 		log.Info("no value set for LoadBalancerConf, setting default value")
@@ -270,7 +270,7 @@ func checkEventConf() error {
 	return nil
 }
 
-//Check or apply default values for message bus to be used by this plugin
+// Check or apply default values for message bus to be used by this plugin
 func checkMessageBusConf() error {
 	if Data.MessageBusConf == nil {
 		return fmt.Errorf("no value found for MessageBusConf")
@@ -293,7 +293,7 @@ func checkMessageBusConf() error {
 	return nil
 }
 
-//Check or apply default values for certs/keys used by this plugin
+// Check or apply default values for certs/keys used by this plugin
 func checkCertsAndKeysConf() error {
 	var err error
 	if Data.KeyCertConf == nil {
@@ -316,7 +316,7 @@ func checkCertsAndKeysConf() error {
 	return nil
 }
 
-//Check or apply default values for URL translation from ODIM <=> redfish
+// Check or apply default values for URL translation from ODIM <=> redfish
 func checkURLTranslationConf() {
 	if Data.URLTranslation == nil {
 		log.Info("URL translation not provided, setting default value")
@@ -451,6 +451,7 @@ func decryptRSAOAEPEncryptedPasswords(encryptedPassword string) ([]byte, error) 
 }
 
 func bytesToPrivateKey(privateKey []byte) (*rsa.PrivateKey, error) {
+	var key *rsa.PrivateKey
 	block, _ := pem.Decode(privateKey)
 	enc := x509.IsEncryptedPEMBlock(block)
 	b := block.Bytes
@@ -462,10 +463,16 @@ func bytesToPrivateKey(privateKey []byte) (*rsa.PrivateKey, error) {
 			return nil, err
 		}
 	}
-	key, err := x509.ParsePKCS1PrivateKey(b)
+	pkcs1Key, err := x509.ParsePKCS1PrivateKey(b)
 	if err != nil {
-		log.Error(err)
-		return nil, err
+		pkcs8Key, err := x509.ParsePKCS8PrivateKey(b)
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
+		key = pkcs8Key.(*rsa.PrivateKey)
+	} else {
+		key = pkcs1Key
 	}
 	return key, nil
 }
