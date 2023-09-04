@@ -12,7 +12,7 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package caphandler ...
+// Package caphandler ...
 package caphandler
 
 import (
@@ -33,7 +33,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//GetEndpointCollection : Fetches details of the given resource from the device
+// GetEndpointCollection : Fetches details of the given resource from the device
 func GetEndpointCollection(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
@@ -65,7 +65,7 @@ func GetEndpointCollection(ctx iris.Context) {
 	ctx.JSON(endpointCollection)
 }
 
-//CreateEndpoint : created endpoints under given fabric
+// CreateEndpoint : created endpoints under given fabric
 func CreateEndpoint(ctx iris.Context) {
 	// Add logic to check if given ports exits
 	uri := ctx.Request().RequestURI
@@ -175,7 +175,7 @@ func CreateEndpoint(ctx iris.Context) {
 	ctx.JSON(endpoint)
 }
 
-//GetEndpointInfo : gets endpoints under given fabric
+// GetEndpointInfo : gets endpoints under given fabric
 func GetEndpointInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")
@@ -190,7 +190,7 @@ func GetEndpointInfo(ctx iris.Context) {
 	ctx.JSON(endpointData.Endpoint)
 }
 
-//DeleteEndpointInfo : deletes  endpoints under given fabric
+// DeleteEndpointInfo : deletes  endpoints under given fabric
 func DeleteEndpointInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	fabricID := ctx.Params().Get("id")

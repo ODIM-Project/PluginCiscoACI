@@ -12,7 +12,7 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package capmodel ...
+// Package capmodel ...
 package capmodel
 
 import (
@@ -23,7 +23,7 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/db"
 )
 
-//SwitchChassis ...
+// SwitchChassis ...
 type SwitchChassis struct {
 	TotalCount string                `json:"totalCount"`
 	IMData     []SwitchChassisIMData `json:"imdata"`

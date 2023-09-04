@@ -12,7 +12,7 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package caphandler ...
+// Package caphandler ...
 package caphandler
 
 import (
@@ -31,7 +31,7 @@ import (
 	"strings"
 )
 
-//CreateEventSubscription : Subscribes for events
+// CreateEventSubscription : Subscribes for events
 func CreateEventSubscription(ctx iris.Context) {
 
 	device, deviceDetails, err := getDeviceDetails(ctx)
@@ -183,7 +183,7 @@ func isOurSubscription(device *caputilities.RedfishDevice) bool {
 	return true
 }
 
-//DeleteEventSubscription : Delete subscription
+// DeleteEventSubscription : Delete subscription
 func DeleteEventSubscription(ctx iris.Context) {
 	device, _, err := getDeviceDetails(ctx)
 	if err != nil {

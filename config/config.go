@@ -54,6 +54,7 @@ type configModel struct {
 // DBConf holds all DB related configurations
 type DBConf struct {
 	Protocol                     string `json:"Protocol"`
+	SentinelHost                 string `json:"SentinelHost"`
 	Host                         string `json:"Host"`
 	Port                         string `json:"Port"`
 	MinIdleConns                 int    `json:"MinIdleConns"`

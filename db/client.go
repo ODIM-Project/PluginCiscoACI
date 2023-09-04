@@ -35,14 +35,27 @@ type Client struct {
 	mux             sync.Mutex
 }
 
+type Config struct {
+	Port         string
+	Protocol     string
+	Host         string
+	SentinelHost string
+	SentinelPort string
+	MasterSet    string
+	Password     string
+}
+
 var client *Client
 
 // RedisExternalCalls containes the methods to make calls to external client libraries of Redis DB
 type RedisExternalCalls interface {
 	getNewClient() *redis.Client
+	newSentinelClient(opt *redis.Options) *redis.SentinelClient
+	getMasterAddrByName(mset string, snlClient *redis.SentinelClient) []string
 }
 
-type redisExtCallsImp struct{}
+type redisExtCallsImp struct {
+}
 
 var redisExtCalls RedisExternalCalls
 
@@ -118,13 +131,29 @@ func (r redisExtCallsImp) getNewClient() *redis.Client {
 	}
 
 	if config.Data.DBConf.RedisHAEnabled {
-		return redis.NewFailoverClient(&redis.FailoverOptions{
-			MasterName:    config.Data.DBConf.MasterSet,
-			SentinelAddrs: []string{net.JoinHostPort(config.Data.DBConf.Host, config.Data.DBConf.SentinelPort)},
-			PoolSize:      config.Data.DBConf.PoolSize,
-			MinIdleConns:  config.Data.DBConf.MinIdleConns,
-			TLSConfig:     tlsConfig,
-			Password:      string(config.Data.DBConf.RedisOnDiskPassword),
+
+		dbConfig := &Config{
+			Port:         config.Data.DBConf.Port,
+			Protocol:     config.Data.DBConf.Protocol,
+			Host:         config.Data.DBConf.Host,
+			SentinelHost: config.Data.DBConf.SentinelHost,
+			SentinelPort: config.Data.DBConf.SentinelPort,
+			MasterSet:    config.Data.DBConf.MasterSet,
+			Password:     string(config.Data.DBConf.RedisOnDiskPassword),
+		}
+		masterIP, masterPort, err := getCurrentMasterHostPort(dbConfig)
+
+		if err != nil {
+			log.Error(err.Error())
+			return nil
+		}
+		return redis.NewClient(&redis.Options{
+			Network:      config.Data.DBConf.Protocol,
+			Addr:         net.JoinHostPort(masterIP, masterPort),
+			PoolSize:     config.Data.DBConf.PoolSize,
+			MinIdleConns: config.Data.DBConf.MinIdleConns,
+			TLSConfig:    tlsConfig,
+			Password:     string(config.Data.DBConf.RedisOnDiskPassword),
 		})
 	}
 	return redis.NewClient(&redis.Options{
@@ -159,4 +188,43 @@ func getTLSConfig(cCert, cKey, caCert string) (*tls.Config, error) {
 
 	tlsConfig.BuildNameToCertificate()
 	return &tlsConfig, e2
+}
+
+// getCurrentMasterHostPort is to get the current Redis Master IP and Port from Sentinel.
+func getCurrentMasterHostPort(dbConfig *Config) (string, string, error) {
+	sentinelClient, err := sentinelNewClient(dbConfig)
+	if err != nil {
+		return "", "", err
+	}
+	stringSlice := redisExtCalls.getMasterAddrByName(dbConfig.MasterSet, sentinelClient)
+	var masterIP string
+	var masterPort string
+	if len(stringSlice) == 2 {
+		masterIP = stringSlice[0]
+		masterPort = stringSlice[1]
+	}
+
+	return masterIP, masterPort, nil
+}
+
+func sentinelNewClient(dbConfig *Config) (*redis.SentinelClient, error) {
+	tlsConfig, err := getTLSConfig(config.Data.KeyCertConf.CertificatePath, config.Data.KeyCertConf.PrivateKeyPath, config.Data.KeyCertConf.RootCACertificatePath)
+	if err != nil {
+		return nil, fmt.Errorf("error while trying to get tls configuration : %s", err.Error())
+	}
+	rdb := redisExtCalls.newSentinelClient(&redis.Options{
+		Addr:      dbConfig.SentinelHost + ":" + dbConfig.SentinelPort,
+		DB:        0, // use default DB
+		TLSConfig: tlsConfig,
+		Password:  dbConfig.Password,
+	})
+	return rdb, nil
+}
+
+func (r redisExtCallsImp) newSentinelClient(opt *redis.Options) *redis.SentinelClient {
+	return redis.NewSentinelClient(opt)
+}
+
+func (r redisExtCallsImp) getMasterAddrByName(masterSet string, snlClient *redis.SentinelClient) []string {
+	return snlClient.GetMasterAddrByName(masterSet).Val()
 }

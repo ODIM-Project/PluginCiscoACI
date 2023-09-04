@@ -12,10 +12,10 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package capresponse ...
+// Package capresponse ...
 package capresponse
 
-//Device struct definition
+// Device struct definition
 type Device struct {
 	ServerIP   string `json:"ServerIP"`
 	Username   string `json:"Username"`

@@ -22,7 +22,7 @@ import (
 	"github.com/ODIM-Project/PluginCiscoACI/db"
 )
 
-//PortCollectionResponse ...
+// PortCollectionResponse ...
 type PortCollectionResponse struct {
 	TotalCount string                 `json:"totalCount"`
 	IMData     []PortCollectionIMData `json:"imdata"`
@@ -44,7 +44,7 @@ type PortInfoResponse struct {
 	IMData     []PortInfoIMData `json:"imdata"`
 }
 
-//PortInfoIMData ...
+// PortInfoIMData ...
 type PortInfoIMData struct {
 	PhysicalInterface PhysicalInterface `json:"ethpmPhysIf"`
 }

@@ -12,16 +12,16 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package capmodel ...
+// Package capmodel ...
 package capmodel
 
-//Health ...
+// Health ...
 type Health struct {
 	TotalCount string         `json:"totalCount"`
 	IMData     []HealthIMData `json:"imdata"`
 }
 
-//HealthIMData ...
+// HealthIMData ...
 type HealthIMData struct {
 	HealthData HealthData `json:"healthInst"`
 }

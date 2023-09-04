@@ -12,7 +12,7 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package caputilities ...
+// Package caputilities ...
 package caputilities
 
 import (
@@ -29,7 +29,7 @@ import (
 	"github.com/ciscoecosystem/aci-go-client/models"
 )
 
-//ACIHTTPClient struct definition of HTTP wraper clinet used to communicate with ACI
+// ACIHTTPClient struct definition of HTTP wraper clinet used to communicate with ACI
 type ACIHTTPClient struct {
 	httpClient *http.Client
 }
@@ -58,7 +58,7 @@ func GetFabricNodeData() ([]*models.FabricNodeMember, error) {
 
 }
 
-//GetPortData collects the all port data for the given switch
+// GetPortData collects the all port data for the given switch
 func GetPortData(podID, ACISwitchID string) (*capmodel.PortCollectionResponse, error) {
 	endpoint := fmt.Sprintf("https://%s/api/node/class/topology/pod-%s/node-%s/l1PhysIf.json", config.Data.APICConf.APICHost, podID, ACISwitchID)
 
@@ -101,7 +101,7 @@ func GetPortData(podID, ACISwitchID string) (*capmodel.PortCollectionResponse, e
 
 }
 
-//GetFabricHealth queries the fabric for it's Health from ACI
+// GetFabricHealth queries the fabric for it's Health from ACI
 func GetFabricHealth(podID string) (*capmodel.FabricHealth, error) {
 	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json
@@ -223,7 +223,7 @@ func GetSwitchChassisInfo(podID, ACISwitchID string) (*capmodel.SwitchChassis, *
 	return &switchChassisData, &chassisHealth, nil
 }
 
-//GetSwitchHealth queries the switch for it's Health from ACI
+// GetSwitchHealth queries the switch for it's Health from ACI
 func GetSwitchHealth(podID, ACISwitchID string) (*capmodel.Health, error) {
 	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json
@@ -272,7 +272,7 @@ func GetSwitchHealth(podID, ACISwitchID string) (*capmodel.Health, error) {
 
 }
 
-//GetPortInfo collects the dat for  given port
+// GetPortInfo collects the dat for  given port
 func GetPortInfo(podID, ACISwitchID, portID string) (*capmodel.PortInfoResponse, error) {
 	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json
@@ -321,7 +321,7 @@ func GetPortInfo(podID, ACISwitchID, portID string) (*capmodel.PortInfoResponse,
 
 }
 
-//GetPortHealth collects the Health  for  given port
+// GetPortHealth collects the Health  for  given port
 func GetPortHealth(podID, ACISwitchID, portID string) (*capmodel.Health, error) {
 	aciClient := client.NewClient("https://"+config.Data.APICConf.APICHost, config.Data.APICConf.UserName, client.Password(config.Data.APICConf.Password), client.Insecure(true))
 	// Get the port data for given switch using the uri /api/node/mo/topology/{pod_id}/health.json

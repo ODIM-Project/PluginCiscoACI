@@ -12,10 +12,10 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package capmodel ...
+// Package capmodel ...
 package capmodel
 
-//Device struct definition
+// Device struct definition
 type Device struct {
 	Host     string `json:"ManagerAddress"`
 	Username string `json:"UserName"`
@@ -24,7 +24,7 @@ type Device struct {
 	Location string `json:"Location"`
 }
 
-//EvtSubPost ...
+// EvtSubPost ...
 type EvtSubPost struct {
 	Destination   string        `json:"Destination"`
 	EventTypes    []string      `json:"EventTypes,omitempty"`
@@ -35,7 +35,7 @@ type EvtSubPost struct {
 	Protocol      string        `json:"Protocol"`
 }
 
-//HTTPHeaders ...
+// HTTPHeaders ...
 type HTTPHeaders struct {
 	ContentType string `json:"Content-Type"`
 }

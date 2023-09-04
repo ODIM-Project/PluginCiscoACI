@@ -19,7 +19,7 @@ import (
 	"github.com/ODIM-Project/ODIM/lib-dmtf/model"
 )
 
-//Fabric ACI data of switch id and pod id
+// Fabric ACI data of switch id and pod id
 type Fabric struct {
 	SwitchData []string
 	PodID      string

@@ -15,6 +15,7 @@
 package db
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/ODIM-Project/PluginCiscoACI/config"
@@ -23,8 +24,31 @@ import (
 
 type redisExtCallsImpMock struct{}
 
+func (r redisExtCallsImpMock) newSentinelClient(opt *redis.Options) *redis.SentinelClient {
+	return newSentinelClientMock(opt)
+}
+
+func newSentinelClientMock(opt *redis.Options) *redis.SentinelClient {
+	strSlice := strings.Split(opt.Addr, ":")
+	sentinelHost := strSlice[0]
+	sentinelPort := strSlice[1]
+	if sentinelHost == "ValidHost" && sentinelPort == "ValidSentinelPort" {
+		return &redis.SentinelClient{}
+	}
+	return nil
+}
+
 func (r redisExtCallsImpMock) getNewClient() *redis.Client {
 	return &redis.Client{}
+}
+func (r redisExtCallsImpMock) getMasterAddrByName(masterSet string, snlClient *redis.SentinelClient) []string {
+	return getMasterAddbyNameMock(masterSet, snlClient)
+}
+func getMasterAddbyNameMock(masterSet string, snlClient *redis.SentinelClient) []string {
+	if masterSet == "ValidMasterSet" && snlClient != nil {
+		return []string{"ValidMasterIP", "ValidMasterPort"}
+	}
+	return []string{"", ""}
 }
 
 func TestGetClient(t *testing.T) {
