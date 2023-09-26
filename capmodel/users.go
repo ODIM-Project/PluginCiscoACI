@@ -12,10 +12,10 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package capmodel ...
+// Package capmodel ...
 package capmodel
 
-//Users struct definition
+// Users struct definition
 type Users struct {
 	Username string `json:"Username"`
 	Password string `json:"Password"`

@@ -12,7 +12,7 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package caphandler ...
+// Package caphandler ...
 package caphandler
 
 import (
@@ -29,7 +29,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//TokenValidation validates sent token with the list of plugin generated tokens
+// TokenValidation validates sent token with the list of plugin generated tokens
 func TokenValidation(token string) bool {
 	var flag bool
 	flag = false
@@ -44,7 +44,7 @@ func TokenValidation(token string) bool {
 	return flag
 }
 
-//Validate does Basic authentication with device and returns UUID of device in response
+// Validate does Basic authentication with device and returns UUID of device in response
 func Validate(ctx iris.Context) {
 	//Get token from Request
 	if ctx.GetHeader("X-Auth-Token") == "" && ctx.GetHeader("Authorization") == "" {

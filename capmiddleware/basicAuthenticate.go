@@ -12,7 +12,7 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package capmiddleware ...
+// Package capmiddleware ...
 package capmiddleware
 
 import (
@@ -25,7 +25,7 @@ import (
 	"strings"
 )
 
-//BasicAuth is used to validate REST API calls with plugin with basic autherization
+// BasicAuth is used to validate REST API calls with plugin with basic autherization
 func BasicAuth(ctx iris.Context) {
 	basicAuth := ctx.GetHeader("Authorization")
 	if basicAuth != "" {

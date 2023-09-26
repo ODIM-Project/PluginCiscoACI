@@ -12,7 +12,7 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package caputilities ...
+// Package caputilities ...
 package caputilities
 
 import (
@@ -29,7 +29,7 @@ import (
 	"net/http"
 )
 
-//RedfishDevice struct definition
+// RedfishDevice struct definition
 type RedfishDevice struct {
 	Host            string                 `json:"hostAddress"`
 	Username        string                 `json:"username,omitempty"`
@@ -42,13 +42,13 @@ type RedfishDevice struct {
 	Location        string `json:"Location"`
 }
 
-//Identifier struct definition
+// Identifier struct definition
 type Identifier struct {
 	UUID uuid.UUID
 	URI  string
 }
 
-//RedfishClient struct definition
+// RedfishClient struct definition
 type RedfishClient struct {
 	httpClient *http.Client
 }

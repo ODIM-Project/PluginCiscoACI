@@ -12,10 +12,10 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package capresponse ...
+// Package capresponse ...
 package capresponse
 
-//PluginStatusResponse holds the information of response of PluginStatus
+// PluginStatusResponse holds the information of response of PluginStatus
 type PluginStatusResponse struct {
 	Comment         string          `json:"_comment"`
 	Name            string          `json:"Name"`
@@ -24,20 +24,20 @@ type PluginStatusResponse struct {
 	EventMessageBus EventMessageBus `json:"EventMessageBus"`
 }
 
-//Status holds information of Plugin Status
+// Status holds information of Plugin Status
 type Status struct {
 	Available string `json:"Available"`
 	Uptime    string `json:"Uptime"`
 	TimeStamp string `json:"TimeStamp"`
 }
 
-//EventMessageBus holds the  information of  EMB Broker type and EMBQueue information
+// EventMessageBus holds the  information of  EMB Broker type and EMBQueue information
 type EventMessageBus struct {
 	EmbType  string     `json:"EmbType"`
 	EmbQueue []EmbQueue `json:"EmbQueue"`
 }
 
-//EmbQueue holds the  information of Queue Name and Queue Description
+// EmbQueue holds the  information of Queue Name and Queue Description
 type EmbQueue struct {
 	QueueName string `json:"EmbQueueName"`
 	QueueDesc string `json:"EmbQueueDesc"`

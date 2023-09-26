@@ -12,7 +12,7 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package caphandler ...
+// Package caphandler ...
 package caphandler
 
 import (
@@ -29,7 +29,7 @@ import (
 	"time"
 )
 
-//TokenMap is used to define the plugin generated tokens
+// TokenMap is used to define the plugin generated tokens
 type TokenMap struct {
 	Token    string
 	LastUsed time.Time
@@ -38,7 +38,7 @@ type TokenMap struct {
 var tokenDetails []TokenMap
 var tokenSpec TokenMap
 
-//CreateSession is used to create session for odimra to interact with plugin
+// CreateSession is used to create session for odimra to interact with plugin
 func CreateSession(ctx iris.Context) {
 	var userCreds capmodel.Users
 	rawBodyAsBytes, err := ioutil.ReadAll(ctx.Request().Body)

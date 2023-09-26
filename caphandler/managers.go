@@ -12,7 +12,7 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package caphandler ...
+// Package caphandler ...
 package caphandler
 
 import (
@@ -27,7 +27,7 @@ import (
 	iris "github.com/kataras/iris/v12"
 )
 
-//GetManagersCollection Fetches details of the manager collection
+// GetManagersCollection Fetches details of the manager collection
 func GetManagersCollection(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	var members = []*model.Link{
@@ -51,7 +51,7 @@ func GetManagersCollection(ctx iris.Context) {
 
 }
 
-//GetManagersInfo Fetches details of the given manager info
+// GetManagersInfo Fetches details of the given manager info
 func GetManagersInfo(ctx iris.Context) {
 	uri := ctx.Request().RequestURI
 	// Get all switch data uri

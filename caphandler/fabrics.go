@@ -12,7 +12,7 @@
 //License for the specific language governing permissions and limitations
 // under the License.
 
-//Package caphandler ...
+// Package caphandler ...
 package caphandler
 
 import (
@@ -28,7 +28,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//GetFabricResource : Fetches details of the given resource from the device
+// GetFabricResource : Fetches details of the given resource from the device
 func GetFabricResource(ctx iris.Context) {
 	ctx.StatusCode(http.StatusNotImplemented)
 }
