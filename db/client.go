@@ -35,6 +35,12 @@ type Client struct {
 	mux             sync.Mutex
 }
 
+// Config is the configuration for db which is set by the wrapper package.
+/*
+Port is the port number for the database connection
+Protocol is the type of protocol with which the connection takes place
+Host is hostname/IP on which the database is running
+*/
 type Config struct {
 	Port         string
 	Protocol     string
